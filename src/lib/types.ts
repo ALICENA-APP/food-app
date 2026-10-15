@@ -30,6 +30,8 @@ export type Shop = {
   slug: string
   name: string
   story: string | null
+  logo_path: string | null
+  cover_path: string | null
   area_label: string | null
   cuisines: string[]
   status: 'draft' | 'live' | 'paused' | 'suspended'

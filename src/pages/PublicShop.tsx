@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { link } from '../lib/router'
+import { photoUrl } from '../lib/images'
 import { basketCount, basketSubtotal, setQty, useBasket } from '../lib/basket'
 import { pounds, type Allergen, type Presence, type Product, type Shop, type ShopSettings } from '../lib/types'
 
@@ -12,6 +13,28 @@ type Loaded = {
   products: Product[]
   allergens: Allergen[]
   rows: AllergenRow[]
+  photos: Record<string, string>
+  hours: { weekday: number; opens: string; closes: string }[]
+  closedToday: boolean
+}
+
+const DAY_SHORT = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+
+// Groups days with the same hours: "Mon–Fri 10:00–18:00 · Sat 11:00–15:00".
+function hoursSummary(hours: Loaded['hours']) {
+  const sorted = [...hours].sort((a, b) => a.weekday - b.weekday)
+  const parts: string[] = []
+  let i = 0
+  while (i < sorted.length) {
+    let j = i
+    const t = `${sorted[i].opens.slice(0, 5)}–${sorted[i].closes.slice(0, 5)}`
+    while (j + 1 < sorted.length && sorted[j + 1].weekday === sorted[j].weekday + 1 &&
+           `${sorted[j + 1].opens.slice(0, 5)}–${sorted[j + 1].closes.slice(0, 5)}` === t) j++
+    const days = i === j ? DAY_SHORT[sorted[i].weekday] : `${DAY_SHORT[sorted[i].weekday]}–${DAY_SHORT[sorted[j].weekday]}`
+    parts.push(`${days} ${t}`)
+    i = j + 1
+  }
+  return parts.join(' · ')
 }
 
 // The shareable shop page at /s/<slug>. Visitors see live shops only; the
@@ -25,10 +48,13 @@ export default function PublicShop({ slug }: { slug: string }) {
       const db = supabase!
       const { data: shop } = await db.from('shops').select('*').eq('slug', slug).maybeSingle()
       if (!shop) return setLoaded(null)
-      const [s, p, a] = await Promise.all([
+      const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/London' })
+      const [s, p, a, h, c] = await Promise.all([
         db.from('shop_settings').select('*').eq('shop_id', shop.id).maybeSingle(),
         db.from('products').select('*').eq('shop_id', shop.id).neq('status', 'archived').order('created_at'),
         db.from('allergens').select('code, name'),
+        db.from('shop_hours').select('weekday, opens, closes').eq('shop_id', shop.id),
+        db.from('shop_closures').select('id').eq('shop_id', shop.id).eq('closed_on', today),
       ])
       const products: Product[] = p.data ?? []
       const { data: rows } = products.length
@@ -39,7 +65,15 @@ export default function PublicShop({ slug }: { slug: string }) {
             .is('variant_id', null)
             .is('addon_id', null)
         : { data: [] }
-      setLoaded({ shop, settings: s.data, products, allergens: a.data ?? [], rows: rows ?? [] })
+      const { data: images } = products.length
+        ? await db.from('product_images').select('product_id, path, sort').in('product_id', products.map((x) => x.id)).order('sort')
+        : { data: [] }
+      const photos: Record<string, string> = {}
+      for (const img of images ?? []) photos[img.product_id] ??= img.path
+      setLoaded({
+        shop, settings: s.data, products, allergens: a.data ?? [], rows: rows ?? [], photos,
+        hours: h.data ?? [], closedToday: (c.data ?? []).length > 0,
+      })
     })()
   }, [slug])
 
@@ -60,7 +94,7 @@ export default function PublicShop({ slug }: { slug: string }) {
     )
   }
 
-  const { shop, settings, products, allergens, rows } = loaded
+  const { shop, settings, products, allergens, rows, photos, hours, closedToday } = loaded
   const name = (code: string) => allergens.find((a) => a.code === code)?.name ?? code
   const isPreview = shop.status !== 'live'
   const canOrder = !isPreview && shop.accepting_orders
@@ -72,13 +106,19 @@ export default function PublicShop({ slug }: { slug: string }) {
       {isPreview && (
         <p className="status">Preview: only you can see this until your shop goes live.</p>
       )}
-      <div>
+      {shop.cover_path && <img className="cover hero" src={photoUrl(shop.cover_path)!} alt="" />}
+      <div className="shop-head">
+        {shop.logo_path && <img className="logo" src={photoUrl(shop.logo_path)!} alt="" />}
+        <div>
         <h1>{shop.name}</h1>
         <p className="muted">
           {[shop.area_label, ...shop.cuisines].filter(Boolean).join(' · ')}
         </p>
         {options.length > 0 && <p className="muted small">{options.join(' or ')}</p>}
+        {hours.length > 0 && <p className="muted small">{hoursSummary(hours)}</p>}
+        </div>
       </div>
+      {closedToday && <p className="status">Closed today.</p>}
       {shop.story && <p className="story">{shop.story}</p>}
 
       <h2>Menu</h2>
@@ -89,6 +129,7 @@ export default function PublicShop({ slug }: { slug: string }) {
         const mayContain = mine.filter((r) => r.presence === 'may_contain').map((r) => name(r.allergen_code))
         return (
           <article key={p.id} className="card">
+            {photos[p.id] && <img className="dish" src={photoUrl(photos[p.id])!} alt={p.name} loading="lazy" />}
             <div className="item">
               <strong>{p.name}</strong>
               <span>{pounds(p.price_pence)}</span>

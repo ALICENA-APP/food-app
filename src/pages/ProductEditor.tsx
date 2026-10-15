@@ -1,7 +1,8 @@
-import { useEffect, useState, type FormEvent } from 'react'
+import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import { supabase } from '../lib/supabase'
 import { link, navigate } from '../lib/router'
 import type { Allergen, Category, Presence, Product } from '../lib/types'
+import { deletePhoto, photoUrl, uploadPhoto } from '../lib/images'
 
 const PRESENCE_LABEL: Record<Presence, string> = {
   contains: 'Contains',
@@ -121,7 +122,8 @@ function Editor({ shopId, product, allergens, categories, answers: initialAnswer
         .eq('id', id)
       if (error) return fail(error.message)
     }
-    navigate('/sell/products')
+    // A new draft stays open so photos can be added straight away.
+    navigate(!product && !publish ? `/sell/products/${id}` : '/sell/products')
   }
 
   function fail(text: string) {
@@ -190,6 +192,12 @@ function Editor({ shopId, product, allergens, categories, answers: initialAnswer
         </label>
       </div>
 
+      {product ? (
+        <Photos shopId={shopId} productId={product.id} />
+      ) : (
+        <p className="muted small">Save the item as a draft first, then you can add photos.</p>
+      )}
+
       <div className="card">
         <h2>Ingredients</h2>
         <textarea maxLength={2000} rows={3} value={ingredients} onChange={(e) => setIngredients(e.target.value)} placeholder="List every ingredient, including what's in sauces and spice mixes" />
@@ -232,5 +240,80 @@ function Editor({ shopId, product, allergens, categories, answers: initialAnswer
         {message && <p className="error">{message}</p>}
       </div>
     </form>
+  )
+}
+
+type Photo = { id: string; path: string; sort: number }
+
+function Photos({ shopId, productId }: { shopId: string; productId: string }) {
+  const [photos, setPhotos] = useState<Photo[]>([])
+  const [busy, setBusy] = useState(false)
+  const [message, setMessage] = useState('')
+
+  const load = useCallback(async () => {
+    const { data } = await supabase!.from('product_images').select('id, path, sort').eq('product_id', productId).order('sort')
+    setPhotos(data ?? [])
+  }, [productId])
+
+  useEffect(() => {
+    load()
+  }, [load])
+
+  async function add(files: FileList | null) {
+    if (!files?.length) return
+    setBusy(true)
+    setMessage('')
+    try {
+      for (const file of Array.from(files).slice(0, 4 - photos.length)) {
+        const path = await uploadPhoto(shopId, file)
+        const sort = photos.length ? Math.max(...photos.map((p) => p.sort)) + 1 : 0
+        const { error } = await supabase!.from('product_images').insert({ product_id: productId, path, sort })
+        if (error) {
+          await deletePhoto(path)
+          throw new Error(error.message)
+        }
+      }
+    } catch (e) {
+      setMessage((e as Error).message)
+    }
+    setBusy(false)
+    load()
+  }
+
+  async function remove(photo: Photo) {
+    await supabase!.from('product_images').delete().eq('id', photo.id)
+    await deletePhoto(photo.path)
+    load()
+  }
+
+  async function makeFirst(photo: Photo) {
+    const first = Math.min(...photos.map((p) => p.sort))
+    await supabase!.from('product_images').update({ sort: first - 1 }).eq('id', photo.id)
+    load()
+  }
+
+  return (
+    <div className="card">
+      <h2>Photos</h2>
+      <p className="muted small">Up to 4. The first one is shown on your menu. Photos are shrunk automatically.</p>
+      <div className="photos">
+        {photos.map((p, i) => (
+          <figure key={p.id}>
+            <img src={photoUrl(p.path)!} alt="" />
+            <figcaption>
+              {i > 0 && <button type="button" className="link small-btn" onClick={() => makeFirst(p)}>Make first</button>}
+              <button type="button" className="link small-btn" onClick={() => remove(p)}>Remove</button>
+            </figcaption>
+          </figure>
+        ))}
+      </div>
+      {photos.length < 4 && (
+        <label className="button secondary upload">
+          {busy ? 'Uploading…' : 'Add photos'}
+          <input type="file" accept="image/*" multiple disabled={busy} onChange={(e) => { add(e.target.files); e.target.value = '' }} />
+        </label>
+      )}
+      {message && <p className="error">{message}</p>}
+    </div>
   )
 }

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { link } from '../lib/router'
+import { photoUrl } from '../lib/images'
 import type { Shop } from '../lib/types'
 
 // Home page: live shops, with a simple search.
@@ -36,6 +37,7 @@ export default function Browse() {
       )}
       {shown.map((s) => (
         <a key={s.id} className="card shop-card" href={`/s/${s.slug}`} onClick={link(`/s/${s.slug}`)}>
+          {s.cover_path && <img className="dish" src={photoUrl(s.cover_path)!} alt="" loading="lazy" />}
           <strong>{s.name}</strong>
           <span className="muted small">{[s.area_label, ...s.cuisines].filter(Boolean).join(' · ')}</span>
           {!s.accepting_orders && <span className="pill">Not taking orders right now</span>}

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import { supabase } from '../lib/supabase'
 import { link, navigate } from '../lib/router'
+import { deletePhoto, photoUrl, uploadPhoto } from '../lib/images'
 import { pounds, type SellerAccount, type Shop, type ShopPrivate, type ShopSettings } from '../lib/types'
 
 function toSlug(text: string) {
@@ -203,6 +204,8 @@ function ShopForm({ account, shop, settings, priv }: Loaded & { account: SellerA
         </label>
       </div>
 
+      {shop && <ShopPhotos shop={shop} />}
+      {shop && <OpeningHours shopId={shop.id} />}
       {shop && delivery && <DeliveryZones shopId={shop.id} />}
 
       <div className="card">
@@ -342,6 +345,166 @@ function DeliveryZones({ shopId }: { shopId: string }) {
       <input value={name} maxLength={60} onChange={(e) => setName(e.target.value)} placeholder="Name for this area (optional)" />
       <button type="button" className="secondary" onClick={add}>Add delivery area</button>
       {message && <p className="error">{message}</p>}
+    </div>
+  )
+}
+
+// Logo and cover photo, saved as soon as they are chosen.
+function ShopPhotos({ shop }: { shop: Shop }) {
+  const [logo, setLogo] = useState(shop.logo_path)
+  const [cover, setCover] = useState(shop.cover_path)
+  const [busy, setBusy] = useState('')
+  const [message, setMessage] = useState('')
+
+  async function replace(kind: 'logo' | 'cover', file: File | undefined) {
+    if (!file) return
+    setBusy(kind)
+    setMessage('')
+    try {
+      const path = await uploadPhoto(shop.id, file, kind === 'logo' ? 400 : 1600, kind === 'cover')
+      const column = kind === 'logo' ? 'logo_path' : 'cover_path'
+      const { error } = await supabase!.from('shops').update({ [column]: path }).eq('id', shop.id)
+      if (error) {
+        await deletePhoto(path)
+        throw new Error(error.message)
+      }
+      const old = kind === 'logo' ? logo : cover
+      if (old) await deletePhoto(old)
+      if (kind === 'logo') setLogo(path)
+      else setCover(path)
+    } catch (e) {
+      setMessage((e as Error).message)
+    }
+    setBusy('')
+  }
+
+  return (
+    <div className="card">
+      <h2>Shop photos</h2>
+      <div className="shop-photos">
+        <div>
+          <p className="small">Logo or your photo</p>
+          {logo ? <img className="logo" src={photoUrl(logo)!} alt="" /> : <div className="logo placeholder" />}
+          <label className="button secondary upload small-btn">
+            {busy === 'logo' ? 'Uploading…' : logo ? 'Change' : 'Add'}
+            <input type="file" accept="image/*" disabled={Boolean(busy)} onChange={(e) => { replace('logo', e.target.files?.[0]); e.target.value = '' }} />
+          </label>
+        </div>
+        <div className="grow">
+          <p className="small">Cover photo (your best dish)</p>
+          {cover ? <img className="cover" src={photoUrl(cover)!} alt="" /> : <div className="cover placeholder" />}
+          <label className="button secondary upload small-btn">
+            {busy === 'cover' ? 'Uploading…' : cover ? 'Change' : 'Add'}
+            <input type="file" accept="image/*" disabled={Boolean(busy)} onChange={(e) => { replace('cover', e.target.files?.[0]); e.target.value = '' }} />
+          </label>
+        </div>
+      </div>
+      {message && <p className="error">{message}</p>}
+    </div>
+  )
+}
+
+const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+type Day = { open: boolean; opens: string; closes: string }
+type Closure = { id: string; closed_on: string; reason: string | null }
+
+// Weekly opening hours (one time range per day) and days off.
+function OpeningHours({ shopId }: { shopId: string }) {
+  const [days, setDays] = useState<Day[] | null>(null)
+  const [closures, setClosures] = useState<Closure[]>([])
+  const [offDate, setOffDate] = useState('')
+  const [offReason, setOffReason] = useState('')
+  const [message, setMessage] = useState('')
+
+  const load = useCallback(async () => {
+    const db = supabase!
+    const [h, c] = await Promise.all([
+      db.from('shop_hours').select('weekday, opens, closes').eq('shop_id', shopId),
+      db.from('shop_closures').select('id, closed_on, reason').eq('shop_id', shopId)
+        .gte('closed_on', new Date().toISOString().slice(0, 10)).order('closed_on'),
+    ])
+    setDays(DAYS.map((_, i) => {
+      const row = h.data?.find((r) => r.weekday === i)
+      return row ? { open: true, opens: row.opens.slice(0, 5), closes: row.closes.slice(0, 5) } : { open: false, opens: '10:00', closes: '18:00' }
+    }))
+    setClosures(c.data ?? [])
+  }, [shopId])
+
+  useEffect(() => {
+    load()
+  }, [load])
+
+  if (!days) return null
+
+  function set(i: number, change: Partial<Day>) {
+    setDays(days!.map((d, j) => (j === i ? { ...d, ...change } : d)))
+  }
+
+  async function saveHours() {
+    setMessage('')
+    const bad = days!.findIndex((d) => d.open && d.closes <= d.opens)
+    if (bad >= 0) return setMessage(`${DAYS[bad]}: closing time must be after opening time.`)
+    const db = supabase!
+    const { error: delError } = await db.from('shop_hours').delete().eq('shop_id', shopId)
+    if (delError) return setMessage(delError.message)
+    const rows = days!.flatMap((d, i) => (d.open ? [{ shop_id: shopId, weekday: i, opens: d.opens, closes: d.closes }] : []))
+    if (rows.length) {
+      const { error } = await db.from('shop_hours').insert(rows)
+      if (error) return setMessage(error.message)
+    }
+    setMessage('Hours saved')
+  }
+
+  async function addClosure() {
+    if (!offDate) return
+    const { error } = await supabase!.from('shop_closures').insert({ shop_id: shopId, closed_on: offDate, reason: offReason.trim() || null })
+    if (error) return setMessage(error.code === '23505' ? 'That day is already marked off.' : error.message)
+    setOffDate('')
+    setOffReason('')
+    load()
+  }
+
+  async function removeClosure(id: string) {
+    await supabase!.from('shop_closures').delete().eq('id', id)
+    load()
+  }
+
+  return (
+    <div className="card">
+      <h2>Opening hours</h2>
+      <p className="muted small">When customers can collect or get deliveries.</p>
+      {days.map((d, i) => (
+        <div key={i} className="hours-row">
+          <label className="check">
+            <input type="checkbox" checked={d.open} onChange={(e) => set(i, { open: e.target.checked })} />
+            {DAYS[i]}
+          </label>
+          {d.open ? (
+            <span className="times">
+              <input type="time" value={d.opens} onChange={(e) => set(i, { opens: e.target.value })} aria-label={`${DAYS[i]} opens`} />
+              <span>to</span>
+              <input type="time" value={d.closes} onChange={(e) => set(i, { closes: e.target.value })} aria-label={`${DAYS[i]} closes`} />
+            </span>
+          ) : (
+            <span className="muted small">Closed</span>
+          )}
+        </div>
+      ))}
+      <button type="button" className="secondary" onClick={saveHours}>Save hours</button>
+
+      <h2>Days off</h2>
+      {closures.map((c) => (
+        <div key={c.id} className="check-row">
+          <span className="small">{new Date(c.closed_on + 'T12:00').toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })}{c.reason && ` · ${c.reason}`}</span>
+          <button type="button" className="secondary small-btn" onClick={() => removeClosure(c.id)}>Remove</button>
+        </div>
+      ))}
+      <div className="row">
+        <input type="date" value={offDate} min={new Date().toISOString().slice(0, 10)} onChange={(e) => setOffDate(e.target.value)} aria-label="Day off" />
+        <input value={offReason} maxLength={200} onChange={(e) => setOffReason(e.target.value)} placeholder="Reason (optional)" />
+      </div>
+      <button type="button" className="secondary" onClick={addClosure} disabled={!offDate}>Add day off</button>
+      {message && <p className="muted">{message}</p>}
     </div>
   )
 }
