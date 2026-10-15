@@ -6,31 +6,28 @@ phone app (PWA) and stores its data in Supabase. The build follows the
 Technical V1 Blueprint. It is set up so it can later be wrapped for
 iOS and Android with Capacitor.
 
-## Where the data lives
+## Where things live
 
-The app uses one of your existing Supabase projects, in its own schema called
-`food`. That keeps its tables apart from your other app and costs nothing extra.
+- **Website:** https://food.beastcase.net, deployed by Netlify (site
+  `beastcase-food`) every time `main` changes. Build settings are in
+  `netlify.toml`; Netlify holds `VITE_SUPABASE_URL` and the publishable
+  `VITE_SUPABASE_ANON_KEY`.
+- **Database:** a dedicated Supabase project (free "Food App" organization,
+  London). App tables live in the `food` schema, which is exposed in the Data
+  API. Every table has row level security.
 
-## One-time setup
+## Database changes
 
-1. **Create the tables.** In Supabase, open *SQL Editor*, paste the contents of
-   `supabase/migrations/0001_foundation.sql`, and click *Run*.
-2. **Let the app see the `food` schema.** In Supabase, go to
-   *Project Settings > Data API* (or *API*), find *Exposed schemas*, add `food`,
-   and save.
+Database changes are SQL files in `supabase/migrations`, applied in name order.
+When a change to that folder lands on `main`, the *Database migrations* GitHub
+Action runs `scripts/migrate.sh`, which applies each new file once inside a
+transaction and records it in `ops.applied_migrations`.
 
-   Keep using Stripe test mode in this shared project. Before taking real
-   payments, move the app to its own Supabase project (see the blueprint).
-3. **Allow sign-in links back to your site.** In *Authentication > URL
-   Configuration*, add your Netlify address (for example
-   `https://food-app.netlify.app`) to *Redirect URLs*.
-4. **Deploy on Netlify.** *Add new site > Import an existing project*, pick the
-   `food-app` GitHub repo. Build settings come from `netlify.toml`.
-5. **Add the two keys on Netlify.** *Site configuration > Environment variables*:
-   - `VITE_SUPABASE_URL` = your project URL (Supabase *Project Settings > API*)
-   - `VITE_SUPABASE_ANON_KEY` = the `anon` / publishable key from the same page
+The action needs one repository secret, `SUPABASE_DB_URL`: the *Session pooler*
+connection string from Supabase (*Connect* button at the top of the project),
+with the database password filled in. Until it is set, the action skips.
 
-   Then redeploy.
+Never put the Supabase secret / service_role key in the app or in Netlify.
 
 ## Running it on your computer
 
