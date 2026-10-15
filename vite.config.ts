@@ -9,9 +9,9 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate',
       manifest: {
-        name: 'Food App',
-        short_name: 'Food',
-        description: 'Keep track of your food.',
+        name: 'Homemade Food',
+        short_name: 'Homemade',
+        description: 'Order from local home cooks.',
         theme_color: '#2f7d4f',
         background_color: '#ffffff',
         display: 'standalone',

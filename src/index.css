@@ -56,8 +56,9 @@ button {
   cursor: pointer;
 }
 button.link { background: none; color: var(--green); padding: 4px 8px; }
-ul { list-style: none; margin: 0; padding: 0; }
-li { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-top: 1px solid var(--border); }
+
+
 .muted { color: var(--muted); margin: 0; }
-.error { color: #c0392b; margin: 0; }
+
 .notice { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 16px; }
+.lead { color: var(--muted); margin: 0 0 16px; }
