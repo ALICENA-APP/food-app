@@ -1,7 +1,7 @@
-import { useEffect, useState, type FormEvent } from 'react'
+import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import { supabase } from '../lib/supabase'
 import { link, navigate } from '../lib/router'
-import type { SellerAccount, Shop, ShopPrivate, ShopSettings } from '../lib/types'
+import { pounds, type SellerAccount, type Shop, type ShopPrivate, type ShopSettings } from '../lib/types'
 
 function toSlug(text: string) {
   return text
@@ -203,6 +203,8 @@ function ShopForm({ account, shop, settings, priv }: Loaded & { account: SellerA
         </label>
       </div>
 
+      {shop && delivery && <DeliveryZones shopId={shop.id} />}
+
       <div className="card">
         <h2>Private details</h2>
         <p className="muted small">
@@ -263,5 +265,83 @@ function ShopForm({ account, shop, settings, priv }: Loaded & { account: SellerA
       <button type="submit" disabled={saving}>{saving ? 'Saving…' : shop ? 'Save' : 'Create my shop'}</button>
       {message && <p className="muted">{message}</p>}
     </form>
+  )
+}
+
+type Zone = { id: string; name: string; postcode_districts: string[]; fee_pence: number; min_order_pence: number }
+
+// Delivery areas, by postcode district (e.g. E3, E14), each with its own fee.
+function DeliveryZones({ shopId }: { shopId: string }) {
+  const [zones, setZones] = useState<Zone[]>([])
+  const [name, setName] = useState('')
+  const [districts, setDistricts] = useState('')
+  const [fee, setFee] = useState('')
+  const [min, setMin] = useState('')
+  const [message, setMessage] = useState('')
+
+  const load = useCallback(async () => {
+    const { data } = await supabase!.from('shop_delivery_zones').select('*').eq('shop_id', shopId).order('fee_pence')
+    setZones(data ?? [])
+  }, [shopId])
+
+  useEffect(() => {
+    load()
+  }, [load])
+
+  async function add() {
+    const list = districts.toUpperCase().split(/[\s,]+/).filter(Boolean).slice(0, 50)
+    if (!list.length) return setMessage('Add at least one postcode area, like E3.')
+    const { error } = await supabase!.from('shop_delivery_zones').insert({
+      shop_id: shopId,
+      name: name.trim() || list.join(', ').slice(0, 60),
+      postcode_districts: list,
+      fee_pence: Math.round((parseFloat(fee) || 0) * 100),
+      min_order_pence: Math.round((parseFloat(min) || 0) * 100),
+    })
+    if (error) return setMessage(error.message)
+    setName('')
+    setDistricts('')
+    setFee('')
+    setMin('')
+    setMessage('')
+    load()
+  }
+
+  async function remove(id: string) {
+    await supabase!.from('shop_delivery_zones').delete().eq('id', id)
+    load()
+  }
+
+  return (
+    <div className="card">
+      <h2>Where you deliver</h2>
+      <p className="muted small">Use the first part of the postcode, like E3 or E14. Customers outside these areas can only collect.</p>
+      {zones.map((z) => (
+        <div key={z.id} className="check-row">
+          <div className="small">
+            <strong>{z.postcode_districts.join(', ')}</strong> · fee {pounds(z.fee_pence)}
+            {z.min_order_pence > 0 && ` · min ${pounds(z.min_order_pence)}`}
+          </div>
+          <button type="button" className="secondary small-btn" onClick={() => remove(z.id)}>Remove</button>
+        </div>
+      ))}
+      <label>
+        Postcode areas
+        <input value={districts} onChange={(e) => setDistricts(e.target.value)} placeholder="e.g. E3, E2, E14" />
+      </label>
+      <div className="row">
+        <label>
+          Delivery fee (£)
+          <input type="number" min="0" max="100" step="0.5" value={fee} onChange={(e) => setFee(e.target.value)} />
+        </label>
+        <label>
+          Minimum order (£)
+          <input type="number" min="0" max="1000" step="0.5" value={min} onChange={(e) => setMin(e.target.value)} />
+        </label>
+      </div>
+      <input value={name} maxLength={60} onChange={(e) => setName(e.target.value)} placeholder="Name for this area (optional)" />
+      <button type="button" className="secondary" onClick={add}>Add delivery area</button>
+      {message && <p className="error">{message}</p>}
+    </div>
   )
 }

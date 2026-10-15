@@ -15,6 +15,7 @@ export type SellerAccount = {
 
 export type Verification = {
   id: string
+  seller_account_id: string
   kind: 'food_registration' | 'hygiene_rating' | 'allergen_declaration' | 'insurance'
   status: 'pending' | 'accepted' | 'rejected' | 'expired'
   authority: string | null

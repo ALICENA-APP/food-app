@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
+import { link } from '../lib/router'
+import { basketCount, basketSubtotal, setQty, useBasket } from '../lib/basket'
 import { pounds, type Allergen, type Presence, type Product, type Shop, type ShopSettings } from '../lib/types'
 
 type AllergenRow = { product_id: string; allergen_code: string; presence: Presence }
@@ -16,6 +18,7 @@ type Loaded = {
 // owner can also preview their own shop before it goes live.
 export default function PublicShop({ slug }: { slug: string }) {
   const [loaded, setLoaded] = useState<Loaded | null | undefined>(undefined)
+  const basket = useBasket()
 
   useEffect(() => {
     ;(async () => {
@@ -60,6 +63,8 @@ export default function PublicShop({ slug }: { slug: string }) {
   const { shop, settings, products, allergens, rows } = loaded
   const name = (code: string) => allergens.find((a) => a.code === code)?.name ?? code
   const isPreview = shop.status !== 'live'
+  const canOrder = !isPreview && shop.accepting_orders
+  const qtyOf = (id: string) => (basket?.shopId === shop.id ? basket.lines.find((l) => l.productId === id)?.qty ?? 0 : 0)
   const options = [settings?.offers_collection && 'Collection', settings?.offers_delivery && 'Delivery'].filter(Boolean)
 
   return (
@@ -91,6 +96,19 @@ export default function PublicShop({ slug }: { slug: string }) {
             {p.status !== 'published' && <span className="pill pill-draft">Draft, not visible to customers</span>}
             {p.portion && <p className="muted small">{p.portion}</p>}
             {p.description && <p>{p.description}</p>}
+            {canOrder && p.status === 'published' && (
+              <div className="qty">
+                {qtyOf(p.id) > 0 ? (
+                  <>
+                    <button type="button" className="secondary small-btn" aria-label="One less" onClick={() => setQty(shop, { productId: p.id, name: p.name, pricePence: p.price_pence }, qtyOf(p.id) - 1)}>−</button>
+                    <span>{qtyOf(p.id)}</span>
+                    <button type="button" className="secondary small-btn" aria-label="One more" onClick={() => setQty(shop, { productId: p.id, name: p.name, pricePence: p.price_pence }, qtyOf(p.id) + 1)}>+</button>
+                  </>
+                ) : (
+                  <button type="button" className="small-btn" onClick={() => setQty(shop, { productId: p.id, name: p.name, pricePence: p.price_pence }, 1)}>Add</button>
+                )}
+              </div>
+            )}
             <details>
               <summary>Ingredients and allergens</summary>
               {p.ingredients && <p className="small">{p.ingredients}</p>}
@@ -105,10 +123,16 @@ export default function PublicShop({ slug }: { slug: string }) {
           </article>
         )
       })}
+      {!isPreview && !shop.accepting_orders && <p className="status">This shop isn't taking orders right now.</p>}
       <p className="muted small">
-        Ordering opens soon. Have an allergy? Check the allergen list for each item and contact the
-        seller before ordering if you are unsure.
+        Have an allergy? Check the allergen list for each item and contact the seller before
+        ordering if you are unsure.
       </p>
+      {basket?.shopId === shop.id && basketCount(basket) > 0 && (
+        <a className="button basket-bar" href="/basket" onClick={link('/basket')}>
+          View basket · {basketCount(basket)} {basketCount(basket) === 1 ? 'item' : 'items'} · {pounds(basketSubtotal(basket))}
+        </a>
+      )}
     </div>
   )
 }

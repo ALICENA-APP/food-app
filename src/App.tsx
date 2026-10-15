@@ -7,11 +7,25 @@ import ShopSetup from './pages/ShopSetup'
 import Products from './pages/Products'
 import ProductEditor from './pages/ProductEditor'
 import PublicShop from './pages/PublicShop'
+import Admin from './pages/Admin'
+import Browse from './pages/Browse'
+import Checkout from './pages/Checkout'
+import SellerOrders from './pages/SellerOrders'
+import { MyOrders, OrderDetail } from './pages/Orders'
+import { basketCount, useBasket } from './lib/basket'
 
 function App() {
   const [session, setSession] = useState<Session | null>(null)
   const [ready, setReady] = useState(!supabase)
   const path = usePath()
+  const basket = useBasket()
+  const [isAdmin, setIsAdmin] = useState(false)
+  const userId = session?.user.id
+
+  useEffect(() => {
+    if (!userId) return setIsAdmin(false)
+    supabase!.rpc('am_i_admin').then(({ data }) => setIsAdmin(Boolean(data)))
+  }, [userId])
 
   useEffect(() => {
     if (!supabase) return
@@ -37,6 +51,7 @@ function App() {
   }, [])
 
   const shopMatch = path.match(/^\/s\/([a-z0-9-]+)\/?$/)
+  const orderMatch = path.match(/^\/orders\/([0-9a-f-]{36})\/?$/)
   const productMatch = path.match(/^\/sell\/products\/([0-9a-f-]{36}|new)\/?$/)
 
   let page
@@ -51,6 +66,17 @@ function App() {
     page = <p className="muted">Loading…</p>
   } else if (shopMatch) {
     page = <PublicShop slug={shopMatch[1]} />
+  } else if (path === '/basket') {
+    page = session ? <Checkout /> : (
+      <>
+        <p className="lead">Sign in to place your order. Your basket is saved.</p>
+        <SignIn redirectPath="/basket" />
+      </>
+    )
+  } else if (path === '/orders' || orderMatch) {
+    page = !session ? <SignIn redirectPath={path} /> : orderMatch ? <OrderDetail id={orderMatch[1]} /> : <MyOrders />
+  } else if (path.startsWith('/admin')) {
+    page = session ? <Admin /> : <SignIn redirectPath="/admin" />
   } else if (path.startsWith('/sell')) {
     if (!session) {
       page = (
@@ -61,6 +87,8 @@ function App() {
       )
     } else if (path === '/sell/shop') {
       page = <ShopSetup />
+    } else if (path === '/sell/orders') {
+      page = <SellerOrders />
     } else if (path === '/sell/products') {
       page = <Products />
     } else if (productMatch) {
@@ -71,19 +99,7 @@ function App() {
   } else {
     page = (
       <>
-        <p className="lead">
-          Homemade food from cooks near you. Coming soon to East London.
-        </p>
-        <div className="card">
-          <h2>Cook at home?</h2>
-          <p className="muted">
-            Open your own little online food shop with a link you can share. No monthly fee, we
-            take 5% of the food price only when you sell.
-          </p>
-          <a className="button" href="/sell" onClick={link('/sell')}>
-            Start selling
-          </a>
-        </div>
+        <Browse />
         {!session && (
           <div style={{ marginTop: 16 }}>
             <SignIn redirectPath="/" />
@@ -99,11 +115,19 @@ function App() {
         <a className="brand" href="/" onClick={link('/')}>
           Homemade Food
         </a>
-        {session && (
-          <button className="link" onClick={() => supabase!.auth.signOut()}>
-            Sign out
-          </button>
-        )}
+        <nav>
+          {basketCount(basket) > 0 && (
+            <a href="/basket" onClick={link('/basket')}>Basket ({basketCount(basket)})</a>
+          )}
+          {session && <a href="/orders" onClick={link('/orders')}>Orders</a>}
+          <a href="/sell" onClick={link('/sell')}>Sell</a>
+          {isAdmin && <a href="/admin" onClick={link('/admin')}>Admin</a>}
+          {session && (
+            <button className="link" onClick={() => supabase!.auth.signOut()}>
+              Sign out
+            </button>
+          )}
+        </nav>
       </header>
       {page}
     </main>

@@ -81,6 +81,11 @@ export default function SellerHome() {
                   Menu
                 </a>
               )}
+              {shop && (
+                <a className="button secondary" href="/sell/orders" onClick={link('/sell/orders')}>
+                  Orders
+                </a>
+              )}
             </div>
             {shop && (
               <p className="muted">
