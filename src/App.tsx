@@ -14,6 +14,8 @@ import SellerOrders from './pages/SellerOrders'
 import { SellerEarnings, SellerReviews } from './pages/SellerInsights'
 import { MyOrders, OrderDetail } from './pages/Orders'
 import { basketCount, useBasket } from './lib/basket'
+import { useUnreadAlerts } from './lib/alerts'
+import Alerts from './pages/Alerts'
 
 function App() {
   const [session, setSession] = useState<Session | null>(null)
@@ -22,6 +24,7 @@ function App() {
   const basket = useBasket()
   const [isAdmin, setIsAdmin] = useState(false)
   const userId = session?.user.id
+  const unread = useUnreadAlerts(userId)
 
   useEffect(() => {
     if (!userId) return setIsAdmin(false)
@@ -67,6 +70,8 @@ function App() {
     page = <p className="muted">Loading…</p>
   } else if (shopMatch) {
     page = <PublicShop slug={shopMatch[1]} />
+  } else if (path === '/alerts') {
+    page = session ? <Alerts /> : <SignIn redirectPath="/alerts" />
   } else if (path === '/basket') {
     page = session ? <Checkout /> : (
       <>
@@ -125,6 +130,11 @@ function App() {
             <a href="/basket" onClick={link('/basket')}>Basket ({basketCount(basket)})</a>
           )}
           {session && <a href="/orders" onClick={link('/orders')}>Orders</a>}
+          {session && (
+            <a href="/alerts" onClick={link('/alerts')} aria-label={`Alerts, ${unread} new`}>
+              🔔{unread > 0 && <span className="badge">{unread > 9 ? '9+' : unread}</span>}
+            </a>
+          )}
           <a href="/sell" onClick={link('/sell')}>Sell</a>
           {isAdmin && <a href="/admin" onClick={link('/admin')}>Admin</a>}
           {session && (

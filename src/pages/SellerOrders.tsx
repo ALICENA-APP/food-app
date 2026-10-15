@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
+import { tidyOrders } from '../lib/alerts'
 import { link } from '../lib/router'
 import { pounds } from '../lib/types'
 import { ORDER_STATUS, when, type Order, type OrderItem, type OrderStatus } from './Orders'
@@ -12,6 +13,7 @@ export default function SellerOrders() {
   const [tab, setTab] = useState<'open' | 'past'>('open')
 
   const load = useCallback(async () => {
+    tidyOrders()
     const db = supabase!
     const { data: account } = await db.from('seller_accounts').select('id').maybeSingle()
     if (!account) return setOrders([])
@@ -30,6 +32,13 @@ export default function SellerOrders() {
 
   useEffect(() => {
     load()
+    // New orders also arrive as alerts; this keeps the list itself fresh.
+    const timer = window.setInterval(load, 60000)
+    window.addEventListener('alerts-read', load)
+    return () => {
+      window.clearInterval(timer)
+      window.removeEventListener('alerts-read', load)
+    }
   }, [load])
 
   if (!orders) return <p className="muted">Loading…</p>

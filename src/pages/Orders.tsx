@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
+import { tidyOrders } from '../lib/alerts'
 import { link } from '../lib/router'
 import { pounds } from '../lib/types'
 import { ReviewForm, ReviewItem, type Review } from '../lib/reviews'
@@ -54,6 +55,7 @@ export function MyOrders() {
   const [orders, setOrders] = useState<Order[] | null>(null)
 
   useEffect(() => {
+    tidyOrders()
     ;(async () => {
       const { data: user } = await supabase!.auth.getUser()
       const { data } = await supabase!
