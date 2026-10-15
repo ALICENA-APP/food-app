@@ -1,0 +1,12 @@
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+[build.environment]
+  NODE_VERSION = "22"
+
+# Send every page to the app so refreshing on any screen works.
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
