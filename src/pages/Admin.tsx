@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import { supabase } from '../lib/supabase'
 import { link } from '../lib/router'
+import { AdminOrders, AdminReviews } from './AdminMore'
 import type { SellerAccount, SellerStatus, Shop, Verification } from '../lib/types'
 
 // Admin screen. Needs an admin account and a two-step (authenticator app)
@@ -23,7 +24,30 @@ export default function Admin() {
   if (state === 'loading') return <p className="muted">Loading…</p>
   if (state === 'not_admin') return <p className="card">This page is for the Homemade Food team.</p>
   if (state === 'needs_mfa') return <TwoStep onDone={check} />
-  return <Sellers />
+  return <AdminTabs />
+}
+
+const TABS = [
+  { key: 'sellers', label: 'Sellers' },
+  { key: 'orders', label: 'Orders' },
+  { key: 'reviews', label: 'Reviews' },
+] as const
+
+function AdminTabs() {
+  const [tab, setTab] = useState<(typeof TABS)[number]['key']>('sellers')
+  return (
+    <div className="stack">
+      <h1>Admin</h1>
+      <div className="tabs">
+        {TABS.map((t) => (
+          <button key={t.key} type="button" className={tab === t.key ? 'on' : ''} onClick={() => setTab(t.key)}>{t.label}</button>
+        ))}
+      </div>
+      {tab === 'sellers' && <Sellers />}
+      {tab === 'orders' && <AdminOrders />}
+      {tab === 'reviews' && <AdminReviews />}
+    </div>
+  )
 }
 
 function TwoStep({ onDone }: { onDone: () => void }) {
@@ -134,7 +158,6 @@ function Sellers() {
 
   return (
     <div className="stack">
-      <h1>Sellers</h1>
       <div className="segmented">
         <label className={filter === 'todo' ? 'on not_present' : ''}>
           <input type="radio" checked={filter === 'todo'} onChange={() => setFilter('todo')} />

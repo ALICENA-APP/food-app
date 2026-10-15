@@ -72,7 +72,7 @@ export default function SellerHome() {
               You can set up your shop and menu while we check your details. It goes live once you
               are approved and payments are set up.
             </p>
-            <div className="row">
+            <div className="row wrap">
               <a className="button" href="/sell/shop" onClick={link('/sell/shop')}>
                 {shop ? 'Edit shop' : 'Set up shop'}
               </a>
@@ -84,6 +84,16 @@ export default function SellerHome() {
               {shop && (
                 <a className="button secondary" href="/sell/orders" onClick={link('/sell/orders')}>
                   Orders
+                </a>
+              )}
+              {shop && (
+                <a className="button secondary" href="/sell/earnings" onClick={link('/sell/earnings')}>
+                  Earnings
+                </a>
+              )}
+              {shop && (
+                <a className="button secondary" href="/sell/reviews" onClick={link('/sell/reviews')}>
+                  Reviews
                 </a>
               )}
             </div>

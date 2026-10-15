@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { link } from '../lib/router'
 import { photoUrl } from '../lib/images'
+import { ReviewItem, Stars, type Review } from '../lib/reviews'
 import { basketCount, basketSubtotal, setQty, useBasket } from '../lib/basket'
 import { pounds, type Allergen, type Presence, type Product, type Shop, type ShopSettings } from '../lib/types'
 
@@ -16,6 +17,7 @@ type Loaded = {
   photos: Record<string, string>
   hours: { weekday: number; opens: string; closes: string }[]
   closedToday: boolean
+  reviews: Review[]
 }
 
 const DAY_SHORT = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
@@ -49,12 +51,13 @@ export default function PublicShop({ slug }: { slug: string }) {
       const { data: shop } = await db.from('shops').select('*').eq('slug', slug).maybeSingle()
       if (!shop) return setLoaded(null)
       const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/London' })
-      const [s, p, a, h, c] = await Promise.all([
+      const [s, p, a, h, c, r] = await Promise.all([
         db.from('shop_settings').select('*').eq('shop_id', shop.id).maybeSingle(),
         db.from('products').select('*').eq('shop_id', shop.id).neq('status', 'archived').order('created_at'),
         db.from('allergens').select('code, name'),
         db.from('shop_hours').select('weekday, opens, closes').eq('shop_id', shop.id),
         db.from('shop_closures').select('id').eq('shop_id', shop.id).eq('closed_on', today),
+        db.from('reviews').select('*').eq('shop_id', shop.id).eq('hidden', false).order('created_at', { ascending: false }).limit(30),
       ])
       const products: Product[] = p.data ?? []
       const { data: rows } = products.length
@@ -72,7 +75,7 @@ export default function PublicShop({ slug }: { slug: string }) {
       for (const img of images ?? []) photos[img.product_id] ??= img.path
       setLoaded({
         shop, settings: s.data, products, allergens: a.data ?? [], rows: rows ?? [], photos,
-        hours: h.data ?? [], closedToday: (c.data ?? []).length > 0,
+        hours: h.data ?? [], closedToday: (c.data ?? []).length > 0, reviews: r.data ?? [],
       })
     })()
   }, [slug])
@@ -94,7 +97,8 @@ export default function PublicShop({ slug }: { slug: string }) {
     )
   }
 
-  const { shop, settings, products, allergens, rows, photos, hours, closedToday } = loaded
+  const { shop, settings, products, allergens, rows, photos, hours, closedToday, reviews } = loaded
+  const average = reviews.length ? reviews.reduce((n, r) => n + r.rating, 0) / reviews.length : 0
   const name = (code: string) => allergens.find((a) => a.code === code)?.name ?? code
   const isPreview = shop.status !== 'live'
   const canOrder = !isPreview && shop.accepting_orders
@@ -116,6 +120,9 @@ export default function PublicShop({ slug }: { slug: string }) {
         </p>
         {options.length > 0 && <p className="muted small">{options.join(' or ')}</p>}
         {hours.length > 0 && <p className="muted small">{hoursSummary(hours)}</p>}
+        {reviews.length > 0 && (
+          <p className="small"><a href="#reviews"><Stars value={average} size="small" /> {average.toFixed(1)} ({reviews.length})</a></p>
+        )}
         </div>
       </div>
       {closedToday && <p className="status">Closed today.</p>}
@@ -164,6 +171,12 @@ export default function PublicShop({ slug }: { slug: string }) {
           </article>
         )
       })}
+      {reviews.length > 0 && (
+        <section id="reviews" className="stack">
+          <h2>Reviews</h2>
+          {reviews.map((r) => <ReviewItem key={r.id} review={r} />)}
+        </section>
+      )}
       {!isPreview && !shop.accepting_orders && <p className="status">This shop isn't taking orders right now.</p>}
       <p className="muted small">
         Have an allergy? Check the allergen list for each item and contact the seller before

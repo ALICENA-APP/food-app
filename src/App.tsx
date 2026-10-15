@@ -11,6 +11,7 @@ import Admin from './pages/Admin'
 import Browse from './pages/Browse'
 import Checkout from './pages/Checkout'
 import SellerOrders from './pages/SellerOrders'
+import { SellerEarnings, SellerReviews } from './pages/SellerInsights'
 import { MyOrders, OrderDetail } from './pages/Orders'
 import { basketCount, useBasket } from './lib/basket'
 
@@ -87,6 +88,10 @@ function App() {
       )
     } else if (path === '/sell/shop') {
       page = <ShopSetup />
+    } else if (path === '/sell/earnings') {
+      page = <SellerEarnings />
+    } else if (path === '/sell/reviews') {
+      page = <SellerReviews />
     } else if (path === '/sell/orders') {
       page = <SellerOrders />
     } else if (path === '/sell/products') {

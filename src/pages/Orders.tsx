@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { link } from '../lib/router'
 import { pounds } from '../lib/types'
+import { ReviewForm, ReviewItem, type Review } from '../lib/reviews'
 
 export type OrderStatus =
   | 'awaiting_payment' | 'pending_acceptance' | 'accepted' | 'declined' | 'ready'
@@ -91,9 +92,12 @@ export function OrderDetail({ id }: { id: string }) {
   const [collection, setCollection] = useState<Collection | null>(null)
   const [allergenNames, setAllergenNames] = useState<Record<string, string>>({})
   const [message, setMessage] = useState('')
+  const [review, setReview] = useState<Review | null>(null)
 
   const load = useCallback(async () => {
     const db = supabase!
+    const { data: r } = await db.from('reviews').select('*').eq('order_id', id).maybeSingle()
+    setReview(r)
     const [o, i, a] = await Promise.all([
       db.from('orders').select('*, shops(name, slug)').eq('id', id).maybeSingle(),
       db.from('order_items').select('*').eq('order_id', id),
@@ -155,6 +159,15 @@ export function OrderDetail({ id }: { id: string }) {
         {order.delivery_fee_pence > 0 && <div className="item"><span>Delivery</span><span>{pounds(order.delivery_fee_pence)}</span></div>}
         <div className="item"><strong>Total</strong><strong>{pounds(order.total_pence)}</strong></div>
       </div>
+
+      {order.status === 'completed' && (review ? (
+        <div className="card">
+          <h2>Your review</h2>
+          <ReviewItem review={review} />
+        </div>
+      ) : (
+        <ReviewForm orderId={order.id} onDone={load} />
+      ))}
 
       {collection && (
         <div className="card">
