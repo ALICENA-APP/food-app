@@ -32,6 +32,9 @@ const PATHS = {
   tag: 'M3 12V4h8l10 10-8 8zM7.5 8.5h.01',
   flag: 'M5 21V4M5 4h11l-2 4 2 4H5',
   moon: 'M20 14.5A8 8 0 0 1 9.5 4 8 8 0 1 0 20 14.5z',
+  users: 'M9 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7zM2.5 20c.6-3.4 3.3-5.5 6.5-5.5s5.9 2.1 6.5 5.5M16 4.3a3.5 3.5 0 0 1 0 6.4M18 14.8c1.9.7 3.2 2.5 3.5 5.2',
+  cutlery: 'M7 3v8M4.5 3v5a2.5 2.5 0 0 0 5 0V3M7 11v10M17 21V3c-2.2 1.2-3.5 3.8-3.5 7v3H17',
+  chevron: 'M9 6l6 6-6 6',
 } as const
 
 export type IconName = keyof typeof PATHS

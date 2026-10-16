@@ -36,6 +36,7 @@ const Poster = lazy(() => import('./pages/Poster'))
 const Discounts = lazy(() => import('./pages/Discounts'))
 const Statement = lazy(() => import('./pages/Statements'))
 import { MyRequests } from './lib/help'
+import Intro, { introSeen } from './pages/Intro'
 
 const TABS: { to: string; label: string; icon: IconName }[] = [
   { to: '/', label: 'Home', icon: 'home' },
@@ -64,8 +65,12 @@ function App() {
   // Screens that need an account send people to sign in, then straight back.
   const needsAccount = (el: ReactNode, why: string) => (session ? el : <SignInPrompt why={why} />)
 
+  // First visit, not signed in: the welcome screen instead of the home page.
+  const intro = path === '/welcome' || (path === '/' && ready && !session && !introSeen())
   let page
-  if (!isConfigured) {
+  if (intro) {
+    page = <Intro />
+  } else if (!isConfigured) {
     page = (
       <p className="notice">
         Almost there: add <code>VITE_SUPABASE_URL</code> and <code>VITE_SUPABASE_ANON_KEY</code> to
@@ -138,8 +143,8 @@ function App() {
 
   return (
     <>
-      <main className="app">
-        {!FULL_BLEED.test(path) && (
+      <main className={`app ${intro ? 'app-intro' : ''}`}>
+        {!FULL_BLEED.test(path) && !intro && (
           <header className="topbar">
             <Wordmark />
             <div className="actions">
@@ -159,7 +164,7 @@ function App() {
         )}
         <Suspense fallback={<p className="muted">Loading…</p>}>{page}</Suspense>
       </main>
-      <nav className="bottom-nav" aria-label="Main">
+      {!intro && <nav className="bottom-nav" aria-label="Main">
         <div className="inner">
           {TABS.map((t) => (
             <a key={t.to} href={t.to} onClick={link(t.to)} className={activeTab === t.to ? 'on' : ''} aria-current={activeTab === t.to ? 'page' : undefined}>
@@ -171,7 +176,7 @@ function App() {
             </a>
           ))}
         </div>
-      </nav>
+      </nav>}
     </>
   )
 }
