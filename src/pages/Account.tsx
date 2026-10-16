@@ -4,6 +4,7 @@ import { link, navigate } from '../lib/router'
 import { useSession } from '../lib/session'
 import { Icon } from '../lib/icons'
 import { deletePhoto } from '../lib/images'
+import { downloadCsv, money } from '../lib/csv'
 
 // Download a copy of your data, or delete your account.
 export default function Account() {
@@ -13,29 +14,39 @@ export default function Account() {
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
 
+  // Everything we hold about you, as one spreadsheet with a section for each kind.
   async function download() {
     const db = supabase!
     const uid = session!.user.id
     const [profile, addresses, favourites, orders, reviews, messages] = await Promise.all([
       db.from('profiles').select('display_name, phone, marketing_consent, created_at').eq('id', uid).maybeSingle(),
-      db.from('addresses').select('label, address, postcode, created_at'),
-      db.from('favourites').select('product_id, shop_id, created_at'),
-      db.from('orders').select('code, status, fulfilment, requested_for, customer_name, customer_phone, customer_note, delivery_address, delivery_postcode, subtotal_pence, delivery_fee_pence, total_pence, created_at, shops(name), order_items(name, qty, unit_price_pence)').eq('customer_id', uid),
+      db.from('addresses').select('label, address, postcode, created_at').eq('user_id', uid),
+      db.from('favourites').select('created_at, products(name), shops(name)').eq('user_id', uid),
+      db.from('orders').select('code, created_at, status, fulfilment, requested_for, customer_name, customer_phone, customer_note, delivery_address, delivery_postcode, subtotal_pence, discount_pence, delivery_fee_pence, total_pence, shops(name), order_items(name, qty)').eq('customer_id', uid).order('created_at'),
       db.from('reviews').select('rating, comment, created_at, shops(name)').eq('customer_id', uid),
-      db.from('order_messages').select('order_id, body, created_at').eq('sender_id', uid),
+      db.from('order_messages').select('body, created_at, orders(code)').eq('sender_id', uid),
     ])
-    const data = {
-      exported_at: new Date().toISOString(),
-      account: { email: session!.user.email, created_at: session!.user.created_at },
-      profile: profile.data, addresses: addresses.data, saved: favourites.data,
-      orders: orders.data, reviews: reviews.data, messages_you_sent: messages.data,
-    }
-    const url = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }))
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `biteby-my-data-${new Date().toISOString().slice(0, 10)}.json`
-    a.click()
-    URL.revokeObjectURL(url)
+    type Named = { name: string } | null
+    const date = (s: string | null) => (s ? s.slice(0, 16).replace('T', ' ') : '')
+    const rows: (string | number | null)[][] = [
+      ['BiteBY: your data', new Date().toISOString().slice(0, 10)], [],
+      ['YOUR DETAILS'], ['Email', session!.user.email ?? ''], ['Name', profile.data?.display_name ?? ''], ['Phone', profile.data?.phone ?? ''],
+      ['Marketing emails', profile.data?.marketing_consent ? 'Yes' : 'No'], ['Joined', date(session!.user.created_at)], [],
+      ['ADDRESSES'], ['Label', 'Address', 'Postcode', 'Added'],
+      ...(addresses.data ?? []).map((a) => [a.label, a.address, a.postcode, date(a.created_at)]), [],
+      ['ORDERS'], ['Date', 'Order', 'Cook', 'Items', 'Status', 'How', 'Food (£)', 'Discount (£)', 'Delivery (£)', 'Total (£)', 'Delivery address', 'Note'],
+      ...((orders.data ?? []) as unknown as { code: string; created_at: string; status: string; fulfilment: string; subtotal_pence: number; discount_pence: number; delivery_fee_pence: number; total_pence: number; delivery_address: string | null; delivery_postcode: string | null; customer_note: string | null; shops: Named; order_items: { name: string; qty: number }[] }[])
+        .map((o) => [date(o.created_at), o.code, o.shops?.name ?? '', o.order_items.map((i) => `${i.qty} x ${i.name}`).join('; '), o.status, o.fulfilment,
+          money(o.subtotal_pence), money(o.discount_pence), money(o.delivery_fee_pence), money(o.total_pence),
+          [o.delivery_address, o.delivery_postcode].filter(Boolean).join(', '), o.customer_note]), [],
+      ['REVIEWS'], ['Date', 'Cook', 'Stars', 'Comment'],
+      ...((reviews.data ?? []) as unknown as { rating: number; comment: string | null; created_at: string; shops: Named }[]).map((r) => [date(r.created_at), r.shops?.name ?? '', r.rating, r.comment]), [],
+      ['SAVED'], ['Dish', 'Cook', 'Saved'],
+      ...((favourites.data ?? []) as unknown as { created_at: string; products: Named; shops: Named }[]).map((f) => [f.products?.name ?? '', f.shops?.name ?? '', date(f.created_at)]), [],
+      ['MESSAGES YOU SENT'], ['Date', 'Order', 'Message'],
+      ...((messages.data ?? []) as unknown as { body: string; created_at: string; orders: { code: string } | null }[]).map((m) => [date(m.created_at), m.orders?.code ?? '', m.body]),
+    ]
+    downloadCsv(`biteby-my-data-${new Date().toISOString().slice(0, 10)}.csv`, rows)
   }
 
   async function remove() {
@@ -63,9 +74,14 @@ export default function Account() {
       <a className="back" href="/profile" onClick={link('/profile')}><Icon name="back" size={18} /> Profile</a>
       <h1>Your data</h1>
       <div className="card">
+        <h2>Your orders by month</h2>
+        <p className="muted small">A statement of what you ordered and paid each month. Save it as a PDF or open it in a spreadsheet.</p>
+        <a className="button secondary" href="/account/statement" onClick={link('/account/statement')}>See monthly statements</a>
+      </div>
+      <div className="card">
         <h2>Download your data</h2>
-        <p className="muted small">A file with your profile, addresses, orders, reviews, saved items and messages.</p>
-        <button type="button" className="secondary" onClick={download}>Download my data</button>
+        <p className="muted small">A spreadsheet with your details, addresses, orders, reviews, saved items and messages. Opens in Excel, Numbers or Google Sheets.</p>
+        <button type="button" className="secondary" onClick={download}>Download my data (spreadsheet)</button>
       </div>
       <div className="card">
         <h2>Delete your account</h2>

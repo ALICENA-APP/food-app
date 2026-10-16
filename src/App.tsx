@@ -34,6 +34,7 @@ const SellerReviews = lazy(() => import('./pages/SellerInsights').then((m) => ({
 const Admin = lazy(() => import('./pages/Admin'))
 const Poster = lazy(() => import('./pages/Poster'))
 const Discounts = lazy(() => import('./pages/Discounts'))
+const Statement = lazy(() => import('./pages/Statements'))
 import { MyRequests } from './lib/help'
 
 const TABS: { to: string; label: string; icon: IconName }[] = [
@@ -101,6 +102,8 @@ function App() {
     page = <Profile />
   } else if (path === '/account/password') {
     page = needsAccount(<SetPassword />, 'Sign in to change your password.')
+  } else if (path === '/account/statement') {
+    page = needsAccount(<Statement kind="customer" />, 'Sign in to see your orders.')
   } else if (path === '/account') {
     page = needsAccount(<Account />, 'Sign in to manage your account.')
   } else if (path === '/addresses') {
@@ -118,6 +121,7 @@ function App() {
     else if (path === '/sell/shop') page = <ShopSetup />
     else if (path === '/sell/poster') page = <Poster />
     else if (path === '/sell/discounts') page = <Discounts />
+    else if (path === '/sell/statement') page = <Statement kind="seller" />
     else if (path === '/sell/earnings') page = <SellerEarnings />
     else if (path === '/sell/reviews') page = <SellerReviews />
     else if (path === '/sell/orders') page = <SellerOrders />

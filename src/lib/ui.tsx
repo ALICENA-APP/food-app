@@ -12,13 +12,9 @@ import { recordView } from './views'
 // "Bite" in black, "BY" in yellow, with three small rays.
 export function Wordmark({ size = 28 }: { size?: number }) {
   return (
-    <a className="wordmark" href="/" onClick={link('/')} style={{ fontSize: size }} aria-label="BiteBY home">
-      Bite<span className="by">BY</span>
-      <svg className="rays" viewBox="0 0 22 14" aria-hidden="true">
-        <g stroke="#FFC72C" strokeWidth="2.6" strokeLinecap="round">
-          <path d="M5 12 3 6" /><path d="M11 11V3" /><path d="M17 12l3-5" />
-        </g>
-      </svg>
+    <a className="wordmark" href="/" onClick={link('/')} aria-label="BiteBY home">
+      <img className="logo-light" src="/logo-word.png" alt="BiteBY" style={{ height: Math.round(size * 1.35) }} />
+      <img className="logo-dark" src="/logo-word-dark.png" alt="" aria-hidden="true" style={{ height: Math.round(size * 1.35) }} />
     </a>
   )
 }

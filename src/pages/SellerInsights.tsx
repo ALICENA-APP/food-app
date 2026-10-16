@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { myUserId } from '../lib/session'
 import { link } from '../lib/router'
+import { Icon } from '../lib/icons'
 import { pounds } from '../lib/types'
 import { ReviewItem, Stars, type Review } from '../lib/reviews'
 
@@ -70,6 +71,13 @@ export function SellerEarnings() {
         <div className="item"><span>BiteBY fee (on food only)</span><span>−{pounds(fees)}</span></div>
         <div className="item total"><strong>You earned</strong><strong>{pounds(food - discounts + delivery - fees)}</strong></div>
       </div>
+      <a className="tile report-tile" href="/sell/statement" onClick={link('/sell/statement')}>
+        <span className="ic" style={{ background: 'var(--yellow-soft)' }}><Icon name="orders" /></span>
+        <span style={{ minWidth: 0 }}>
+          <span className="t" style={{ display: 'block' }}>Monthly statements</span>
+          <span className="s">Every order, fee and earning by month, as a PDF or spreadsheet</span>
+        </span>
+      </a>
       <p className="muted small">Payouts go straight to your bank account through Stripe once payments are switched on.</p>
     </div>
   )

@@ -56,7 +56,8 @@ export default async (request: Request, context: Context) => {
   try {
     const preview = isDish ? await dishPreview(base, key, slug, id) : await shopPreview(base, key, slug)
     if (!preview) return response
-    const { title, description, image } = preview
+    const { title, description } = preview
+    const image = preview.image ?? `${new URL(request.url).origin}/og-image.png`
     const tags = [
       `<title>${escape(title)}</title>`,
       `<meta name="description" content="${escape(description)}" />`,
