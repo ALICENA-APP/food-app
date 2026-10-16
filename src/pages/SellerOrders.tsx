@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { tidyOrders } from '../lib/alerts'
-import { link } from '../lib/router'
+import { link, queryParam } from '../lib/router'
+import { OrderChat } from '../lib/chat'
 import { pounds } from '../lib/types'
 import { ORDER_STATUS, when, type Order, type OrderItem, type OrderStatus } from './Orders'
 
@@ -11,6 +12,7 @@ const OPEN: OrderStatus[] = ['pending_acceptance', 'accepted', 'ready', 'out_for
 export default function SellerOrders() {
   const [orders, setOrders] = useState<(Order & { order_items: OrderItem[] })[] | null>(null)
   const [tab, setTab] = useState<'open' | 'past'>('open')
+  const openId = queryParam('open')
 
   const load = useCallback(async () => {
     tidyOrders()
@@ -29,6 +31,16 @@ export default function SellerOrders() {
       .limit(100)
     setOrders(data ?? [])
   }, [])
+
+  // Coming from a message alert: show the tab that order is on, then scroll to it.
+  const jumped = useRef(false)
+  useEffect(() => {
+    const target = orders?.find((o) => o.id === openId)
+    if (!target || jumped.current) return
+    jumped.current = true
+    if (!OPEN.includes(target.status)) setTab('past')
+    setTimeout(() => document.getElementById(`order-${target.id}`)?.scrollIntoView({ block: 'start' }), 50)
+  }, [orders, openId])
 
   useEffect(() => {
     load()
@@ -68,6 +80,7 @@ function SellerOrderCard({ order, onChanged }: { order: Order & { order_items: O
   const [reason, setReason] = useState('')
   const [declining, setDeclining] = useState(false)
   const [message, setMessage] = useState('')
+  const [chat, setChat] = useState(() => queryParam('open') === order.id)
 
   async function move(status: OrderStatus) {
     const { error } = await supabase!.rpc('seller_update_order', { p_order: order.id, p_status: status, p_reason: reason || null })
@@ -78,7 +91,7 @@ function SellerOrderCard({ order, onChanged }: { order: Order & { order_items: O
   const yourShare = order.subtotal_pence - order.platform_fee_pence + order.delivery_fee_pence
 
   return (
-    <article className="card">
+    <article className="card" id={`order-${order.id}`}>
       <div className="item">
         <strong>{order.code} · {order.customer_name}</strong>
         <span className="pill">{ORDER_STATUS[order.status]}</span>
@@ -121,6 +134,10 @@ function SellerOrderCard({ order, onChanged }: { order: Order & { order_items: O
         <button onClick={() => move('completed')}>{order.fulfilment === 'delivery' ? 'Delivered' : 'Collected'}</button>
       )}
       {message && <p className="error">{message}</p>}
+      <button type="button" className="secondary small-btn" onClick={() => setChat(!chat)}>
+        {chat ? 'Hide messages' : `Message ${order.customer_name}`}
+      </button>
+      {chat && <OrderChat orderId={order.id} asSeller otherName={order.customer_name} />}
     </article>
   )
 }

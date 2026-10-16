@@ -3,6 +3,8 @@ import { supabase } from '../lib/supabase'
 import { link, navigate } from '../lib/router'
 import { Icon } from '../lib/icons'
 import { dishQuery, loadRatings, useCategories, type Dish, type Rating } from '../lib/catalogue'
+import { loadOpenStates, type OpenState } from '../lib/hours'
+import { InstallPrompt } from '../lib/install'
 import { BowlArt, DishCard, SellerCard, type ShopCardData } from '../lib/ui'
 
 // The first screen everyone sees, signed in or not.
@@ -12,6 +14,7 @@ export default function Home() {
   const [shops, setShops] = useState<ShopCardData[]>([])
   const [ratings, setRatings] = useState<Record<string, Rating>>({})
   const [query, setQuery] = useState('')
+  const [open, setOpen] = useState<Record<string, OpenState>>({})
 
   useEffect(() => {
     ;(async () => {
@@ -22,7 +25,10 @@ export default function Home() {
       const list = (d.data ?? []) as unknown as Dish[]
       setDishes(list)
       setShops(s.data ?? [])
-      setRatings(await loadRatings((s.data ?? []).map((x) => x.id)))
+      const ids = (s.data ?? []).map((x) => x.id)
+      const [r, o] = await Promise.all([loadRatings(ids), loadOpenStates(ids)])
+      setRatings(r)
+      setOpen(o)
     })()
   }, [])
 
@@ -53,6 +59,8 @@ export default function Home() {
           <a className="chip" href="/explore?diet=vegan" onClick={link('/explore?diet=vegan')}>Vegan</a>
         </div>
       </div>
+
+      <InstallPrompt />
 
       <section className="hero">
         <span className="kicker">Homemade · Local · Fresh</span>
@@ -91,7 +99,7 @@ export default function Home() {
             <a href="/explore?view=sellers" onClick={link('/explore?view=sellers')}>See all</a>
           </div>
           <div className="hscroll">
-            {topShops.map((s) => <SellerCard key={s.id} shop={s} rating={ratings[s.id]} />)}
+            {topShops.map((s) => <SellerCard key={s.id} shop={s} rating={ratings[s.id]} open={open[s.id]} />)}
           </div>
         </section>
       )}

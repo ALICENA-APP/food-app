@@ -14,6 +14,7 @@ import Checkout from './pages/Checkout'
 import { MyOrders, OrderDetail } from './pages/Orders'
 import Profile, { Help } from './pages/Profile'
 import Favourites from './pages/Favourites'
+import Addresses from './pages/Addresses'
 import SignIn, { SetPassword } from './pages/SignIn'
 import Alerts from './pages/Alerts'
 import SellerHome from './pages/SellerHome'
@@ -78,6 +79,8 @@ function App() {
     page = <Profile />
   } else if (path === '/account/password') {
     page = needsAccount(<SetPassword />, 'Sign in to change your password.')
+  } else if (path === '/addresses') {
+    page = needsAccount(<Addresses />, 'Sign in to manage your saved addresses.')
   } else if (path === '/favourites') {
     page = needsAccount(<Favourites />, 'Sign in to see the dishes and cooks you have saved.')
   } else if (path === '/alerts') {
@@ -101,7 +104,7 @@ function App() {
 
   const name = session?.user.user_metadata?.name || session?.user.email || ''
   const activeTab = path === '/' ? '/' : TABS.slice(1).find((t) => path.startsWith(t.to))?.to
-    ?? (path.startsWith('/sell') || path.startsWith('/favourites') || path.startsWith('/account') || path === '/help' || path === '/alerts' ? '/profile' : null)
+    ?? (path.startsWith('/sell') || path.startsWith('/favourites') || path === '/addresses' || path.startsWith('/account') || path === '/help' || path === '/alerts' ? '/profile' : null)
 
   return (
     <>

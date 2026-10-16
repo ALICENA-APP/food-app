@@ -99,6 +99,7 @@ export default function Profile() {
         <Tile to="/favourites" icon="heart" title="Saved dishes" sub="Dishes you've hearted" tone="#fde8e8" />
         <Tile to="/favourites?tab=sellers" icon="store" title="Favourite cooks" sub="Shops you follow" />
         <Tile to="/orders" icon="orders" title="Orders" sub="Track and reorder" tone="var(--green-soft)" />
+        <Tile to="/addresses" icon="pin" title="Addresses" sub="For delivery" tone="var(--yellow-soft)" />
         <Tile to="/alerts" icon="bell" title="Notifications" sub="Order updates" tone="var(--line)" />
         <Tile to="/account/password" icon="lock" title="Password" sub="Set or change it" tone="var(--line)" />
         <Tile to="/help" icon="help" title="Help and support" sub="How BiteBY works" tone="var(--line)" />

@@ -5,6 +5,7 @@ import { Icon, VerifiedTick } from '../lib/icons'
 import { ReviewItem } from '../lib/reviews'
 import { basketCount, basketSubtotal, qtyIn, setQty, useBasket } from '../lib/basket'
 import { averageRating, hoursSummary, loadShop, type ShopData } from '../lib/shopData'
+import { openState } from '../lib/hours'
 import { Avatar, BackButton, FoodPhoto, HeartButton, share } from '../lib/ui'
 import { dietaryName, pounds, type Product } from '../lib/types'
 
@@ -47,6 +48,7 @@ export default function PublicShop({ slug }: { slug: string }) {
   const shown = products.filter((p) => !category || p.category_id === category)
   const options = [settings?.offers_delivery && 'Delivery', settings?.offers_collection && 'Collection'].filter(Boolean) as string[]
   const inBasket = basket?.shopId === shop.id ? basketCount(basket) : 0
+  const state = openState(hours, closedToday)
 
   return (
     <div className="stack">
@@ -70,6 +72,7 @@ export default function PublicShop({ slug }: { slug: string }) {
           {reviews.length > 0 && <><span className="star">★</span> <strong>{average.toFixed(1)}</strong> ({reviews.length} {reviews.length === 1 ? 'review' : 'reviews'}) · </>}
           {shop.area_label && <><Icon name="pin" size={15} /> {shop.area_label}</>}
         </p>
+        {state && <span className={`pill ${state.open ? 'green' : ''}`}>{state.label}</span>}
         {shop.story && <p className="story clamp3">{shop.story}</p>}
         <div className="tags">
           {shop.cuisines.map((c) => <span key={c} className="tag">{c}</span>)}
@@ -78,7 +81,7 @@ export default function PublicShop({ slug }: { slug: string }) {
       </div>
 
       {isPreview && <p className="status">Preview: only you can see this until your shop goes live.</p>}
-      {closedToday && <p className="status">Closed today.</p>}
+      {state && !state.open && canOrder && <p className="status small">You can still order ahead: choose a time at checkout.</p>}
       {!isPreview && !shop.accepting_orders && <p className="status">This shop isn't taking orders right now.</p>}
 
       <div className="tabs" role="tablist">

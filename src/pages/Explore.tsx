@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase'
 import { navigate, queryParam } from '../lib/router'
 import { Icon } from '../lib/icons'
 import { dishQuery, loadRatings, loadShopOptions, useCategories, type Dish, type Rating } from '../lib/catalogue'
+import { loadOpenStates, type OpenState } from '../lib/hours'
 import { DishCard, SellerRow, type ShopCardData } from '../lib/ui'
 
 type Filter = 'delivery' | 'collection' | 'rated' | 'under10' | 'vegetarian' | 'vegan' | 'halal' | 'open'
@@ -14,7 +15,7 @@ const FILTERS: { key: Filter; label: string }[] = [
   { key: 'vegetarian', label: 'Vegetarian' },
   { key: 'vegan', label: 'Vegan' },
   { key: 'halal', label: 'Halal' },
-  { key: 'open', label: 'Taking orders' },
+  { key: 'open', label: 'Open now' },
 ]
 
 type ShopRow = ShopCardData & { accepting_orders: boolean }
@@ -29,6 +30,7 @@ export default function Explore() {
   const [dishes, setDishes] = useState<Dish[] | null>(null)
   const [shops, setShops] = useState<ShopRow[]>([])
   const [ratings, setRatings] = useState<Record<string, Rating>>({})
+  const [open, setOpen] = useState<Record<string, OpenState>>({})
   const [options, setOptions] = useState<Record<string, { collection: boolean; delivery: boolean }>>({})
 
   useEffect(() => {
@@ -40,9 +42,10 @@ export default function Explore() {
       setDishes((d.data ?? []) as unknown as Dish[])
       setShops(s.data ?? [])
       const ids = (s.data ?? []).map((x) => x.id)
-      const [r, o] = await Promise.all([loadRatings(ids), loadShopOptions(ids)])
+      const [r, o, h] = await Promise.all([loadRatings(ids), loadShopOptions(ids), loadOpenStates(ids)])
       setRatings(r)
       setOptions(o)
+      setOpen(h)
     })()
   }, [])
 
@@ -65,7 +68,7 @@ export default function Explore() {
     (!has('delivery') || options[id]?.delivery) &&
     (!has('collection') || options[id]?.collection !== false) &&
     (!has('rated') || (ratings[id]?.average ?? 0) >= 4.5) &&
-    (!has('open') || accepting)
+    (!has('open') || (accepting && open[id]?.open !== false))
 
   const shownDishes = (dishes ?? []).filter((d) =>
     (!q || [d.name, d.description ?? '', d.shops.name].some((t) => t.toLowerCase().includes(q))) &&
@@ -122,7 +125,7 @@ export default function Explore() {
       ) : <NothingFound empty={dishes.length === 0} />)}
       {dishes && view === 'sellers' && (shownShops.length ? (
         <div className="stack" style={{ gap: 10 }}>
-          {shownShops.map((s) => <SellerRow key={s.id} shop={s} rating={ratings[s.id]} />)}
+          {shownShops.map((s) => <SellerRow key={s.id} shop={s} rating={ratings[s.id]} open={open[s.id]} />)}
         </div>
       ) : <NothingFound empty={shops.length === 0} />)}
     </div>

@@ -5,6 +5,7 @@ import { askToSignIn, useSession } from '../lib/session'
 import { Icon } from '../lib/icons'
 import { basketCount, basketSubtotal, setQty, useBasket, writeBasket } from '../lib/basket'
 import { FoodPhoto } from '../lib/ui'
+import { loadAddresses, saveAddress, type SavedAddress } from './Addresses'
 import { pounds, type ShopSettings } from '../lib/types'
 
 type Zone = { name: string; postcode_districts: string[]; fee_pence: number; min_order_pence: number }
@@ -31,6 +32,8 @@ export default function Checkout() {
   const [draft, setDraft] = useState<Draft>(readDraft)
   const [message, setMessage] = useState('')
   const [placing, setPlacing] = useState(false)
+  const [saved, setSaved] = useState<SavedAddress[]>([])
+  const [keepAddress, setKeepAddress] = useState(true)
   const shopId = basket?.shopId
   const userId = session?.user.id
 
@@ -58,6 +61,10 @@ export default function Checkout() {
   // Fill in the name and phone from their profile the first time.
   useEffect(() => {
     if (!userId) return
+    loadAddresses().then((list) => {
+      setSaved(list)
+      if (list.length) setDraft((d) => (d.address ? d : { ...d, address: list[0].address, postcode: list[0].postcode }))
+    })
     supabase!.from('profiles').select('display_name, phone').eq('id', userId).maybeSingle().then(({ data }) => {
       if (data) setDraft((d) => ({ ...d, name: d.name || data.display_name || '', phone: d.phone || data.phone || '' }))
     })
@@ -86,6 +93,8 @@ export default function Checkout() {
   const fee = zone?.fee_pence ?? 0
   const minOrder = Math.max(settings?.min_order_pence ?? 0, zone?.min_order_pence ?? 0)
   const shop = { id: basket.shopId, slug: basket.shopSlug, name: basket.shopName }
+  const sameAddress = (a: SavedAddress) => a.address.trim() === address.trim() && a.postcode.replace(/\s/g, '').toUpperCase() === postcode.replace(/\s/g, '').toUpperCase()
+  const isNewAddress = address.trim().length > 2 && !saved.some(sameAddress)
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault()
@@ -105,6 +114,9 @@ export default function Checkout() {
     })
     setPlacing(false)
     if (error) return setMessage(error.message)
+    if (fulfilment === 'delivery' && keepAddress && isNewAddress && saved.length < 5) {
+      await saveAddress({ label: null, address: address.trim(), postcode: postcode.trim().toUpperCase() })
+    }
     writeBasket(null)
     setDraft({ ...draft, note: '', when: '' })
     navigate(`/orders/${data}`)
@@ -165,6 +177,15 @@ export default function Checkout() {
       <div className="card">
         {fulfilment === 'delivery' && (
           <>
+            {saved.length > 0 && (
+              <div className="chips">
+                {saved.map((a) => (
+                  <button key={a.id} type="button" className={`chip ${sameAddress(a) ? 'on' : ''}`} onClick={() => update({ address: a.address, postcode: a.postcode })}>
+                    {a.label || a.postcode}
+                  </button>
+                ))}
+              </div>
+            )}
             <label>
               Delivery address
               <textarea required rows={2} maxLength={300} value={address} onChange={(e) => update({ address: e.target.value })} autoComplete="street-address" />
@@ -174,6 +195,9 @@ export default function Checkout() {
               <input required maxLength={10} value={postcode} onChange={(e) => update({ postcode: e.target.value })} autoComplete="postal-code" />
             </label>
             {district && !zone && <p className="error">This cook doesn't deliver to {district}.</p>}
+            {session && isNewAddress && saved.length < 5 && (
+              <label className="check"><input type="checkbox" checked={keepAddress} onChange={(e) => setKeepAddress(e.target.checked)} /> Save this address for next time</label>
+            )}
           </>
         )}
         <label>

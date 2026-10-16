@@ -5,6 +5,7 @@ import { link, navigate } from '../lib/router'
 import { Icon } from '../lib/icons'
 import { readBasket, writeBasket } from '../lib/basket'
 import { Avatar } from '../lib/ui'
+import { OrderChat } from '../lib/chat'
 import { pounds } from '../lib/types'
 import { ReviewForm, ReviewItem, type Review } from '../lib/reviews'
 
@@ -267,6 +268,13 @@ export function OrderDetail({ id }: { id: string }) {
           <p className="story">{[collection.address_line1, collection.address_line2, collection.city, collection.postcode].filter(Boolean).join('\n')}</p>
           {collection.collection_instructions && <p className="muted">{collection.collection_instructions}</p>}
           {collection.contact_phone && <p>Phone: <a href={`tel:${collection.contact_phone}`}>{collection.contact_phone}</a></p>}
+        </div>
+      )}
+
+      {order.status !== 'awaiting_payment' && (
+        <div className="card" id="messages">
+          <h2>Messages</h2>
+          <OrderChat orderId={order.id} asSeller={false} otherName={order.shops?.name ?? 'the cook'} />
         </div>
       )}
     </div>

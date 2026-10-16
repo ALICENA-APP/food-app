@@ -6,6 +6,7 @@ import { photoUrl } from './images'
 import { Icon } from './icons'
 import { firstPhoto, type Dish, type Rating } from './catalogue'
 import { pounds } from './types'
+import type { OpenState } from './hours'
 
 // "Bite" in black, "BY" in yellow, with three small rays.
 export function Wordmark({ size = 28 }: { size?: number }) {
@@ -151,7 +152,12 @@ export function DishCard({ dish, rating }: { dish: Dish; rating?: Rating }) {
 
 export type ShopCardData = { id: string; name: string; slug: string; logo_path: string | null; area_label: string | null; cuisines: string[] }
 
-export function SellerCard({ shop, rating }: { shop: ShopCardData; rating?: Rating }) {
+function OpenLabel({ state }: { state?: OpenState }) {
+  if (!state) return null
+  return <span className={`open-label ${state.open ? 'on' : ''}`}>{state.open ? 'Open now' : state.label}</span>
+}
+
+export function SellerCard({ shop, rating, open }: { shop: ShopCardData; rating?: Rating; open?: OpenState }) {
   const to = `/s/${shop.slug}`
   return (
     <a className="seller-card" href={to} onClick={link(to)}>
@@ -160,12 +166,13 @@ export function SellerCard({ shop, rating }: { shop: ShopCardData; rating?: Rati
       <strong>{shop.name}</strong>
       <RatingBadge rating={rating} />
       {shop.area_label && <span className="muted tiny">{shop.area_label}</span>}
+      <OpenLabel state={open} />
       {shop.cuisines.length > 0 && <span className="tags">{shop.cuisines.slice(0, 2).map((c) => <span key={c} className="tag">{c}</span>)}</span>}
     </a>
   )
 }
 
-export function SellerRow({ shop, rating }: { shop: ShopCardData; rating?: Rating }) {
+export function SellerRow({ shop, rating, open }: { shop: ShopCardData; rating?: Rating; open?: OpenState }) {
   const to = `/s/${shop.slug}`
   return (
     <a className="seller-row card" href={to} onClick={link(to)} style={{ flexDirection: 'row' }}>
@@ -173,7 +180,7 @@ export function SellerRow({ shop, rating }: { shop: ShopCardData; rating?: Ratin
       <span className="stack" style={{ gap: 3, flex: 1, minWidth: 0 }}>
         <strong>{shop.name}</strong>
         <span className="muted tiny">{[shop.area_label, ...shop.cuisines].filter(Boolean).join(' · ')}</span>
-        <RatingBadge rating={rating} />
+        <span className="row wrap" style={{ gap: 8, alignItems: 'center' }}><RatingBadge rating={rating} /><OpenLabel state={open} /></span>
       </span>
       <HeartButton shopId={shop.id} className="heart inline" />
     </a>
