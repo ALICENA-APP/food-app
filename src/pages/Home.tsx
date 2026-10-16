@@ -8,11 +8,15 @@ import { InstallPrompt } from '../lib/install'
 import { PostcodePicker } from '../lib/PostcodePicker'
 import { CategoryIcon } from '../lib/categoryIcons'
 import { loadDeliveryTo, loadNear, postcodeDistrict, usePostcode, type Near } from '../lib/postcode'
-import { BowlArt, DishCard, SellerCard, type ShopCardData } from '../lib/ui'
+import { BowlArt, DishCard, FoodPhoto, SellerCard, type ShopCardData } from '../lib/ui'
+import { readRecent } from '../lib/views'
+import { pounds } from '../lib/types'
+import { useCommission } from '../lib/platform'
 
 // The first screen everyone sees, signed in or not.
 export default function Home() {
   const categories = useCategories()
+  const commission = useCommission()
   const [dishes, setDishes] = useState<Dish[] | null>(null)
   const [shops, setShops] = useState<ShopCardData[]>([])
   const [ratings, setRatings] = useState<Record<string, Rating>>({})
@@ -22,6 +26,7 @@ export default function Home() {
   const [near, setNear] = useState<Record<string, Near>>({})
   const [delivers, setDelivers] = useState<Record<string, number>>({})
   const [featured, setFeatured] = useState<string[]>([])
+  const [recent] = useState(readRecent)
 
   useEffect(() => {
     ;(async () => {
@@ -140,6 +145,23 @@ export default function Home() {
         </section>
       )}
 
+      {recent.length > 0 && (
+        <section className="stack">
+          <div className="section-head"><h2>Recently viewed</h2></div>
+          <div className="hscroll">
+            {recent.map((d) => {
+              const to = `/s/${d.slug}/i/${d.id}`
+              return (
+                <a key={d.id} className="dish-card small" href={to} onClick={link(to)}>
+                  <span className="ph"><FoodPhoto path={d.photo} alt={d.name} /></span>
+                  <span className="body"><span className="name">{d.name}</span><span className="by">{d.shopName}</span><span className="price">{pounds(d.pricePence)}</span></span>
+                </a>
+              )
+            })}
+          </div>
+        </section>
+      )}
+
       {sweet.length > 0 && (
         <section className="stack">
           <div className="section-head">
@@ -154,7 +176,7 @@ export default function Home() {
 
       <section className="promo">
         <h2>Cook at home? Sell on BiteBY</h2>
-        <p>Open your own food shop with a link you can share. No monthly fee: we take 10% of the food price only when you sell.</p>
+        <p>Open your own food shop with a link you can share. No monthly fee: we take {commission} of the food price only when you sell.</p>
         <a className="button dark" href="/sell" onClick={link('/sell')}>Become a seller</a>
         <BowlArt />
       </section>

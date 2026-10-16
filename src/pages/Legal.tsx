@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import { link } from '../lib/router'
+import { useCommission } from '../lib/platform'
 
 // Plain-English policy pages. Drafts until they have been reviewed before launch.
 const OPERATOR = '[BiteBY operator name and address, to be added before launch]'
@@ -70,9 +71,10 @@ export function AllergenInfo() {
 }
 
 export function SellerTerms() {
+  const commission = useCommission()
   return (
     <Page title="Seller terms" updated="16 October 2026">
-      <section><h2>Fees</h2><p>No monthly fee. BiteBY keeps 10% of the food price of each completed order. Delivery fees you charge are all yours. Payments are made to you through Stripe once online payments are switched on.</p></section>
+      <section><h2>Fees</h2><p>No monthly fee. BiteBY keeps {commission} of the food price of each completed order. Delivery fees you charge are all yours. If we change our fee, we’ll tell you at least 30 days before it applies. Payments are made to you through Stripe once online payments are switched on.</p></section>
       <section><h2>Before you sell</h2><p>You must be registered as a food business with your local council (free, at least 28 days before you start), follow food hygiene law, and be approved by the BiteBY team. You're responsible for any tax on your earnings.</p></section>
       <section><h2>Your menu</h2><p>Describe dishes honestly, use your own photos, and list all 14 allergens accurately for every dish. Update them whenever a recipe or ingredient changes. Mark dishes sold out when you can't make them.</p></section>
       <section><h2>Orders</h2><p>Customers pay up front. Accept or decline each order in time. Once you accept, make the food as described and hand it over at the agreed time. If you decline or don't respond, the customer is refunded in full.</p></section>

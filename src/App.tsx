@@ -16,17 +16,22 @@ import { MyOrders, OrderDetail } from './pages/Orders'
 import Profile, { Help } from './pages/Profile'
 import Favourites from './pages/Favourites'
 import Addresses from './pages/Addresses'
-import Account from './pages/Account'
-import { AllergenInfo, Privacy, SellerTerms, Terms } from './pages/Legal'
+const Account = lazy(() => import('./pages/Account'))
+const Legal = () => import('./pages/Legal')
+const AllergenInfo = lazy(() => Legal().then((m) => ({ default: m.AllergenInfo })))
+const Privacy = lazy(() => Legal().then((m) => ({ default: m.Privacy })))
+const SellerTerms = lazy(() => Legal().then((m) => ({ default: m.SellerTerms })))
+const Terms = lazy(() => Legal().then((m) => ({ default: m.Terms })))
 import SignIn, { SetPassword } from './pages/SignIn'
 import Alerts from './pages/Alerts'
-import SellerHome from './pages/SellerHome'
-import ShopSetup from './pages/ShopSetup'
-import Products from './pages/Products'
-import ProductEditor from './pages/ProductEditor'
-import SellerOrders from './pages/SellerOrders'
-import { SellerEarnings, SellerReviews } from './pages/SellerInsights'
-import Admin from './pages/Admin'
+const SellerHome = lazy(() => import('./pages/SellerHome'))
+const ShopSetup = lazy(() => import('./pages/ShopSetup'))
+const Products = lazy(() => import('./pages/Products'))
+const ProductEditor = lazy(() => import('./pages/ProductEditor'))
+const SellerOrders = lazy(() => import('./pages/SellerOrders'))
+const SellerEarnings = lazy(() => import('./pages/SellerInsights').then((m) => ({ default: m.SellerEarnings })))
+const SellerReviews = lazy(() => import('./pages/SellerInsights').then((m) => ({ default: m.SellerReviews })))
+const Admin = lazy(() => import('./pages/Admin'))
 const Poster = lazy(() => import('./pages/Poster'))
 import { MyRequests } from './lib/help'
 
@@ -110,7 +115,7 @@ function App() {
   } else if (path.startsWith('/sell')) {
     if (!session) page = <SignInPrompt why="Sign in or create an account to open your food shop." />
     else if (path === '/sell/shop') page = <ShopSetup />
-    else if (path === '/sell/poster') page = <Suspense fallback={<p className="muted">Loading…</p>}><Poster /></Suspense>
+    else if (path === '/sell/poster') page = <Poster />
     else if (path === '/sell/earnings') page = <SellerEarnings />
     else if (path === '/sell/reviews') page = <SellerReviews />
     else if (path === '/sell/orders') page = <SellerOrders />
@@ -146,7 +151,7 @@ function App() {
             </div>
           </header>
         )}
-        {page}
+        <Suspense fallback={<p className="muted">Loading…</p>}>{page}</Suspense>
       </main>
       <nav className="bottom-nav" aria-label="Main">
         <div className="inner">

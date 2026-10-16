@@ -7,6 +7,7 @@ import { Icon } from './icons'
 import { firstPhoto, type Dish, type Rating } from './catalogue'
 import { pounds } from './types'
 import type { OpenState } from './hours'
+import { recordView } from './views'
 
 // "Bite" in black, "BY" in yellow, with three small rays.
 export function Wordmark({ size = 28 }: { size?: number }) {
@@ -170,7 +171,7 @@ function OpenLabel({ state }: { state?: OpenState }) {
 export function SellerCard({ shop, rating, open, miles, sponsored }: { shop: ShopCardData; rating?: Rating; open?: OpenState; miles?: number; sponsored?: boolean }) {
   const to = `/s/${shop.slug}`
   return (
-    <a className="seller-card" href={to} onClick={link(to)}>
+    <a className="seller-card" href={to} onClick={(e) => { if (sponsored) recordView(shop.id, 'featured'); link(to)(e) }}>
       {(sponsored || shop.is_demo) && <span className="card-flags">{sponsored && <SponsoredTag />}{shop.is_demo && <DemoTag />}</span>}
       <HeartButton shopId={shop.id} />
       <Avatar name={shop.name} path={shop.logo_path} />
@@ -186,7 +187,7 @@ export function SellerCard({ shop, rating, open, miles, sponsored }: { shop: Sho
 export function SellerRow({ shop, rating, open, miles, sponsored }: { shop: ShopCardData; rating?: Rating; open?: OpenState; miles?: number; sponsored?: boolean }) {
   const to = `/s/${shop.slug}`
   return (
-    <a className="seller-row card" href={to} onClick={link(to)} style={{ flexDirection: 'row' }}>
+    <a className="seller-row card" href={to} onClick={(e) => { if (sponsored) recordView(shop.id, 'featured'); link(to)(e) }} style={{ flexDirection: 'row' }}>
       <Avatar name={shop.name} path={shop.logo_path} />
       <span className="stack" style={{ gap: 3, flex: 1, minWidth: 0 }}>
         <strong>{shop.name} {sponsored && <SponsoredTag />} {shop.is_demo && <DemoTag />}</strong>

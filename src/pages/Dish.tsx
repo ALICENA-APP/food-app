@@ -3,6 +3,7 @@ import { goBack, link, navigate } from '../lib/router'
 import { photoUrl } from '../lib/images'
 import { Icon, VerifiedTick } from '../lib/icons'
 import { lineQty, qtyIn, setQty, useBasket } from '../lib/basket'
+import { recordView, rememberDish } from '../lib/views'
 import { allergenLists, averageRating, loadShop, type ShopData } from '../lib/shopData'
 import { Avatar, BackButton, FoodPhoto, HeartButton, share } from '../lib/ui'
 import { dietaryName, noticeLabel, pounds } from '../lib/types'
@@ -29,7 +30,11 @@ export default function Dish({ slug, productId }: { slug: string; productId: str
   const product = data?.products.find((p) => p.id === productId)
 
   useEffect(() => {
-    if (product && data) document.title = `${product.name} · ${data.shop.name} · BiteBY`
+    if (product && data) {
+      document.title = `${product.name} · ${data.shop.name} · BiteBY`
+      recordView(data.shop.id, 'dish', product.id)
+      rememberDish({ id: product.id, slug: data.shop.slug, name: product.name, shopName: data.shop.name, pricePence: product.price_pence, photo: data.images[product.id]?.[0] ?? null })
+    }
     return () => {
       document.title = 'BiteBY · Real food. Real people.'
     }

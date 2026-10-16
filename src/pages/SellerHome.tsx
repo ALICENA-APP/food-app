@@ -5,6 +5,7 @@ import { pounds, TERMS_VERSION, type SellerAccount, type Shop, type Verification
 import { Icon, type IconName } from '../lib/icons'
 import { Avatar, share } from '../lib/ui'
 import { loadRatings, type Rating } from '../lib/catalogue'
+import { useCommission } from '../lib/platform'
 
 const STATUS_TEXT: Record<SellerAccount['status'], string> = {
   draft: 'Not sent yet',
@@ -172,6 +173,8 @@ function Dashboard({ shop, account, onChanged }: { shop: Shop; account: SellerAc
         <a href="/sell/reviews" onClick={link('/sell/reviews')}><strong>{stats?.rating ? stats.rating.average.toFixed(1) : '–'}</strong><span className="muted tiny">{stats?.rating ? `${stats.rating.reviews} ${stats.rating.reviews === 1 ? 'review' : 'reviews'}` : 'No reviews yet'}</span></a>
       </div>
 
+      <ViewsCard shopId={shop.id} />
+
       <div className="menu-tiles">
         <SellerTile to="/sell/orders" icon="orders" title="Orders" sub="Accept and update" tone="var(--green-soft)" />
         <SellerTile to="/sell/products" icon="chef" title="Menu" sub="Dishes, photos, sold out" />
@@ -182,6 +185,44 @@ function Dashboard({ shop, account, onChanged }: { shop: Shop; account: SellerAc
       </div>
       <GetFeatured shopLive={shop.status === 'live'} />
     </>
+  )
+}
+
+type DayViews = { day: string; shop_views: number; dish_views: number; featured_clicks: number }
+
+// How many people looked at the shop this week, by day.
+function ViewsCard({ shopId }: { shopId: string }) {
+  const [days, setDays] = useState<DayViews[] | null>(null)
+  useEffect(() => {
+    const from = new Date(Date.now() - 6 * 864e5).toISOString().slice(0, 10)
+    supabase!.from('shop_daily_views').select('day, shop_views, dish_views, featured_clicks').eq('shop_id', shopId).gte('day', from).order('day')
+      .then(({ data }) => setDays(data ?? []))
+  }, [shopId])
+  if (!days) return null
+  const sum = (k: keyof Omit<DayViews, 'day'>) => days.reduce((n, d) => n + d[k], 0)
+  const max = Math.max(1, ...days.map((d) => d.shop_views + d.dish_views))
+  const week = [...Array(7)].map((_, i) => {
+    const day = new Date(Date.now() - (6 - i) * 864e5).toISOString().slice(0, 10)
+    const row = days.find((d) => d.day === day)
+    return { day, total: row ? row.shop_views + row.dish_views : 0 }
+  })
+  return (
+    <div className="card stack" style={{ gap: 8 }}>
+      <div className="item"><h2>Last 7 days</h2><span className="muted tiny">Not counting your own visits</span></div>
+      <div className="views-row">
+        <span><strong>{sum('shop_views')}</strong><span className="muted tiny">Shop visits</span></span>
+        <span><strong>{sum('dish_views')}</strong><span className="muted tiny">Dish views</span></span>
+        <span><strong>{sum('featured_clicks')}</strong><span className="muted tiny">From Featured</span></span>
+      </div>
+      <div className="mini-bars" role="img" aria-label={`Views per day: ${week.map((w) => w.total).join(', ')}`}>
+        {week.map((w) => (
+          <span key={w.day} title={`${w.day}: ${w.total}`}>
+            <i style={{ height: `${Math.max(4, (w.total / max) * 100)}%` }} />
+            <small>{new Date(w.day + 'T12:00').toLocaleDateString('en-GB', { weekday: 'narrow' })}</small>
+          </span>
+        ))}
+      </div>
+    </div>
   )
 }
 
@@ -377,6 +418,7 @@ function AllergenDeclaration({ accountId, done, editable, onSaved }: { accountId
 function Terms({ account, editable, onSaved }: { account: SellerAccount; editable: boolean; onSaved: () => void }) {
   const [agreed, setAgreed] = useState(Boolean(account.terms_accepted_at))
   const [message, setMessage] = useState('')
+  const commission = useCommission()
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault()
@@ -393,7 +435,7 @@ function Terms({ account, editable, onSaved }: { account: SellerAccount; editabl
     <form className="card" onSubmit={onSubmit}>
       <h2>4. Seller terms {done && <span className="tick">✓</span>}</h2>
       <ul className="muted small">
-        <li>No monthly fee. BiteBY keeps 10% of the food price of each order. Delivery fees are all yours.</li>
+        <li>No monthly fee. BiteBY keeps {commission} of the food price of each order. Delivery fees are all yours.</li>
         <li>Customers pay up front. You accept or decline each order.</li>
         <li>Your home address is never shown publicly.</li>
         <li>You are responsible for food safety and accurate allergen information.</li>

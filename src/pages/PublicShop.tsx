@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { goBack, link, navigate } from '../lib/router'
+import { recordView } from '../lib/views'
 import { photoUrl } from '../lib/images'
 import { Icon, VerifiedTick } from '../lib/icons'
 import { ReviewItem } from '../lib/reviews'
@@ -22,7 +23,10 @@ export default function PublicShop({ slug }: { slug: string }) {
   }, [slug])
 
   useEffect(() => {
-    if (data) document.title = `${data.shop.name} · BiteBY`
+    if (data) {
+      document.title = `${data.shop.name} · BiteBY`
+      recordView(data.shop.id, 'shop')
+    }
     return () => {
       document.title = 'BiteBY · Real food. Real people.'
     }

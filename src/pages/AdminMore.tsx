@@ -4,6 +4,7 @@ import { link } from '../lib/router'
 import { pounds } from '../lib/types'
 import { ReviewItem, type Review } from '../lib/reviews'
 import { TOPIC_LABEL, type Topic } from '../lib/help'
+import { loadPlatform, percent } from '../lib/platform'
 import { ORDER_STATUS, when, type Order, type OrderStatus } from './Orders'
 
 const FILTERS: { key: string; label: string; statuses: OrderStatus[] | null }[] = [
@@ -420,6 +421,66 @@ export function AdminSafety() {
           {f.excerpt && <p className="story small">{f.excerpt}</p>}
         </article>
       ))}
+    </div>
+  )
+}
+
+// Platform settings: commission and featured spots. Changes apply to new orders and requests.
+export function AdminSettings() {
+  const [commission, setCommission] = useState('')
+  const [price, setPrice] = useState('')
+  const [slots, setSlots] = useState('')
+  const [saved, setSaved] = useState<string | null>(null)
+  const [message, setMessage] = useState('')
+  const [sure, setSure] = useState(false)
+
+  useEffect(() => {
+    loadPlatform(true).then((s) => {
+      setCommission(String(s.commission_bps / 100))
+      setPrice((s.promo_week_pence / 100).toFixed(2))
+      setSlots(String(s.promo_slots))
+      setSaved(percent(s.commission_bps))
+    })
+  }, [])
+
+  const bps = Math.round(parseFloat(commission || '0') * 100)
+  const changed = saved !== null && percent(bps) !== saved
+
+  async function save() {
+    setMessage('')
+    if (changed && !sure) return setSure(true)
+    const { error } = await supabase!.rpc('admin_update_settings', {
+      p_commission_bps: bps,
+      p_promo_week_pence: Math.round(parseFloat(price || '0') * 100),
+      p_promo_slots: parseInt(slots || '0', 10),
+    })
+    setSure(false)
+    if (error) return setMessage(error.message)
+    await loadPlatform(true)
+    setSaved(percent(bps))
+    setMessage('Saved. New orders and requests use these settings.')
+  }
+
+  if (saved === null) return <p className="muted">Loading…</p>
+  return (
+    <div className="card stack">
+      <h2>Settings</h2>
+      <label>
+        BiteBY commission on food (%)
+        <input type="number" min="0" max="30" step="0.5" inputMode="decimal" value={commission} onChange={(e) => { setCommission(e.target.value); setSure(false) }} />
+      </label>
+      <p className="muted small">Taken from the food price only, never from delivery fees. Orders already placed keep the rate they were placed at. The help text and seller terms update automatically.</p>
+      <label>
+        Featured spot price per week (£)
+        <input type="number" min="0" max="1000" step="0.5" inputMode="decimal" value={price} onChange={(e) => setPrice(e.target.value)} />
+      </label>
+      <label>
+        Number of featured spots
+        <input type="number" min="0" max="50" step="1" inputMode="numeric" value={slots} onChange={(e) => setSlots(e.target.value)} />
+      </label>
+      {sure && <p className="status small">You’re changing the commission from {saved} to {percent(bps)}. Your seller terms promise sellers 30 days’ notice of fee changes, so tell them first and save it when the notice ends. Tap Save again to confirm.</p>}
+      <button type="button" onClick={save}>{sure ? 'Confirm and save' : 'Save settings'}</button>
+      {message && <p className="small">{message}</p>}
     </div>
   )
 }
