@@ -1,62 +1,54 @@
-import { useEffect, useState, type FormEvent } from 'react'
-import type { Session } from '@supabase/supabase-js'
-import { isConfigured, supabase } from './lib/supabase'
-import { link, navigate, usePath } from './lib/router'
+import type { ReactNode } from 'react'
+import { isConfigured } from './lib/supabase'
+import { link, usePath } from './lib/router'
+import { askToSignIn, useSession } from './lib/session'
+import { basketCount, useBasket } from './lib/basket'
+import { useUnreadAlerts } from './lib/alerts'
+import { Icon, type IconName } from './lib/icons'
+import { Avatar, Wordmark } from './lib/ui'
+import Home from './pages/Home'
+import Explore from './pages/Explore'
+import Dish from './pages/Dish'
+import PublicShop from './pages/PublicShop'
+import Checkout from './pages/Checkout'
+import { MyOrders, OrderDetail } from './pages/Orders'
+import Profile, { Help } from './pages/Profile'
+import Favourites from './pages/Favourites'
+import SignIn, { SetPassword } from './pages/SignIn'
+import Alerts from './pages/Alerts'
 import SellerHome from './pages/SellerHome'
 import ShopSetup from './pages/ShopSetup'
 import Products from './pages/Products'
 import ProductEditor from './pages/ProductEditor'
-import PublicShop from './pages/PublicShop'
-import Admin from './pages/Admin'
-import Browse from './pages/Browse'
-import Checkout from './pages/Checkout'
 import SellerOrders from './pages/SellerOrders'
 import { SellerEarnings, SellerReviews } from './pages/SellerInsights'
-import { MyOrders, OrderDetail } from './pages/Orders'
-import { basketCount, useBasket } from './lib/basket'
-import { useUnreadAlerts } from './lib/alerts'
-import Alerts from './pages/Alerts'
+import Admin from './pages/Admin'
+
+const TABS: { to: string; label: string; icon: IconName }[] = [
+  { to: '/', label: 'Home', icon: 'home' },
+  { to: '/explore', label: 'Explore', icon: 'search' },
+  { to: '/basket', label: 'Basket', icon: 'basket' },
+  { to: '/orders', label: 'Orders', icon: 'orders' },
+  { to: '/profile', label: 'Profile', icon: 'user' },
+]
+
+// Pages that show their own photo header instead of the BiteBY top bar.
+const FULL_BLEED = /^\/s\/[a-z0-9-]+(\/i\/[0-9a-f-]{36})?\/?$|^\/signin\/?$/
 
 function App() {
-  const [session, setSession] = useState<Session | null>(null)
-  const [ready, setReady] = useState(!supabase)
   const path = usePath()
+  const { session, ready } = useSession()
   const basket = useBasket()
-  const [isAdmin, setIsAdmin] = useState(false)
-  const userId = session?.user.id
-  const unread = useUnreadAlerts(userId)
-
-  useEffect(() => {
-    if (!userId) return setIsAdmin(false)
-    supabase!.rpc('am_i_admin').then(({ data }) => setIsAdmin(Boolean(data)))
-  }, [userId])
-
-  useEffect(() => {
-    if (!supabase) return
-    supabase.auth.getSession().then(({ data }) => {
-      setSession(data.session)
-      setReady(true)
-    })
-    const { data } = supabase.auth.onAuthStateChange((event, s) => {
-      setSession(s)
-      if (event === 'SIGNED_IN') {
-        // Return to the page the person was on when they asked for the link.
-        let back: string | null = null
-        try {
-          back = localStorage.getItem('afterSignIn')
-          localStorage.removeItem('afterSignIn')
-        } catch {
-          // storage unavailable
-        }
-        if (back) navigate(back)
-      }
-    })
-    return () => data.subscription.unsubscribe()
-  }, [])
+  const unread = useUnreadAlerts(session?.user.id)
+  const count = basketCount(basket)
 
   const shopMatch = path.match(/^\/s\/([a-z0-9-]+)\/?$/)
+  const dishMatch = path.match(/^\/s\/([a-z0-9-]+)\/i\/([0-9a-f-]{36})\/?$/)
   const orderMatch = path.match(/^\/orders\/([0-9a-f-]{36})\/?$/)
   const productMatch = path.match(/^\/sell\/products\/([0-9a-f-]{36}|new)\/?$/)
+
+  // Screens that need an account send people to sign in, then straight back.
+  const needsAccount = (el: ReactNode, why: string) => (session ? el : <SignInPrompt why={why} />)
 
   let page
   if (!isConfigured) {
@@ -68,119 +60,99 @@ function App() {
     )
   } else if (!ready) {
     page = <p className="muted">Loading…</p>
+  } else if (dishMatch) {
+    page = <Dish slug={dishMatch[1]} productId={dishMatch[2]} />
   } else if (shopMatch) {
     page = <PublicShop slug={shopMatch[1]} />
-  } else if (path === '/alerts') {
-    page = session ? <Alerts /> : <SignIn redirectPath="/alerts" />
+  } else if (path === '/explore') {
+    page = <Explore />
   } else if (path === '/basket') {
-    page = session ? <Checkout /> : (
-      <>
-        <p className="lead">Sign in to place your order. Your basket is saved.</p>
-        <SignIn redirectPath="/basket" />
-      </>
-    )
+    page = <Checkout />
+  } else if (path === '/signin') {
+    page = <SignIn />
+  } else if (path === '/reset') {
+    page = <SetPassword reset />
+  } else if (path === '/help') {
+    page = <Help />
+  } else if (path === '/profile') {
+    page = <Profile />
+  } else if (path === '/account/password') {
+    page = needsAccount(<SetPassword />, 'Sign in to change your password.')
+  } else if (path === '/favourites') {
+    page = needsAccount(<Favourites />, 'Sign in to see the dishes and cooks you have saved.')
+  } else if (path === '/alerts') {
+    page = needsAccount(<Alerts />, 'Sign in to see your notifications.')
   } else if (path === '/orders' || orderMatch) {
-    page = !session ? <SignIn redirectPath={path} /> : orderMatch ? <OrderDetail id={orderMatch[1]} /> : <MyOrders />
+    page = needsAccount(orderMatch ? <OrderDetail id={orderMatch[1]} /> : <MyOrders />, 'Sign in to see and track your orders.')
   } else if (path.startsWith('/admin')) {
-    page = session ? <Admin /> : <SignIn redirectPath="/admin" />
+    page = needsAccount(<Admin />, 'Sign in to the BiteBY team tools.')
   } else if (path.startsWith('/sell')) {
-    if (!session) {
-      page = (
-        <>
-          <p className="lead">Sign in to set up your shop.</p>
-          <SignIn redirectPath={path} />
-        </>
-      )
-    } else if (path === '/sell/shop') {
-      page = <ShopSetup />
-    } else if (path === '/sell/earnings') {
-      page = <SellerEarnings />
-    } else if (path === '/sell/reviews') {
-      page = <SellerReviews />
-    } else if (path === '/sell/orders') {
-      page = <SellerOrders />
-    } else if (path === '/sell/products') {
-      page = <Products />
-    } else if (productMatch) {
-      page = <ProductEditor productId={productMatch[1] === 'new' ? null : productMatch[1]} />
-    } else {
-      page = <SellerHome />
-    }
+    if (!session) page = <SignInPrompt why="Sign in or create an account to open your food shop." />
+    else if (path === '/sell/shop') page = <ShopSetup />
+    else if (path === '/sell/earnings') page = <SellerEarnings />
+    else if (path === '/sell/reviews') page = <SellerReviews />
+    else if (path === '/sell/orders') page = <SellerOrders />
+    else if (path === '/sell/products') page = <Products />
+    else if (productMatch) page = <ProductEditor productId={productMatch[1] === 'new' ? null : productMatch[1]} />
+    else page = <SellerHome />
   } else {
-    page = (
-      <>
-        <Browse />
-        {!session && (
-          <div style={{ marginTop: 16 }}>
-            <SignIn redirectPath="/" />
-          </div>
-        )}
-      </>
-    )
+    page = <Home />
   }
 
+  const name = session?.user.user_metadata?.name || session?.user.email || ''
+  const activeTab = path === '/' ? '/' : TABS.slice(1).find((t) => path.startsWith(t.to))?.to
+    ?? (path.startsWith('/sell') || path.startsWith('/favourites') || path.startsWith('/account') || path === '/help' || path === '/alerts' ? '/profile' : null)
+
   return (
-    <main className="app">
-      <header>
-        <a className="brand" href="/" onClick={link('/')}>
-          Homemade Food
-        </a>
-        <nav>
-          {basketCount(basket) > 0 && (
-            <a href="/basket" onClick={link('/basket')}>Basket ({basketCount(basket)})</a>
-          )}
-          {session && <a href="/orders" onClick={link('/orders')}>Orders</a>}
-          {session && (
-            <a href="/alerts" onClick={link('/alerts')} aria-label={`Alerts, ${unread} new`}>
-              🔔{unread > 0 && <span className="badge">{unread > 9 ? '9+' : unread}</span>}
+    <>
+      <main className="app">
+        {!FULL_BLEED.test(path) && (
+          <header className="topbar">
+            <Wordmark />
+            <div className="actions">
+              {session && (
+                <a className="icon-btn" href="/alerts" onClick={link('/alerts')} aria-label={`Notifications, ${unread} new`}>
+                  <Icon name="bell" />
+                  {unread > 0 && <span className="badge">{unread > 9 ? '9+' : unread}</span>}
+                </a>
+              )}
+              {session ? (
+                <a href="/profile" onClick={link('/profile')} aria-label="Your profile"><Avatar name={name} size={42} /></a>
+              ) : (
+                <button type="button" className="small-btn" onClick={() => askToSignIn()}>Sign in</button>
+              )}
+            </div>
+          </header>
+        )}
+        {page}
+      </main>
+      <nav className="bottom-nav" aria-label="Main">
+        <div className="inner">
+          {TABS.map((t) => (
+            <a key={t.to} href={t.to} onClick={link(t.to)} className={activeTab === t.to ? 'on' : ''} aria-current={activeTab === t.to ? 'page' : undefined}>
+              <span className="icon">
+                <Icon name={t.icon} filled={activeTab === t.to} />
+                {t.to === '/basket' && count > 0 && <span className="badge">{count > 9 ? '9+' : count}</span>}
+              </span>
+              {t.label}
             </a>
-          )}
-          <a href="/sell" onClick={link('/sell')}>Sell</a>
-          {isAdmin && <a href="/admin" onClick={link('/admin')}>Admin</a>}
-          {session && (
-            <button className="link" onClick={() => supabase!.auth.signOut()}>
-              Sign out
-            </button>
-          )}
-        </nav>
-      </header>
-      {page}
-    </main>
+          ))}
+        </div>
+      </nav>
+    </>
   )
 }
 
-function SignIn({ redirectPath }: { redirectPath: string }) {
-  const [email, setEmail] = useState('')
-  const [message, setMessage] = useState('')
-
-  async function onSubmit(e: FormEvent) {
-    e.preventDefault()
-    try {
-      localStorage.setItem('afterSignIn', redirectPath)
-    } catch {
-      // storage unavailable: they land on the home page instead
-    }
-    const { error } = await supabase!.auth.signInWithOtp({
-      email,
-      options: { emailRedirectTo: window.location.origin },
-    })
-    setMessage(error ? error.message : 'Check your email for a sign-in link.')
-  }
-
+function SignInPrompt({ why }: { why: string }) {
+  const next = window.location.pathname + window.location.search
   return (
-    <form onSubmit={onSubmit} className="card">
-      <label htmlFor="email">Sign in with your email</label>
-      <input
-        id="email"
-        type="email"
-        required
-        value={email}
-        onChange={(e) => setEmail(e.target.value)}
-        placeholder="you@example.com"
-      />
-      <button type="submit">Send me a link</button>
-      {message && <p className="muted">{message}</p>}
-    </form>
+    <div className="card empty">
+      <span className="big">👋</span>
+      <h2 style={{ color: 'var(--text)' }}>Sign in to carry on</h2>
+      <p>{why}</p>
+      <a className="button dark" href={`/signin?next=${encodeURIComponent(next)}`} onClick={link(`/signin?next=${encodeURIComponent(next)}`)}>Sign in</a>
+      <a className="button secondary" href={`/signin?mode=signup&next=${encodeURIComponent(next)}`} onClick={link(`/signin?mode=signup&next=${encodeURIComponent(next)}`)}>Create an account</a>
+    </div>
   )
 }
 

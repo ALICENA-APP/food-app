@@ -9,11 +9,11 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate',
       manifest: {
-        name: 'Homemade Food',
-        short_name: 'Homemade',
-        description: 'Order from local home cooks.',
-        theme_color: '#2f7d4f',
-        background_color: '#2f7d4f',
+        name: 'BiteBY',
+        short_name: 'BiteBY',
+        description: 'Real food. Real people. Homemade food from local cooks.',
+        theme_color: '#FFC72C',
+        background_color: '#FFFDF7',
         start_url: '/',
         display: 'standalone',
         icons: [

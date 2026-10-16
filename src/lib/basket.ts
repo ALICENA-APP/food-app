@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 
 // One shop per basket. Kept in this browser only; prices are always worked
 // out again by the database when the order is placed.
-export type BasketLine = { productId: string; name: string; pricePence: number; qty: number }
+export type BasketLine = { productId: string; name: string; pricePence: number; qty: number; photo?: string | null }
 export type Basket = { shopId: string; shopSlug: string; shopName: string; lines: BasketLine[] }
 
 const KEY = 'basket'
@@ -52,9 +52,13 @@ export function basketSubtotal(b: Basket | null) {
   return b ? b.lines.reduce((n, l) => n + l.qty * l.pricePence, 0) : 0
 }
 
+export function qtyIn(b: Basket | null, shopId: string, productId: string) {
+  return b?.shopId === shopId ? b.lines.find((l) => l.productId === productId)?.qty ?? 0 : 0
+}
+
 export function setQty(
   shop: { id: string; slug: string; name: string },
-  item: { productId: string; name: string; pricePence: number },
+  item: { productId: string; name: string; pricePence: number; photo?: string | null },
   qty: number,
 ): boolean {
   let b = readBasket() ?? memory

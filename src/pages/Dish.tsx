@@ -1,0 +1,173 @@
+import { useEffect, useState, type UIEvent } from 'react'
+import { goBack, link, navigate } from '../lib/router'
+import { photoUrl } from '../lib/images'
+import { Icon, VerifiedTick } from '../lib/icons'
+import { qtyIn, setQty, useBasket } from '../lib/basket'
+import { allergenLists, averageRating, loadShop, type ShopData } from '../lib/shopData'
+import { Avatar, BackButton, FoodPhoto, HeartButton, share } from '../lib/ui'
+import { dietaryName, pounds } from '../lib/types'
+
+// One dish: photos, description, ingredients, allergens and add to basket.
+export default function Dish({ slug, productId }: { slug: string; productId: string }) {
+  const [data, setData] = useState<ShopData | null | undefined>(undefined)
+  const [slide, setSlide] = useState(0)
+  const [qty, setQtyHere] = useState(1)
+  const [added, setAdded] = useState(false)
+  const basket = useBasket()
+
+  useEffect(() => {
+    loadShop(slug).then(setData)
+    setSlide(0)
+    setQtyHere(1)
+    setAdded(false)
+  }, [slug, productId])
+
+  const product = data?.products.find((p) => p.id === productId)
+
+  useEffect(() => {
+    if (product && data) document.title = `${product.name} · ${data.shop.name} · BiteBY`
+    return () => {
+      document.title = 'BiteBY · Real food. Real people.'
+    }
+  }, [product, data])
+
+  if (data === undefined) return <p className="muted">Loading…</p>
+  if (!data || !product) {
+    return (
+      <div className="card empty">
+        <span className="big">🍽️</span>
+        <h2 style={{ color: 'var(--text)' }}>Dish not found</h2>
+        <p>It may have sold out or been taken off the menu.</p>
+        <a className="button" href={data ? `/s/${slug}` : '/'} onClick={link(data ? `/s/${slug}` : '/')}>{data ? `See ${data.shop.name}` : 'Back to home'}</a>
+      </div>
+    )
+  }
+
+  const { shop, reviews, categories } = data
+  const photos = data.images[product.id] ?? []
+  const { contains, mayContain } = allergenLists(data, product.id)
+  const average = averageRating(reviews)
+  const canOrder = shop.status === 'live' && shop.accepting_orders && product.status === 'published'
+  const already = qtyIn(basket, shop.id, product.id)
+  const category = categories.find((c) => c.id === product.category_id)?.name
+  const others = data.products.filter((p) => p.id !== product.id && p.status === 'published').slice(0, 8)
+
+  function onScroll(e: UIEvent<HTMLDivElement>) {
+    const el = e.currentTarget
+    setSlide(Math.round(el.scrollLeft / el.clientWidth))
+  }
+
+  function add() {
+    const ok = setQty(shop, { productId: product!.id, name: product!.name, pricePence: product!.price_pence, photo: photos[0] ?? null }, already + qty)
+    if (ok) setAdded(true)
+  }
+
+  return (
+    <div className="stack">
+      <div className="dish-hero">
+        {photos.length ? (
+          <div className="slides" onScroll={onScroll}>
+            {photos.map((p) => <img key={p} src={photoUrl(p)!} alt={product.name} />)}
+          </div>
+        ) : <FoodPhoto path={null} alt="" />}
+        <div className="actions">
+          <BackButton onClick={() => goBack(`/s/${slug}`)} />
+          <span className="group">
+            <button type="button" className="icon-btn" onClick={() => share(product.name)} aria-label="Share this dish"><Icon name="share" /></button>
+            <HeartButton productId={product.id} className="icon-btn heart-btn" />
+          </span>
+        </div>
+        {photos.length > 1 && <div className="dots">{photos.map((p, i) => <span key={p} className={i === slide ? 'on' : ''} />)}</div>}
+      </div>
+
+      <div className="stack" style={{ gap: 8 }}>
+        <div className="item" style={{ alignItems: 'flex-start' }}>
+          <h1 style={{ fontSize: '1.5rem' }}>{product.name}</h1>
+          <span className="price-big">{pounds(product.price_pence)}</span>
+        </div>
+        <p className="muted small">
+          by <a href={`/s/${slug}`} onClick={link(`/s/${slug}`)}><strong>{shop.name}</strong></a>
+          {reviews.length > 0 && <> · <span className="star">★</span> {average.toFixed(1)} ({reviews.length})</>}
+          {product.portion && <> · {product.portion}</>}
+        </p>
+        <div className="tags">
+          <span className="tag">Homemade</span>
+          {category && <span className="tag grey">{category}</span>}
+          {product.dietary?.map((d) => <span key={d} className="tag green">{dietaryName(d)}</span>)}
+          {product.collection_ok && <span className="tag grey">Collection</span>}
+          {product.delivery_ok && <span className="tag grey">Delivery</span>}
+        </div>
+      </div>
+
+      {product.description && <p className="story">{product.description}</p>}
+
+      <a className="card seller-strip" href={`/s/${slug}`} onClick={link(`/s/${slug}`)}>
+        <Avatar name={shop.name} path={shop.logo_path} size={48} />
+        <span style={{ flex: 1, minWidth: 0 }}>
+          <strong>{shop.name}</strong> {shop.status === 'live' && <VerifiedTick />}
+          <span className="muted tiny" style={{ display: 'block' }}>{[shop.area_label, ...shop.cuisines].filter(Boolean).join(' · ')}</span>
+        </span>
+        <span className="button secondary small-btn">View store</span>
+      </a>
+
+      <div className="card">
+        <div className="info-row">
+          <span className="ic"><Icon name="leaf" /></span>
+          <div>
+            <strong>Ingredients</strong>
+            <p className="muted small">{product.ingredients || 'Ask the cook for the full ingredients.'}</p>
+          </div>
+        </div>
+        <div className="info-row">
+          <span className="ic" style={{ background: contains.length ? '#fde8e8' : 'var(--green-soft)' }}><Icon name="info" /></span>
+          <div className="stack" style={{ gap: 4 }}>
+            <strong>Allergens</strong>
+            <p className="small"><strong>Contains:</strong> {contains.length ? contains.join(', ') : 'none of the 14 main allergens'}</p>
+            {mayContain.length > 0 && <p className="small"><strong>May contain:</strong> {mayContain.join(', ')}</p>}
+            {product.may_contain_notes && <p className="muted small">{product.may_contain_notes}</p>}
+            <p className="muted tiny">Made in a home kitchen. If you have a severe allergy, message the cook before ordering.</p>
+          </div>
+        </div>
+      </div>
+
+      {others.length > 0 && (
+        <section className="stack">
+          <h2>You might also like</h2>
+          <div className="hscroll">
+            {others.map((p) => {
+              const to = `/s/${slug}/i/${p.id}`
+              return (
+                <a key={p.id} className="dish-card small" href={to} onClick={link(to)}>
+                  <span className="ph"><FoodPhoto path={data.images[p.id]?.[0] ?? null} alt={p.name} /></span>
+                  <span className="body"><span className="name">{p.name}</span><span className="price">{pounds(p.price_pence)}</span></span>
+                </a>
+              )
+            })}
+          </div>
+        </section>
+      )}
+
+      {canOrder ? (
+        <div className="card action-bar row-bar">
+          {added ? (
+            <>
+              <span className="tick"><Icon name="check" size={20} /> Added to basket</span>
+              <button type="button" className="dark" onClick={() => navigate('/basket')}>View basket</button>
+            </>
+          ) : (
+            <>
+              <span className="stepper">
+                <button type="button" aria-label="One less" disabled={qty <= 1} onClick={() => setQtyHere(qty - 1)}>−</button>
+                <span>{qty}</span>
+                <button type="button" className="add" aria-label="One more" onClick={() => setQtyHere(Math.min(qty + 1, 50))}>+</button>
+              </span>
+              <button type="button" className="grow" onClick={add}>Add to basket · {pounds(product.price_pence * qty)}</button>
+            </>
+          )}
+        </div>
+      ) : (
+        <p className="status">{shop.status !== 'live' ? 'Preview: customers can order once your shop is live.' : "This dish can't be ordered right now."}</p>
+      )}
+    </div>
+  )
+}

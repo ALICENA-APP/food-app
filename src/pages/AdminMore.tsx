@@ -42,7 +42,7 @@ export function AdminOrders() {
       <div className="card">
         <div className="item"><span>Completed orders</span><strong>{completed.length}</strong></div>
         <div className="item"><span>Customers paid</span><span>{pounds(sales)}</span></div>
-        <div className="item total"><strong>Homemade Food fees</strong><strong>{pounds(fees)}</strong></div>
+        <div className="item total"><strong>BiteBY fees</strong><strong>{pounds(fees)}</strong></div>
         <p className="muted small">From the latest 500 orders.</p>
       </div>
       <div className="segmented">

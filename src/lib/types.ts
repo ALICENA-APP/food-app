@@ -69,12 +69,22 @@ export type Product = {
   may_contain_notes: string | null
   collection_ok: boolean
   delivery_ok: boolean
+  dietary: string[]
   status: 'draft' | 'published' | 'archived'
   allergens_confirmed_at: string | null
 }
 
 export type Allergen = { code: string; name: string }
-export type Category = { id: string; name: string }
+export type Category = { id: string; name: string; slug?: string }
+
+// Optional labels a seller can put on an item.
+export const DIETARY = [
+  { code: 'vegetarian', name: 'Vegetarian' },
+  { code: 'vegan', name: 'Vegan' },
+  { code: 'halal', name: 'Halal' },
+  { code: 'spicy', name: 'Spicy' },
+]
+export const dietaryName = (code: string) => DIETARY.find((d) => d.code === code)?.name ?? code
 
 export const TERMS_VERSION = '2026-10-v1'
 

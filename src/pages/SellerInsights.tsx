@@ -64,7 +64,7 @@ export function SellerEarnings() {
         <div className="item"><span>Completed orders</span><strong>{shown.length}</strong></div>
         <div className="item"><span>Food sales</span><span>{pounds(food)}</span></div>
         <div className="item"><span>Delivery fees (all yours)</span><span>{pounds(delivery)}</span></div>
-        <div className="item"><span>Homemade Food fee (5% of food)</span><span>−{pounds(fees)}</span></div>
+        <div className="item"><span>BiteBY fee (5% of food)</span><span>−{pounds(fees)}</span></div>
         <div className="item total"><strong>You earned</strong><strong>{pounds(food + delivery - fees)}</strong></div>
       </div>
       <p className="muted small">Payouts go straight to your bank account through Stripe once payments are switched on.</p>
@@ -100,7 +100,7 @@ export function SellerReviews() {
       {reviews.map((r) => (
         <div key={r.id} className="card">
           <ReviewItem review={r}>
-            {r.hidden && <p className="error small">Hidden by Homemade Food: {r.hidden_reason}</p>}
+            {r.hidden && <p className="error small">Hidden by BiteBY: {r.hidden_reason}</p>}
             {!r.seller_reply && <ReplyBox reviewId={r.id} onDone={load} />}
           </ReviewItem>
         </div>

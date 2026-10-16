@@ -22,15 +22,15 @@ export default async (request: Request, context: Context) => {
     const [shop] = res.ok ? await res.json() : []
     if (!shop) return response
 
-    const title = `${shop.name} · Homemade Food`
+    const title = `${shop.name} · BiteBY`
     const where = [shop.area_label, ...(shop.cuisines ?? [])].filter(Boolean).join(' · ')
-    const description = (shop.story || `Homemade food${where ? ` · ${where}` : ''}. Order online.`).slice(0, 200)
+    const description = (shop.story || `Homemade food on BiteBY${where ? ` · ${where}` : ''}. Order online.`).slice(0, 200)
     const image = shop.cover_path ? `${base}/storage/v1/object/public/product-images/${shop.cover_path}` : null
     const tags = [
       `<title>${escape(title)}</title>`,
       `<meta name="description" content="${escape(description)}" />`,
       `<meta property="og:type" content="website" />`,
-      `<meta property="og:site_name" content="Homemade Food" />`,
+      `<meta property="og:site_name" content="BiteBY" />`,
       `<meta property="og:title" content="${escape(title)}" />`,
       `<meta property="og:description" content="${escape(description)}" />`,
       `<meta property="og:url" content="${escape(request.url)}" />`,

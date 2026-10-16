@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import { supabase } from '../lib/supabase'
 import { link, navigate } from '../lib/router'
-import type { Allergen, Category, Presence, Product } from '../lib/types'
+import { DIETARY, type Allergen, type Category, type Presence, type Product } from '../lib/types'
 import { deletePhoto, photoUrl, uploadPhoto } from '../lib/images'
 
 const PRESENCE_LABEL: Record<Presence, string> = {
@@ -68,6 +68,7 @@ function Editor({ shopId, product, allergens, categories, answers: initialAnswer
   const [mayContainNotes, setMayContainNotes] = useState(product?.may_contain_notes ?? '')
   const [collectionOk, setCollectionOk] = useState(product?.collection_ok ?? true)
   const [deliveryOk, setDeliveryOk] = useState(product?.delivery_ok ?? true)
+  const [dietary, setDietary] = useState<string[]>(product?.dietary ?? [])
   const [answers, setAnswers] = useState<Record<string, Presence>>(initialAnswers)
   const [confirmed, setConfirmed] = useState(false)
   const [message, setMessage] = useState('')
@@ -95,6 +96,7 @@ function Editor({ shopId, product, allergens, categories, answers: initialAnswer
       may_contain_notes: mayContainNotes.trim() || null,
       collection_ok: collectionOk,
       delivery_ok: deliveryOk,
+      dietary,
     }
 
     // 1. Save the item as a draft (new items get their id here).
@@ -182,6 +184,17 @@ function Editor({ shopId, product, allergens, categories, answers: initialAnswer
             ))}
           </select>
         </label>
+        <div className="stack" style={{ gap: 8 }}>
+          <strong className="small">Suitable for (optional)</strong>
+          <div className="tags">
+            {DIETARY.map((d) => (
+              <button key={d.code} type="button" className={`chip ${dietary.includes(d.code) ? 'on' : ''}`}
+                onClick={() => setDietary(dietary.includes(d.code) ? dietary.filter((x) => x !== d.code) : [...dietary, d.code])}>
+                {d.name}
+              </button>
+            ))}
+          </div>
+        </div>
         <label className="check">
           <input type="checkbox" checked={collectionOk} onChange={(e) => setCollectionOk(e.target.checked)} />
           Can be collected

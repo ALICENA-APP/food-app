@@ -22,7 +22,7 @@ export default function Admin() {
   }, [check])
 
   if (state === 'loading') return <p className="muted">Loading…</p>
-  if (state === 'not_admin') return <p className="card">This page is for the Homemade Food team.</p>
+  if (state === 'not_admin') return <p className="card">This page is for the BiteBY team.</p>
   if (state === 'needs_mfa') return <TwoStep onDone={check} />
   return <AdminTabs />
 }
@@ -67,7 +67,7 @@ function TwoStep({ onDone }: { onDone: () => void }) {
       for (const f of data?.all ?? []) {
         if (f.status !== 'verified') await mfa.unenroll({ factorId: f.id })
       }
-      const { data: enrolled, error } = await mfa.enroll({ factorType: 'totp', friendlyName: 'Homemade Food admin' })
+      const { data: enrolled, error } = await mfa.enroll({ factorType: 'totp', friendlyName: 'BiteBY admin' })
       if (error) return setMessage(error.message)
       setFactorId(enrolled.id)
       setQr(enrolled.totp.qr_code)
