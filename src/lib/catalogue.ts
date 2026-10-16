@@ -10,6 +10,7 @@ export type Dish = {
   description: string | null
   price_pence: number
   portion: string | null
+  stock_qty: number | null
   dietary: string[]
   category_id: string | null
   collection_ok: boolean
@@ -22,7 +23,7 @@ export type Dish = {
 export type Rating = { average: number; reviews: number }
 
 export const DISH_FIELDS =
-  'id, shop_id, name, description, price_pence, portion, dietary, category_id, collection_ok, delivery_ok, created_at, ' +
+  'id, shop_id, name, description, price_pence, portion, stock_qty, dietary, category_id, collection_ok, delivery_ok, created_at, ' +
   'shops!inner(id, name, slug, logo_path, area_label, accepting_orders, status), product_images(path, sort)'
 
 // Dishes on sale in live shops. The database only returns what the public may see.

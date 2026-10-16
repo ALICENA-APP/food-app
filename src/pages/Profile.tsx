@@ -54,6 +54,7 @@ export default function Profile() {
         <div className="menu-tiles">
           <Tile to="/help" icon="help" title="Help and support" sub="How BiteBY works" tone="var(--line)" wide />
         </div>
+        <LegalLinks />
       </div>
     )
   }
@@ -106,7 +107,16 @@ export default function Profile() {
         {isAdmin && <Tile to="/admin" icon="shield" title="Admin" sub="BiteBY team tools" tone="var(--yellow)" wide />}
         <Tile icon="logout" title="Sign out" tone="var(--line)" wide onClick={async () => { await supabase!.auth.signOut(); navigate('/') }} />
       </div>
+      <LegalLinks />
     </div>
+  )
+}
+
+function LegalLinks() {
+  return (
+    <p className="muted small" style={{ textAlign: 'center' }}>
+      <a href="/terms" onClick={link('/terms')}>Terms</a> · <a href="/privacy" onClick={link('/privacy')}>Privacy</a> · <a href="/allergens" onClick={link('/allergens')}>Allergens</a>
+    </p>
   )
 }
 
@@ -159,6 +169,7 @@ export function Help() {
           <p className="muted">{a}</p>
         </details>
       ))}
+      <LegalLinks />
     </div>
   )
 }

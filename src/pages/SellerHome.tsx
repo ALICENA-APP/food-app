@@ -1,7 +1,10 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import { supabase } from '../lib/supabase'
 import { link } from '../lib/router'
-import { TERMS_VERSION, type SellerAccount, type Shop, type Verification } from '../lib/types'
+import { pounds, TERMS_VERSION, type SellerAccount, type Shop, type Verification } from '../lib/types'
+import { Icon, type IconName } from '../lib/icons'
+import { Avatar, share } from '../lib/ui'
+import { loadRatings, type Rating } from '../lib/catalogue'
 
 const STATUS_TEXT: Record<SellerAccount['status'], string> = {
   draft: 'Not sent yet',
@@ -48,9 +51,21 @@ export default function SellerHome() {
   const registration = verifications.find((v) => v.kind === 'food_registration' && v.status !== 'rejected')
   const declaration = verifications.find((v) => v.kind === 'allergen_declaration' && v.status !== 'rejected')
 
+  const steps = account && (
+    <>
+      <FoodRegistration accountId={account.id} current={registration} editable={editable} onSaved={load} />
+      <AllergenDeclaration accountId={account.id} done={Boolean(declaration)} editable={editable} onSaved={load} />
+      <Terms account={account} editable={editable} onSaved={load} />
+      {editable && <Submit ready={Boolean(account.legal_name && registration && declaration && account.terms_accepted_at)} onSaved={load} />}
+    </>
+  )
+
   return (
     <div className="stack">
-      <h1>Your seller account</h1>
+      <h1>{shop ? 'Your shop' : 'Sell on BiteBY'}</h1>
+      {!account && (
+        <p className="lead">Open your own food shop with a link you can share. Start with a few details about you: it takes about 10 minutes.</p>
+      )}
       {account && (
         <p className={`status status-${account.status}`}>
           Application: {STATUS_TEXT[account.status]}
@@ -58,54 +73,125 @@ export default function SellerHome() {
         </p>
       )}
 
-      <BusinessDetails account={account} editable={editable} onSaved={load} />
-      {account && (
-        <>
-          <FoodRegistration accountId={account.id} current={registration} editable={editable} onSaved={load} />
-          <AllergenDeclaration accountId={account.id} done={Boolean(declaration)} editable={editable} onSaved={load} />
-          <Terms account={account} editable={editable} onSaved={load} />
-          {editable && <Submit ready={Boolean(account.legal_name && registration && declaration && account.terms_accepted_at)} onSaved={load} />}
+      {shop && <Dashboard shop={shop} account={account!} onChanged={load} />}
 
-          <div className="card">
-            <h2>Your shop</h2>
-            <p className="muted">
-              You can set up your shop and menu while we check your details. It goes live once you
-              are approved and payments are set up.
-            </p>
-            <div className="row wrap">
-              <a className="button" href="/sell/shop" onClick={link('/sell/shop')}>
-                {shop ? 'Edit shop' : 'Set up shop'}
-              </a>
-              {shop && (
-                <a className="button secondary" href="/sell/products" onClick={link('/sell/products')}>
-                  Menu
-                </a>
-              )}
-              {shop && (
-                <a className="button secondary" href="/sell/orders" onClick={link('/sell/orders')}>
-                  Orders
-                </a>
-              )}
-              {shop && (
-                <a className="button secondary" href="/sell/earnings" onClick={link('/sell/earnings')}>
-                  Earnings
-                </a>
-              )}
-              {shop && (
-                <a className="button secondary" href="/sell/reviews" onClick={link('/sell/reviews')}>
-                  Reviews
-                </a>
-              )}
-            </div>
-            {shop && (
-              <p className="muted">
-                Your link: <a href={`/s/${shop.slug}`} onClick={link(`/s/${shop.slug}`)}>food.beastcase.net/s/{shop.slug}</a>
-              </p>
-            )}
-          </div>
+      {account && !shop && (
+        <div className="card">
+          <h2>Your shop</h2>
+          <p className="muted">You can set up your shop and menu while we check your details. It goes live once you are approved and payments are set up.</p>
+          <a className="button" href="/sell/shop" onClick={link('/sell/shop')}>Set up shop</a>
+        </div>
+      )}
+
+      {account?.status === 'approved' ? (
+        <details className="card">
+          <summary>Your application details</summary>
+          <BusinessDetails account={account} editable={false} onSaved={load} />
+          {steps}
+        </details>
+      ) : (
+        <>
+          {account && <h2>Your application</h2>}
+          <BusinessDetails account={account} editable={editable} onSaved={load} />
+          {steps}
         </>
       )}
     </div>
+  )
+}
+
+function Dashboard({ shop, account, onChanged }: { shop: Shop; account: SellerAccount; onChanged: () => void }) {
+  const [stats, setStats] = useState<{ todo: number; today: number; rating: Rating | undefined } | null>(null)
+  const [accepting, setAccepting] = useState(shop.accepting_orders)
+  const [error, setError] = useState('')
+  const url = `${window.location.origin}/s/${shop.slug}`
+
+  useEffect(() => {
+    ;(async () => {
+      const db = supabase!
+      const since = new Date()
+      since.setHours(0, 0, 0, 0)
+      const [todo, today, ratings] = await Promise.all([
+        db.from('orders').select('id', { count: 'exact', head: true }).eq('shop_id', shop.id).in('status', ['pending_acceptance', 'accepted', 'ready', 'out_for_delivery']),
+        db.from('orders').select('subtotal_pence, platform_fee_pence, delivery_fee_pence').eq('shop_id', shop.id).gte('created_at', since.toISOString())
+          .not('status', 'in', '(awaiting_payment,declined,cancelled,expired,refunded)'),
+        loadRatings([shop.id]),
+      ])
+      setStats({
+        todo: todo.count ?? 0,
+        today: (today.data ?? []).reduce((n, o) => n + o.subtotal_pence - o.platform_fee_pence + o.delivery_fee_pence, 0),
+        rating: ratings[shop.id],
+      })
+    })()
+  }, [shop.id])
+
+  async function toggle() {
+    setError('')
+    const next = !accepting
+    setAccepting(next)
+    const { error: err } = await supabase!.from('shops').update({ accepting_orders: next }).eq('id', shop.id)
+    if (err) {
+      setAccepting(!next)
+      setError(err.message)
+    } else onChanged()
+  }
+
+  const live = shop.status === 'live'
+  return (
+    <>
+      <div className="card">
+        <div className="row-bar" style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+          <Avatar name={shop.name} path={shop.logo_path} size={56} />
+          <span style={{ flex: 1, minWidth: 0 }}>
+            <strong>{shop.name}</strong>
+            <span className="muted small" style={{ display: 'block' }}>
+              {live ? 'Live' : account.status === 'approved' ? 'Ready to go live once payments are set up' : 'Not live yet'}
+            </span>
+          </span>
+          <a className="button secondary small-btn" href={`/s/${shop.slug}`} onClick={link(`/s/${shop.slug}`)}>View</a>
+        </div>
+        <label className="switch-row">
+          <span>
+            <strong>{accepting ? 'Taking orders' : 'Orders paused'}</strong>
+            <span className="muted small" style={{ display: 'block' }}>
+              {accepting ? 'Customers can order from you now.' : 'Customers can see your menu but can’t order.'}
+            </span>
+          </span>
+          <input type="checkbox" className="switch" checked={accepting} onChange={toggle} aria-label="Taking orders" />
+        </label>
+        {error && <p className="error small">{error}</p>}
+        <div className="row">
+          <button type="button" className="secondary small-btn" onClick={() => share(shop.name, url)}><Icon name="share" size={16} /> Share your shop link</button>
+        </div>
+      </div>
+
+      <div className="stats">
+        <a href="/sell/orders" onClick={link('/sell/orders')}><strong>{stats?.todo ?? '–'}</strong><span className="muted tiny">Orders to do</span></a>
+        <a href="/sell/earnings" onClick={link('/sell/earnings')}><strong>{stats ? pounds(stats.today) : '–'}</strong><span className="muted tiny">Earned today</span></a>
+        <a href="/sell/reviews" onClick={link('/sell/reviews')}><strong>{stats?.rating ? stats.rating.average.toFixed(1) : '–'}</strong><span className="muted tiny">{stats?.rating ? `${stats.rating.reviews} ${stats.rating.reviews === 1 ? 'review' : 'reviews'}` : 'No reviews yet'}</span></a>
+      </div>
+
+      <div className="menu-tiles">
+        <SellerTile to="/sell/orders" icon="orders" title="Orders" sub="Accept and update" tone="var(--green-soft)" />
+        <SellerTile to="/sell/products" icon="chef" title="Menu" sub="Dishes, photos, sold out" />
+        <SellerTile to="/sell/shop" icon="store" title="Shop details" sub="Photos, hours, delivery" tone="var(--line)" />
+        <SellerTile to="/sell/earnings" icon="pound" title="Earnings" sub="What you've made" tone="var(--line)" />
+        <SellerTile to="/sell/reviews" icon="star" title="Reviews" sub="Read and reply" tone="var(--line)" />
+        <SellerTile to="/help" icon="help" title="Help" sub="How selling works" tone="var(--line)" />
+      </div>
+    </>
+  )
+}
+
+function SellerTile({ to, icon, title, sub, tone = 'var(--yellow-soft)' }: { to: string; icon: IconName; title: string; sub: string; tone?: string }) {
+  return (
+    <a className="tile" href={to} onClick={link(to)}>
+      <span className="ic" style={{ background: tone }}><Icon name={icon} /></span>
+      <span style={{ minWidth: 0 }}>
+        <span className="t" style={{ display: 'block' }}>{title}</span>
+        <span className="s">{sub}</span>
+      </span>
+    </a>
   )
 }
 
@@ -248,7 +334,7 @@ function Terms({ account, editable, onSaved }: { account: SellerAccount; editabl
       </ul>
       <label className="check">
         <input type="checkbox" checked={agreed} disabled={done || !editable} onChange={(e) => setAgreed(e.target.checked)} />
-        I agree to the seller terms.
+        <span>I agree to the <a href="/seller-terms" onClick={link('/seller-terms')}>seller terms</a>.</span>
       </label>
       {!done && editable && <button type="submit" disabled={!agreed}>Agree</button>}
       {message && <p className="muted">{message}</p>}

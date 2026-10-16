@@ -105,7 +105,7 @@ export default function PublicShop({ slug }: { slug: string }) {
           {shown.length === 0 && <p className="muted">Nothing on the menu yet.</p>}
           {shown.map((p) => (
             <MenuRow key={p.id} product={p} slug={shop.slug} photo={images[p.id]?.[0] ?? null}
-              qty={qtyIn(basket, shop.id, p.id)} canOrder={canOrder && p.status === 'published'}
+              qty={qtyIn(basket, shop.id, p.id)} canOrder={canOrder && p.status === 'published' && p.stock_qty !== 0}
               onQty={(n) => setQty(shop, { productId: p.id, name: p.name, pricePence: p.price_pence, photo: images[p.id]?.[0] ?? null }, n)} />
           ))}
           <p className="muted small">
@@ -151,7 +151,7 @@ function MenuRow({ product: p, slug, photo, qty, canOrder, onQty }: {
 }) {
   const to = `/s/${slug}/i/${p.id}`
   return (
-    <a className="menu-row" href={to} onClick={link(to)}>
+    <a className={`menu-row ${p.stock_qty === 0 ? 'sold-out' : ''}`} href={to} onClick={link(to)}>
       <span className="ph"><FoodPhoto path={photo} alt={p.name} /></span>
       <span className="info">
         <strong>{p.name}</strong>
@@ -159,6 +159,8 @@ function MenuRow({ product: p, slug, photo, qty, canOrder, onQty }: {
         {p.dietary?.length > 0 && <span className="tags">{p.dietary.map((d) => <span key={d} className="tag green">{dietaryName(d)}</span>)}</span>}
         {p.status !== 'published' && <span className="pill">Draft, not visible to customers</span>}
         <strong>{pounds(p.price_pence)}</strong>
+        {p.stock_qty === 0 && <span className="tag red">Sold out</span>}
+        {p.stock_qty !== null && p.stock_qty > 0 && p.stock_qty <= 5 && <span className="muted tiny">Only {p.stock_qty} left</span>}
       </span>
       {canOrder && (
         <span className="side" onClick={(e) => { e.preventDefault(); e.stopPropagation() }}>

@@ -15,6 +15,7 @@ import { MyOrders, OrderDetail } from './pages/Orders'
 import Profile, { Help } from './pages/Profile'
 import Favourites from './pages/Favourites'
 import Addresses from './pages/Addresses'
+import { AllergenInfo, Privacy, SellerTerms, Terms } from './pages/Legal'
 import SignIn, { SetPassword } from './pages/SignIn'
 import Alerts from './pages/Alerts'
 import SellerHome from './pages/SellerHome'
@@ -73,6 +74,14 @@ function App() {
     page = <SignIn />
   } else if (path === '/reset') {
     page = <SetPassword reset />
+  } else if (path === '/terms') {
+    page = <Terms />
+  } else if (path === '/privacy') {
+    page = <Privacy />
+  } else if (path === '/allergens') {
+    page = <AllergenInfo />
+  } else if (path === '/seller-terms') {
+    page = <SellerTerms />
   } else if (path === '/help') {
     page = <Help />
   } else if (path === '/profile') {
@@ -104,7 +113,7 @@ function App() {
 
   const name = session?.user.user_metadata?.name || session?.user.email || ''
   const activeTab = path === '/' ? '/' : TABS.slice(1).find((t) => path.startsWith(t.to))?.to
-    ?? (path.startsWith('/sell') || path.startsWith('/favourites') || path === '/addresses' || path.startsWith('/account') || path === '/help' || path === '/alerts' ? '/profile' : null)
+    ?? (path.startsWith('/sell') || path.startsWith('/favourites') || path === '/addresses' || path.startsWith('/account') || ['/help', '/alerts', '/terms', '/privacy', '/allergens', '/seller-terms'].includes(path) ? '/profile' : null)
 
   return (
     <>

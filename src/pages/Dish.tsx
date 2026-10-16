@@ -47,7 +47,8 @@ export default function Dish({ slug, productId }: { slug: string; productId: str
   const photos = data.images[product.id] ?? []
   const { contains, mayContain } = allergenLists(data, product.id)
   const average = averageRating(reviews)
-  const canOrder = shop.status === 'live' && shop.accepting_orders && product.status === 'published'
+  const soldOut = product.stock_qty === 0
+  const canOrder = shop.status === 'live' && shop.accepting_orders && product.status === 'published' && !soldOut
   const already = qtyIn(basket, shop.id, product.id)
   const category = categories.find((c) => c.id === product.category_id)?.name
   const others = data.products.filter((p) => p.id !== product.id && p.status === 'published').slice(0, 8)
@@ -89,6 +90,7 @@ export default function Dish({ slug, productId }: { slug: string; productId: str
           by <a href={`/s/${slug}`} onClick={link(`/s/${slug}`)}><strong>{shop.name}</strong></a>
           {reviews.length > 0 && <> · <span className="star">★</span> {average.toFixed(1)} ({reviews.length})</>}
           {product.portion && <> · {product.portion}</>}
+          {product.stock_qty !== null && product.stock_qty > 0 && product.stock_qty <= 5 && <> · Only {product.stock_qty} left</>}
         </p>
         <div className="tags">
           <span className="tag">Homemade</span>
@@ -159,14 +161,14 @@ export default function Dish({ slug, productId }: { slug: string; productId: str
               <span className="stepper">
                 <button type="button" aria-label="One less" disabled={qty <= 1} onClick={() => setQtyHere(qty - 1)}>−</button>
                 <span>{qty}</span>
-                <button type="button" className="add" aria-label="One more" onClick={() => setQtyHere(Math.min(qty + 1, 50))}>+</button>
+                <button type="button" className="add" aria-label="One more" onClick={() => setQtyHere(Math.max(1, Math.min(qty + 1, 50, (product.stock_qty ?? 50) - already)))}>+</button>
               </span>
               <button type="button" className="grow" onClick={add}>Add to basket · {pounds(product.price_pence * qty)}</button>
             </>
           )}
         </div>
       ) : (
-        <p className="status">{shop.status !== 'live' ? 'Preview: customers can order once your shop is live.' : "This dish can't be ordered right now."}</p>
+        <p className="status">{shop.status !== 'live' ? 'Preview: customers can order once your shop is live.' : soldOut ? 'Sold out for now. Save it with the heart and check back soon.' : "This dish can't be ordered right now."}</p>
       )}
     </div>
   )

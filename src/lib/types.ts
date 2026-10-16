@@ -65,6 +65,7 @@ export type Product = {
   category_id: string | null
   price_pence: number
   portion: string | null
+  stock_qty: number | null
   ingredients: string | null
   may_contain_notes: string | null
   collection_ok: boolean

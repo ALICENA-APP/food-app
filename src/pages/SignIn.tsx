@@ -115,6 +115,12 @@ export default function SignIn() {
             {mode === 'signup' ? 'Sign in' : 'Create an account'}
           </button>
         </p>
+        {mode === 'signup' && (
+          <p className="muted tiny">
+            By creating an account you agree to the <a href="/terms" onClick={link('/terms')}>terms of use</a> and confirm you're 18 or over.
+            See how we use your data in our <a href="/privacy" onClick={link('/privacy')}>privacy notice</a>.
+          </p>
+        )}
       </form>
       <p className="muted small" style={{ textAlign: 'center' }}>
         You'll stay signed in on this device. <a href="/" onClick={link('/')}>Keep browsing</a>
