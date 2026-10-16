@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import { supabase } from '../lib/supabase'
+import { myUserId } from '../lib/session'
 import { link } from '../lib/router'
 import { Icon } from '../lib/icons'
 import { offerLabel as discountLabel } from '../lib/discounts'
@@ -43,7 +44,7 @@ export default function Discounts() {
   useEffect(() => {
     ;(async () => {
       const db = supabase!
-      const { data: account } = await db.from('seller_accounts').select('id').maybeSingle()
+      const { data: account } = await db.from('seller_accounts').select('id').eq('user_id', await myUserId()).maybeSingle()
       if (!account) return setShopId(null)
       const { data: shops } = await db.from('shops').select('id').eq('seller_account_id', account.id).limit(1)
       const id = shops?.[0]?.id ?? null

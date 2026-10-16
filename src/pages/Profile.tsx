@@ -59,7 +59,7 @@ export default function Profile() {
     const db = supabase!
     db.from('profiles').select('display_name').eq('id', userId).maybeSingle().then(({ data }) => setName(data?.display_name ?? ''))
     db.from('reviews').select('id', { count: 'exact', head: true }).eq('customer_id', userId).then(({ count }) => setReviews(count ?? 0))
-    db.from('seller_accounts').select('id').maybeSingle().then(({ data }) => setIsSeller(Boolean(data)))
+    db.from('seller_accounts').select('id').eq('user_id', userId).maybeSingle().then(({ data }) => setIsSeller(Boolean(data)))
     db.rpc('am_i_admin').then(({ data }) => setIsAdmin(Boolean(data)))
   }, [userId])
 

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import QRCode from 'qrcode'
 import { supabase } from '../lib/supabase'
+import { myUserId } from '../lib/session'
 import { link } from '../lib/router'
 import { Icon } from '../lib/icons'
 import { Wordmark } from '../lib/ui'
@@ -16,7 +17,7 @@ export default function Poster() {
   useEffect(() => {
     ;(async () => {
       const db = supabase!
-      const { data: account } = await db.from('seller_accounts').select('id').maybeSingle()
+      const { data: account } = await db.from('seller_accounts').select('id').eq('user_id', await myUserId()).maybeSingle()
       if (!account) return setShop(null)
       const { data: shops } = await db.from('shops').select('*').eq('seller_account_id', account.id).limit(1)
       setShop(shops?.[0] ?? null)

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import { supabase } from '../lib/supabase'
+import { myUserId } from '../lib/session'
 import { link, navigate } from '../lib/router'
 import { DIETARY, pounds, type Allergen, type Category, type Presence, type Product, type ProductAddon, type ProductVariant } from '../lib/types'
 import { deletePhoto, photoUrl, uploadPhoto } from '../lib/images'
@@ -26,7 +27,7 @@ export default function ProductEditor({ productId }: { productId: string | null 
   useEffect(() => {
     ;(async () => {
       const db = supabase!
-      const { data: account } = await db.from('seller_accounts').select('id').maybeSingle()
+      const { data: account } = await db.from('seller_accounts').select('id').eq('user_id', await myUserId()).maybeSingle()
       const { data: shops } = account
         ? await db.from('shops').select('id').eq('seller_account_id', account.id).limit(1)
         : { data: [] }

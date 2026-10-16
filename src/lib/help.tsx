@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { supabase } from './supabase'
-import { askToSignIn, useSession } from './session'
+import { askToSignIn, myUserId, useSession } from './session'
 import { link } from './router'
 
 export type Topic = 'missing' | 'wrong' | 'quality' | 'late' | 'allergy' | 'payment' | 'account' | 'selling' | 'other'
@@ -100,7 +100,7 @@ export function HelpForm({ orderId, seller, plain, onDone }: { orderId?: string;
 export function MyRequests() {
   const [list, setList] = useState<HelpRequest[] | null>(null)
   useEffect(() => {
-    supabase!.from('help_requests').select('*').order('created_at', { ascending: false }).limit(50)
+    myUserId().then((uid) => supabase!.from('help_requests').select('*').eq('user_id', uid).order('created_at', { ascending: false }).limit(50))
       .then(({ data }) => setList((data ?? []) as HelpRequest[]))
   }, [])
   return (

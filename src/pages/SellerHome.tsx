@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import { supabase } from '../lib/supabase'
+import { myUserId } from '../lib/session'
 import { link } from '../lib/router'
 import { pounds, TERMS_VERSION, type SellerAccount, type Shop, type Verification } from '../lib/types'
 import { Icon, type IconName } from '../lib/icons'
@@ -28,7 +29,7 @@ export default function SellerHome() {
 
   const load = useCallback(async () => {
     const db = supabase!
-    const { data: acc, error: accErr } = await db.from('seller_accounts').select('*').maybeSingle()
+    const { data: acc, error: accErr } = await db.from('seller_accounts').select('*').eq('user_id', await myUserId()).maybeSingle()
     if (accErr) return setError(accErr.message)
     setAccount(acc)
     if (acc) {
@@ -186,7 +187,7 @@ function Dashboard({ shop, account, onChanged }: { shop: Shop; account: SellerAc
         <SellerTile to="/sell/discounts" icon="tag" title="Discount codes" sub="Offers for customers" tone="var(--yellow-soft)" />
         <SellerTile to="/help" icon="help" title="Help" sub="How selling works" tone="var(--line)" />
       </div>
-      <GetFeatured shopLive={shop.status === 'live'} />
+      <GetFeatured shopId={shop.id} shopLive={shop.status === 'live'} />
     </>
   )
 }
@@ -232,7 +233,7 @@ function ViewsCard({ shopId }: { shopId: string }) {
 type Promo = { id: string; weeks: number; status: 'requested' | 'active' | 'declined' | 'cancelled'; starts_on: string | null; ends_on: string | null; fee_pence: number; note: string | null }
 
 // Ask for a featured (sponsored) spot on the home page and at the top of Explore.
-function GetFeatured({ shopLive }: { shopLive: boolean }) {
+function GetFeatured({ shopId, shopLive }: { shopId: string; shopLive: boolean }) {
   const [promos, setPromos] = useState<Promo[] | null>(null)
   const [weekPence, setWeekPence] = useState(500)
   const [weeks, setWeeks] = useState(2)
@@ -241,12 +242,12 @@ function GetFeatured({ shopLive }: { shopLive: boolean }) {
   const load = useCallback(async () => {
     const db = supabase!
     const [p, s] = await Promise.all([
-      db.from('promotions').select('*').order('created_at', { ascending: false }).limit(5),
+      db.from('promotions').select('*').eq('shop_id', shopId).order('created_at', { ascending: false }).limit(5),
       db.from('platform_settings').select('promo_week_pence').maybeSingle(),
     ])
     setPromos(p.data ?? [])
     if (s.data?.promo_week_pence != null) setWeekPence(s.data.promo_week_pence)
-  }, [])
+  }, [shopId])
 
   useEffect(() => {
     load()

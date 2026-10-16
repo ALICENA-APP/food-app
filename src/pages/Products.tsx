@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
+import { myUserId } from '../lib/session'
 import { link } from '../lib/router'
 import { Icon } from '../lib/icons'
 import { FoodPhoto } from '../lib/ui'
@@ -20,7 +21,7 @@ export default function Products() {
   useEffect(() => {
     ;(async () => {
       const db = supabase!
-      const { data: account } = await db.from('seller_accounts').select('id').maybeSingle()
+      const { data: account } = await db.from('seller_accounts').select('id').eq('user_id', await myUserId()).maybeSingle()
       if (!account) return setShop(null)
       const { data: shops } = await db.from('shops').select('*').eq('seller_account_id', account.id).limit(1)
       const s = shops?.[0] ?? null

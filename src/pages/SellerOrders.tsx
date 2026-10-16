@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { supabase } from '../lib/supabase'
+import { myUserId } from '../lib/session'
 import { tidyOrders } from '../lib/alerts'
 import { link, queryParam } from '../lib/router'
 import { OrderChat } from '../lib/chat'
@@ -18,7 +19,7 @@ export default function SellerOrders() {
   const load = useCallback(async () => {
     tidyOrders()
     const db = supabase!
-    const { data: account } = await db.from('seller_accounts').select('id').maybeSingle()
+    const { data: account } = await db.from('seller_accounts').select('id').eq('user_id', await myUserId()).maybeSingle()
     if (!account) return setOrders([])
     const { data: shops } = await db.from('shops').select('id').eq('seller_account_id', account.id)
     const ids = (shops ?? []).map((s) => s.id)

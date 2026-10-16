@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
+import { myUserId } from '../lib/session'
 import { link } from '../lib/router'
 import { pounds } from '../lib/types'
 import { ReviewItem, Stars, type Review } from '../lib/reviews'
 
 async function myShopIds() {
   const db = supabase!
-  const { data: account } = await db.from('seller_accounts').select('id').maybeSingle()
+  const { data: account } = await db.from('seller_accounts').select('id').eq('user_id', await myUserId()).maybeSingle()
   if (!account) return []
   const { data } = await db.from('shops').select('id').eq('seller_account_id', account.id)
   return (data ?? []).map((s) => s.id as string)

@@ -56,3 +56,10 @@ export function useSession() {
 export function askToSignIn(next = window.location.pathname + window.location.search) {
   navigate(`/signin?next=${encodeURIComponent(next)}`)
 }
+
+// The signed-in person's id. Queries for "my" rows filter by it, because
+// admins can read everyone's rows and would otherwise get them all.
+export async function myUserId() {
+  const { data } = await supabase!.auth.getSession()
+  return data.session?.user.id ?? '00000000-0000-0000-0000-000000000000'
+}

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import { supabase } from '../lib/supabase'
+import { myUserId } from '../lib/session'
 import { locatePostcode } from '../lib/geo'
 import { addDays, shortDate } from '../lib/hours'
 import { link, navigate } from '../lib/router'
@@ -29,7 +30,7 @@ export default function ShopSetup() {
   useEffect(() => {
     ;(async () => {
       const db = supabase!
-      const { data: account } = await db.from('seller_accounts').select('*').maybeSingle()
+      const { data: account } = await db.from('seller_accounts').select('*').eq('user_id', await myUserId()).maybeSingle()
       let shop: Shop | null = null
       let settings: ShopSettings | null = null
       let priv: ShopPrivate | null = null
