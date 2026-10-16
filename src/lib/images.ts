@@ -6,6 +6,7 @@ const MAX_BYTES = 250 * 1024 // bucket allows 300 KB; stay under it
 // Public web address of a photo in the product-images bucket.
 export function photoUrl(path: string | null | undefined) {
   if (!path || !supabase) return null
+  if (path.startsWith('/')) return path // pictures shipped with the app (demo shops)
   return supabase.storage.from(BUCKET).getPublicUrl(path).data.publicUrl
 }
 

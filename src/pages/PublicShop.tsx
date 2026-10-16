@@ -82,6 +82,7 @@ export default function PublicShop({ slug }: { slug: string }) {
       </div>
 
       {isPreview && <p className="status">Preview: only you can see this until your shop goes live.</p>}
+      {shop.is_demo && <p className="demo-banner small"><strong>This is a demo shop.</strong> It’s made up to show how BiteBY works, so it can’t take real orders.</p>}
       {shop.notice && (!shop.notice_until || shop.notice_until >= londonNow().date) && (
         <p className="shop-notice"><Icon name="info" size={18} /> <span>{shop.notice}</span></p>
       )}

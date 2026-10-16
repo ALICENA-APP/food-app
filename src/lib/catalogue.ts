@@ -17,7 +17,7 @@ export type Dish = {
   collection_ok: boolean
   delivery_ok: boolean
   created_at: string
-  shops: Pick<Shop, 'id' | 'name' | 'slug' | 'logo_path' | 'area_label' | 'accepting_orders'>
+  shops: Pick<Shop, 'id' | 'name' | 'slug' | 'logo_path' | 'area_label' | 'accepting_orders' | 'is_demo'>
   product_images: { path: string; sort: number }[]
 }
 
@@ -25,7 +25,7 @@ export type Rating = { average: number; reviews: number }
 
 export const DISH_FIELDS =
   'id, shop_id, name, description, price_pence, portion, stock_qty, min_lead_hours, dietary, category_id, collection_ok, delivery_ok, created_at, ' +
-  'shops!inner(id, name, slug, logo_path, area_label, accepting_orders, status), product_images(path, sort)'
+  'shops!inner(id, name, slug, logo_path, area_label, accepting_orders, status, is_demo), product_images(path, sort)'
 
 // Dishes on sale in live shops. The database only returns what the public may see.
 export function dishQuery() {
@@ -68,4 +68,10 @@ export async function loadShopOptions(shopIds: string[]) {
   if (!shopIds.length) return {} as Record<string, { collection: boolean; delivery: boolean }>
   const { data } = await supabase!.from('shop_settings').select('shop_id, offers_collection, offers_delivery').in('shop_id', [...new Set(shopIds)])
   return Object.fromEntries((data ?? []).map((s) => [s.shop_id, { collection: s.offers_collection, delivery: s.offers_delivery }]))
+}
+
+// Shops with a featured (sponsored) spot today.
+export async function loadFeatured(): Promise<string[]> {
+  const { data } = await supabase!.rpc('featured_shops')
+  return ((data ?? []) as (string | { featured_shops: string })[]).map((x) => (typeof x === 'string' ? x : x.featured_shops))
 }

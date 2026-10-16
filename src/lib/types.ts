@@ -38,6 +38,7 @@ export type Shop = {
   accepting_orders: boolean
   notice?: string | null
   notice_until?: string | null
+  is_demo?: boolean
 }
 
 export type ShopSettings = {
@@ -105,7 +106,7 @@ export function noticeLabel(hours: number | null | undefined) {
 
 export const dietaryName = (code: string) => DIETARY.find((d) => d.code === code)?.name ?? code
 
-export const TERMS_VERSION = '2026-10-v2'
+export const TERMS_VERSION = '2026-10-v3'
 
 export function pounds(pence: number) {
   return `£${(pence / 100).toFixed(2)}`

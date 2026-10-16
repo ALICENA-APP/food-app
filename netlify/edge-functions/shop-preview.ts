@@ -25,7 +25,7 @@ async function shopPreview(base: string, key: string, slug: string): Promise<Pre
   return {
     title: `${shop.name} · BiteBY`,
     description: (shop.story || `Homemade food on BiteBY${where ? ` · ${where}` : ''}. Order online.`).slice(0, 200),
-    image: shop.cover_path ? `${base}/storage/v1/object/public/product-images/${shop.cover_path}` : null,
+    image: shop.cover_path && !shop.cover_path.startsWith('/') ? `${base}/storage/v1/object/public/product-images/${shop.cover_path}` : null,
   }
 }
 
@@ -40,7 +40,7 @@ async function dishPreview(base: string, key: string, slug: string, id: string):
   return {
     title: `${dish.name} · ${price} · ${dish.shops.name}`,
     description: (dish.description || `Homemade by ${dish.shops.name}. Order on BiteBY.`).slice(0, 200),
-    image: photo ? `${base}/storage/v1/object/public/product-images/${photo}` : null,
+    image: photo && !photo.startsWith('/') ? `${base}/storage/v1/object/public/product-images/${photo}` : null,
   }
 }
 

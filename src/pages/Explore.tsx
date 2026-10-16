@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { navigate, queryParam } from '../lib/router'
 import { Icon } from '../lib/icons'
-import { dishQuery, loadRatings, loadShopOptions, useCategories, type Dish, type Rating } from '../lib/catalogue'
+import { dishQuery, loadFeatured, loadRatings, loadShopOptions, useCategories, type Dish, type Rating } from '../lib/catalogue'
 import { loadOpenStates, type OpenState } from '../lib/hours'
 import { loadDeliveryTo, loadNear, postcodeDistrict, usePostcode, type Near } from '../lib/postcode'
 import { PostcodePicker } from '../lib/PostcodePicker'
@@ -39,14 +39,16 @@ export default function Explore() {
   const [within, setWithin] = useState(0)
   const district = postcode ? postcodeDistrict(postcode) : ''
   const [delivers, setDelivers] = useState<Record<string, number>>({})
+  const [featured, setFeatured] = useState<string[]>([])
   const [options, setOptions] = useState<Record<string, { collection: boolean; delivery: boolean }>>({})
 
   useEffect(() => {
     ;(async () => {
       const [d, s] = await Promise.all([
         dishQuery().order('created_at', { ascending: false }).limit(300),
-        supabase!.from('shops').select('id, name, slug, logo_path, area_label, cuisines, accepting_orders').eq('status', 'live').limit(200),
+        supabase!.from('shops').select('id, name, slug, logo_path, area_label, cuisines, accepting_orders, is_demo').eq('status', 'live').limit(200),
       ])
+      loadFeatured().then(setFeatured)
       setDishes((d.data ?? []) as unknown as Dish[])
       setShops(s.data ?? [])
       const ids = (s.data ?? []).map((x) => x.id)
@@ -99,7 +101,9 @@ export default function Explore() {
 
   const withDishes = new Set(shownDishes.map((d) => d.shop_id))
   const dishFilterOn = Boolean(categoryId) || ['under10', 'vegetarian', 'vegan', 'halal'].some((f) => has(f as Filter))
-  const shownShops = [...shops].sort((a, b) => (near[a.id]?.miles ?? 99) - (near[b.id]?.miles ?? 99)).filter((s) =>
+  // Up to three featured cooks go first, labelled Sponsored; the rest by distance.
+  const pinned = new Set(featured.slice(0, 3))
+  const shownShops = [...shops].sort((a, b) => Number(pinned.has(b.id)) - Number(pinned.has(a.id)) || (near[a.id]?.miles ?? 99) - (near[b.id]?.miles ?? 99)).filter((s) =>
     (!q || [s.name, s.area_label ?? '', ...s.cuisines].some((t) => t.toLowerCase().includes(q)) || withDishes.has(s.id)) &&
     (!dishFilterOn || withDishes.has(s.id)) &&
     shopOk(s.id, s.accepting_orders))
@@ -154,7 +158,7 @@ export default function Explore() {
       ) : <NothingFound empty={dishes.length === 0} />)}
       {dishes && view === 'sellers' && (shownShops.length ? (
         <div className="stack" style={{ gap: 10 }}>
-          {shownShops.map((s) => <SellerRow key={s.id} shop={s} rating={ratings[s.id]} open={open[s.id]} miles={near[s.id]?.miles} />)}
+          {shownShops.map((s) => <SellerRow key={s.id} shop={s} rating={ratings[s.id]} open={open[s.id]} miles={near[s.id]?.miles} sponsored={pinned.has(s.id)} />)}
         </div>
       ) : <NothingFound empty={shops.length === 0} />)}
     </div>

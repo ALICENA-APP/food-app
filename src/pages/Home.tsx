@@ -2,7 +2,7 @@ import { useEffect, useState, type FormEvent } from 'react'
 import { supabase } from '../lib/supabase'
 import { link, navigate } from '../lib/router'
 import { Icon } from '../lib/icons'
-import { dishQuery, loadRatings, useCategories, type Dish, type Rating } from '../lib/catalogue'
+import { dishQuery, loadFeatured, loadRatings, useCategories, type Dish, type Rating } from '../lib/catalogue'
 import { loadOpenStates, type OpenState } from '../lib/hours'
 import { InstallPrompt } from '../lib/install'
 import { PostcodePicker } from '../lib/PostcodePicker'
@@ -21,13 +21,16 @@ export default function Home() {
   const [postcode, , point] = usePostcode()
   const [near, setNear] = useState<Record<string, Near>>({})
   const [delivers, setDelivers] = useState<Record<string, number>>({})
+  const [featured, setFeatured] = useState<string[]>([])
 
   useEffect(() => {
     ;(async () => {
-      const [d, s] = await Promise.all([
+      const [d, s, f] = await Promise.all([
         dishQuery().order('created_at', { ascending: false }).limit(60),
-        supabase!.from('shops').select('id, name, slug, logo_path, area_label, cuisines').eq('status', 'live').limit(60),
+        supabase!.from('shops').select('id, name, slug, logo_path, area_label, cuisines, is_demo').eq('status', 'live').limit(60),
+        loadFeatured(),
       ])
+      setFeatured(f)
       const list = (d.data ?? []) as unknown as Dish[]
       setDishes(list)
       setShops(s.data ?? [])
@@ -60,6 +63,7 @@ export default function Home() {
   const closer = (a: string, b: string) => reach(b) - reach(a) || away(a) - away(b)
   const popular = [...(dishes ?? [])].sort((a, b) => closer(a.shop_id, b.shop_id) || rated(b.shop_id) - rated(a.shop_id)).slice(0, 10)
   const sweet = (dishes ?? []).filter((d) => d.category_id && desserts.includes(d.category_id)).slice(0, 10)
+  const featuredShops = featured.map((id) => shops.find((x) => x.id === id)).filter((x): x is ShopCardData => Boolean(x))
   const topShops = [...shops].sort((a, b) => (point ? closer(a.id, b.id) : 0) || rated(b.id) - rated(a.id) || (ratings[b.id]?.reviews ?? 0) - (ratings[a.id]?.reviews ?? 0)).slice(0, 10)
 
   return (
@@ -79,6 +83,18 @@ export default function Home() {
         <CatTile slug="vegetarian" name="Vegetarian" to="/explore?diet=vegetarian" />
         <CatTile slug="vegan" name="Vegan" to="/explore?diet=vegan" />
       </div>
+
+      {featuredShops.length > 0 && (
+        <section className="stack">
+          <div className="section-head">
+            <span className="featured-head"><h2>Featured cooks</h2><span className="muted tiny">Sponsored</span></span>
+            <a href="/explore?view=sellers" onClick={link('/explore?view=sellers')}>See all</a>
+          </div>
+          <div className="hscroll">
+            {featuredShops.map((s) => <SellerCard key={s.id} shop={s} rating={ratings[s.id]} open={open[s.id]} miles={near[s.id]?.miles} sponsored />)}
+          </div>
+        </section>
+      )}
 
       <InstallPrompt />
 

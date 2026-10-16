@@ -46,9 +46,10 @@ export function OrderChat({ orderId, asSeller, otherName }: { orderId: string; a
     if (!text.trim()) return
     setSending(true)
     setError('')
-    const { error: err } = await supabase!.rpc('send_order_message', { p_order: orderId, p_body: text })
+    const { data: note, error: err } = await supabase!.rpc('send_order_message', { p_order: orderId, p_body: text })
     setSending(false)
     if (err) return setError(err.message)
+    if (typeof note === 'string' && note) setError(note)
     setText('')
     load()
   }

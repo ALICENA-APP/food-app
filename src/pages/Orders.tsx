@@ -293,12 +293,14 @@ export function OrderDetail({ id }: { id: string }) {
         </div>
       )}
 
-      {order.status !== 'awaiting_payment' && (
+      {order.status !== 'awaiting_payment' && (<>
+        <p className="safety-tip small"><Icon name="shield" size={18} /> <span>Never pay a cook outside BiteBY, even if they ask. Report it below and we’ll help.</span></p>
         <details className="card" id="problem">
           <summary>Report a problem with this order</summary>
           <p className="muted small">Message the cook first if it’s something they can sort out. If not, tell the BiteBY team and we’ll help.</p>
           <HelpForm orderId={order.id} plain />
         </details>
+      </>
       )}
     </div>
   )

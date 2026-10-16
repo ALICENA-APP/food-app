@@ -48,6 +48,7 @@ export default function Checkout() {
   const [keepAddress, setKeepAddress] = useState(true)
   const [lead, setLead] = useState(0)
   const [away, setAway] = useState<string[]>([])
+  const [demo, setDemo] = useState(false)
   // For cooks who deliver within a distance: where the delivery postcode is,
   // and whether this cook reaches it.
   const [spot, setSpot] = useState<{ postcode: string; point: Point | null; delivers: boolean } | null>(null)
@@ -90,6 +91,7 @@ export default function Checkout() {
   // Days the cook is away, so nobody orders for one of them.
   useEffect(() => {
     if (!shopId) return
+    supabase!.from('shops').select('is_demo').eq('id', shopId).maybeSingle().then(({ data }) => setDemo(Boolean(data?.is_demo)))
     const today = londonNow().date
     supabase!.from('shop_closures').select('closed_on').eq('shop_id', shopId).gte('closed_on', today).lte('closed_on', addDays(today, 60))
       .then(({ data }) => setAway((data ?? []).map((x) => x.closed_on)))
@@ -188,6 +190,7 @@ export default function Checkout() {
         <h1>Basket</h1>
         <span className="muted small">{basketCount(basket)} {basketCount(basket) === 1 ? 'item' : 'items'}</span>
       </div>
+      {demo && <p className="demo-banner small"><strong>Demo shop.</strong> You can try the basket and checkout, but demo shops can’t take real orders.</p>}
 
       <div className="card">
         <a className="small" href={`/s/${basket.shopSlug}`} onClick={link(`/s/${basket.shopSlug}`)}>
@@ -291,6 +294,7 @@ export default function Checkout() {
         <p className="muted tiny">You pay before the cook starts. If they can't take your order, you get your money back.</p>
       </div>
 
+      <p className="safety-tip small"><Icon name="shield" size={18} /> <span>Only pay through BiteBY. If a cook asks for cash or a bank transfer, don’t pay and tap “Report a problem” on your order. Payments made outside BiteBY can’t be refunded by us.</span></p>
       <button type="submit" className="dark block action-bar" disabled={placing}>
         {placing ? 'Placing order…' : session ? `Place order · ${pounds(subtotal + fee)}` : 'Sign in to place your order'}
       </button>

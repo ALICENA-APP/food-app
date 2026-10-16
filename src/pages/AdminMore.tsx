@@ -209,6 +209,7 @@ export function AdminOverview() {
           ))}
         </div>
       )}
+      <DemoData />
     </div>
   )
 }
@@ -282,5 +283,143 @@ function HelpCard({ help: h, onDone }: { help: AdminHelp; onDone: () => void }) 
       )}
       {message && <p className="error small">{message}</p>}
     </article>
+  )
+}
+
+// The made-up demo shops: how many there are, and a button to remove them all.
+function DemoData() {
+  const [count, setCount] = useState<number | null>(null)
+  const [sure, setSure] = useState(false)
+  const [message, setMessage] = useState('')
+
+  useEffect(() => {
+    supabase!.from('shops').select('id', { count: 'exact', head: true }).eq('is_demo', true).then(({ count: n }) => setCount(n ?? 0))
+  }, [])
+
+  if (!count && !message) return null
+
+  async function remove() {
+    const { data, error } = await supabase!.rpc('admin_remove_demo_data')
+    if (error) return setMessage(error.message)
+    setCount(0)
+    setMessage(`Removed ${data} demo shops, with their dishes, reviews and featured spots.`)
+  }
+
+  return (
+    <div className="card">
+      <h2>Demo shops</h2>
+      {count ? (
+        <>
+          <p className="muted small">There are {count} made-up demo shops so you can try every part of the app. They’re labelled “Demo” and can’t take real orders. Remove them before launch.</p>
+          <button type="button" className={sure ? 'danger' : 'secondary'} onClick={() => (sure ? remove() : setSure(true))}>
+            {sure ? 'Tap again to remove all demo shops' : 'Remove demo shops'}
+          </button>
+        </>
+      ) : null}
+      {message && <p className="small">{message}</p>}
+    </div>
+  )
+}
+
+type AdminPromo = {
+  id: string; shop_name: string; slug: string; is_demo: boolean; weeks: number; status: string
+  starts_on: string | null; ends_on: string | null; fee_pence: number; note: string | null; created_at: string; running: boolean
+}
+
+// Featured (sponsored) spots: requests to approve, and who is featured now.
+export function AdminPromoted() {
+  const [data, setData] = useState<{ slots: number; week_pence: number; list: AdminPromo[] } | null>(null)
+  const [error, setError] = useState('')
+
+  const load = useCallback(async () => {
+    const { data: d, error: e } = await supabase!.rpc('admin_promotions')
+    if (e) return setError(e.message)
+    setData(d)
+  }, [])
+
+  useEffect(() => {
+    load()
+  }, [load])
+
+  async function decide(id: string, action: 'approve' | 'decline' | 'end') {
+    setError('')
+    const note = action === 'decline' ? window.prompt('Reason to show the cook (optional)') ?? undefined : undefined
+    const { error: e } = await supabase!.rpc('admin_decide_promotion', { p_id: id, p_action: action, p_note: note || null })
+    if (e) return setError(e.message)
+    load()
+  }
+
+  if (error && !data) return <p className="error">{error}</p>
+  if (!data) return <p className="muted">Loading…</p>
+  const requests = data.list.filter((p) => p.status === 'requested')
+  const running = data.list.filter((p) => p.running)
+  const day = (d: string | null) => (d ? new Date(d + 'T12:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : '')
+
+  return (
+    <div className="stack">
+      <div className="card">
+        <div className="item"><span>Featured spots in use</span><strong>{running.length} of {data.slots}</strong></div>
+        <div className="item"><span>Price per week</span><strong>{pounds(data.week_pence)}</strong></div>
+        <p className="muted small">Featured cooks show in a “Featured cooks” row on the home page and first in Explore, always marked “Sponsored”. The order changes every day so everyone gets a turn at the front.</p>
+      </div>
+      {error && <p className="error">{error}</p>}
+      <h2>Requests ({requests.length})</h2>
+      {requests.length === 0 && <p className="muted">No requests waiting.</p>}
+      {requests.map((p) => (
+        <article key={p.id} className="card">
+          <div className="item"><strong><a href={`/s/${p.slug}`} onClick={link(`/s/${p.slug}`)}>{p.shop_name}</a></strong><span>{p.weeks} {p.weeks === 1 ? 'week' : 'weeks'} · {pounds(p.fee_pence)}</span></div>
+          <p className="muted tiny">Asked {when(p.created_at)}</p>
+          <div className="row">
+            <button type="button" onClick={() => decide(p.id, 'approve')}>Approve, start today</button>
+            <button type="button" className="secondary" onClick={() => decide(p.id, 'decline')}>Decline</button>
+          </div>
+        </article>
+      ))}
+      <h2>Featured now</h2>
+      {running.length === 0 && <p className="muted">Nobody is featured right now.</p>}
+      {running.map((p) => (
+        <article key={p.id} className="card">
+          <div className="item">
+            <strong>{p.shop_name} {p.is_demo && <span className="tag demo">Demo</span>}</strong>
+            <span className="muted small">{day(p.starts_on)} to {day(p.ends_on)}</span>
+          </div>
+          <button type="button" className="secondary small-btn" onClick={() => decide(p.id, 'end')}>End early</button>
+        </article>
+      ))}
+    </div>
+  )
+}
+
+type Flag = { id: number; source: string; reason: string; excerpt: string | null; created_at: string; shop_name: string | null; slug: string | null; order_code: string | null; email: string | null; shop_total: number }
+
+// Attempts to move orders, payment or contact off BiteBY.
+export function AdminSafety() {
+  const [flags, setFlags] = useState<Flag[] | null>(null)
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    supabase!.rpc('admin_safety_flags').then(({ data, error: e }) => (e ? setError(e.message) : setFlags(data ?? [])))
+  }, [])
+
+  if (error) return <p className="error">{error}</p>
+  if (!flags) return <p className="muted">Loading…</p>
+  return (
+    <div className="stack">
+      <p className="muted small">
+        Messages with phone numbers, emails, links, bank details or talk of paying outside BiteBY are hidden automatically and listed here.
+        Shop pages and dishes can’t be saved with them at all. A cook who keeps appearing here may be taking customers off the app.
+      </p>
+      {flags.length === 0 && <p className="muted">Nothing flagged. Good.</p>}
+      {flags.map((f) => (
+        <article key={f.id} className="card stack" style={{ gap: 4 }}>
+          <div className="item">
+            <strong>{f.shop_name ?? 'Unknown shop'}</strong>
+            <span className={`tag ${f.shop_total >= 3 ? 'red' : 'grey'}`}>{f.shop_total} flagged</span>
+          </div>
+          <p className="muted tiny">{f.source} · {f.reason}{f.order_code ? ` · order ${f.order_code}` : ''} · {f.email ?? ''} · {when(f.created_at)}</p>
+          {f.excerpt && <p className="story small">{f.excerpt}</p>}
+        </article>
+      ))}
+    </div>
   )
 }

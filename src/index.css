@@ -497,3 +497,16 @@ fieldset.options legend { font-weight: 700; padding: 0 4px; display: flex; gap: 
 .line-options { display: block; }
 .shop-notice { display: flex; gap: 10px; align-items: flex-start; background: var(--black); color: #fff; border-radius: 12px; padding: 12px 14px; margin: 0; font-weight: 600; }
 .shop-notice svg { flex: none; color: var(--yellow); margin-top: 2px; }
+
+/* Sponsored and demo labels */
+.tag.sponsored { background: var(--black); color: #fff; font-size: 0.68rem; letter-spacing: 0.02em; }
+.tag.demo { background: #e7f5ff; color: #1864ab; font-size: 0.68rem; }
+.card-flags { position: absolute; top: 8px; left: 8px; display: flex; gap: 4px; z-index: 1; }
+.seller-card { position: relative; }
+.demo-banner { background: #e7f5ff; color: #1864ab; border-radius: 12px; padding: 10px 14px; margin: 0; }
+.featured-head { display: flex; align-items: baseline; gap: 8px; }
+.safety-tip { display: flex; gap: 10px; align-items: flex-start; background: var(--green-soft); border-radius: 12px; padding: 10px 14px; margin: 0; }
+.safety-tip svg { flex: none; margin-top: 2px; }
+.tabs { overflow-x: auto; scrollbar-width: none; }
+.tabs::-webkit-scrollbar { display: none; }
+.tabs button { flex: 1 0 auto; padding-left: 12px; padding-right: 12px; }

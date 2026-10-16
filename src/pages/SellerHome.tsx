@@ -180,7 +180,72 @@ function Dashboard({ shop, account, onChanged }: { shop: Shop; account: SellerAc
         <SellerTile to="/sell/reviews" icon="star" title="Reviews" sub="Read and reply" tone="var(--line)" />
         <SellerTile to="/help" icon="help" title="Help" sub="How selling works" tone="var(--line)" />
       </div>
+      <GetFeatured shopLive={shop.status === 'live'} />
     </>
+  )
+}
+
+type Promo = { id: string; weeks: number; status: 'requested' | 'active' | 'declined' | 'cancelled'; starts_on: string | null; ends_on: string | null; fee_pence: number; note: string | null }
+
+// Ask for a featured (sponsored) spot on the home page and at the top of Explore.
+function GetFeatured({ shopLive }: { shopLive: boolean }) {
+  const [promos, setPromos] = useState<Promo[] | null>(null)
+  const [weekPence, setWeekPence] = useState(500)
+  const [weeks, setWeeks] = useState(2)
+  const [message, setMessage] = useState('')
+
+  const load = useCallback(async () => {
+    const db = supabase!
+    const [p, s] = await Promise.all([
+      db.from('promotions').select('*').order('created_at', { ascending: false }).limit(5),
+      db.from('platform_settings').select('promo_week_pence').maybeSingle(),
+    ])
+    setPromos(p.data ?? [])
+    if (s.data?.promo_week_pence != null) setWeekPence(s.data.promo_week_pence)
+  }, [])
+
+  useEffect(() => {
+    load()
+  }, [load])
+
+  if (!promos) return null
+  const today = new Date().toISOString().slice(0, 10)
+  const running = promos.find((p) => p.status === 'active' && p.ends_on && p.ends_on >= today)
+  const waiting = promos.find((p) => p.status === 'requested')
+  const lastDeclined = promos[0]?.status === 'declined' ? promos[0] : null
+
+  async function request() {
+    setMessage('')
+    const { error } = await supabase!.rpc('request_promotion', { p_weeks: weeks })
+    if (error) return setMessage(error.message)
+    load()
+  }
+
+  return (
+    <div className="card stack">
+      <h2>Get featured</h2>
+      <p className="muted small">Featured cooks appear in a “Featured cooks” row near the top of the home page and first in Explore, marked “Sponsored”.</p>
+      {running ? (
+        <p className="tick">You’re featured until {new Date(running.ends_on + 'T12:00').toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })}.</p>
+      ) : waiting ? (
+        <p className="status small">Request sent for {waiting.weeks} {waiting.weeks === 1 ? 'week' : 'weeks'}. The BiteBY team will confirm soon.</p>
+      ) : (
+        <>
+          {lastDeclined?.note && <p className="muted small">Last request: {lastDeclined.note}</p>}
+          <div className="chips">
+            {[1, 2, 4].map((w) => (
+              <button key={w} type="button" className={`chip ${weeks === w ? 'on' : ''}`} onClick={() => setWeeks(w)}>
+                {w} {w === 1 ? 'week' : 'weeks'} · {pounds(w * weekPence)}
+              </button>
+            ))}
+          </div>
+          <button type="button" onClick={request} disabled={!shopLive}>Ask to be featured</button>
+          {!shopLive && <p className="muted small">You can ask once your shop is live.</p>}
+          <p className="muted tiny">Nothing is charged now. Payment will be taken by card once online payments are switched on, and only if the team approves your spot.</p>
+        </>
+      )}
+      {message && <p className="error small">{message}</p>}
+    </div>
   )
 }
 

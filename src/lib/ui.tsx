@@ -140,7 +140,7 @@ export function DishCard({ dish, rating }: { dish: Dish; rating?: Rating }) {
       <HeartButton productId={dish.id} />
       <span className="body">
         <span className="name">{dish.name}</span>
-        <span className="by">{dish.shops.name}</span>
+        <span className="by">{dish.shops.name}{dish.shops.is_demo && <> <DemoTag /></>}</span>
         <span className="foot">
           <span className="price">{pounds(dish.price_pence)}</span>
           {dish.stock_qty === 0 ? <span className="tag red">Sold out</span> : <RatingBadge rating={rating} />}
@@ -150,7 +150,11 @@ export function DishCard({ dish, rating }: { dish: Dish; rating?: Rating }) {
   )
 }
 
-export type ShopCardData = { id: string; name: string; slug: string; logo_path: string | null; area_label: string | null; cuisines: string[] }
+export type ShopCardData = { id: string; name: string; slug: string; logo_path: string | null; area_label: string | null; cuisines: string[]; is_demo?: boolean }
+
+// Paid placements are always labelled, as UK advertising rules require.
+export const SponsoredTag = () => <span className="tag sponsored">Sponsored</span>
+export const DemoTag = () => <span className="tag demo" title="A made-up shop to show how BiteBY works">Demo</span>
 
 // Distances come rounded to whole miles from the database.
 export function distanceLabel(miles?: number) {
@@ -163,10 +167,11 @@ function OpenLabel({ state }: { state?: OpenState }) {
   return <span className={`open-label ${state.open ? 'on' : ''}`}>{state.open ? 'Open now' : state.label}</span>
 }
 
-export function SellerCard({ shop, rating, open, miles }: { shop: ShopCardData; rating?: Rating; open?: OpenState; miles?: number }) {
+export function SellerCard({ shop, rating, open, miles, sponsored }: { shop: ShopCardData; rating?: Rating; open?: OpenState; miles?: number; sponsored?: boolean }) {
   const to = `/s/${shop.slug}`
   return (
     <a className="seller-card" href={to} onClick={link(to)}>
+      {(sponsored || shop.is_demo) && <span className="card-flags">{sponsored && <SponsoredTag />}{shop.is_demo && <DemoTag />}</span>}
       <HeartButton shopId={shop.id} />
       <Avatar name={shop.name} path={shop.logo_path} />
       <strong>{shop.name}</strong>
@@ -178,13 +183,13 @@ export function SellerCard({ shop, rating, open, miles }: { shop: ShopCardData; 
   )
 }
 
-export function SellerRow({ shop, rating, open, miles }: { shop: ShopCardData; rating?: Rating; open?: OpenState; miles?: number }) {
+export function SellerRow({ shop, rating, open, miles, sponsored }: { shop: ShopCardData; rating?: Rating; open?: OpenState; miles?: number; sponsored?: boolean }) {
   const to = `/s/${shop.slug}`
   return (
     <a className="seller-row card" href={to} onClick={link(to)} style={{ flexDirection: 'row' }}>
       <Avatar name={shop.name} path={shop.logo_path} />
       <span className="stack" style={{ gap: 3, flex: 1, minWidth: 0 }}>
-        <strong>{shop.name}</strong>
+        <strong>{shop.name} {sponsored && <SponsoredTag />} {shop.is_demo && <DemoTag />}</strong>
         <span className="muted tiny">{[distanceLabel(miles), shop.area_label, ...shop.cuisines].filter(Boolean).join(' · ')}</span>
         <span className="row wrap" style={{ gap: 8, alignItems: 'center' }}><RatingBadge rating={rating} /><OpenLabel state={open} /></span>
       </span>
