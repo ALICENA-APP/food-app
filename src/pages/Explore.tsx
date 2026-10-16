@@ -5,6 +5,7 @@ import { Icon } from '../lib/icons'
 import { dishQuery, loadRatings, loadShopOptions, useCategories, type Dish, type Rating } from '../lib/catalogue'
 import { loadOpenStates, type OpenState } from '../lib/hours'
 import { loadDeliveryTo, postcodeDistrict, usePostcode } from '../lib/postcode'
+import { CategoryIcon } from '../lib/categoryIcons'
 import { DishCard, SellerRow, type ShopCardData } from '../lib/ui'
 
 type Filter = 'delivery' | 'collection' | 'rated' | 'under10' | 'vegetarian' | 'vegan' | 'halal' | 'open'
@@ -106,6 +107,7 @@ export default function Explore() {
       <div className="chips">
         {FILTERS.map((f) => (
           <button key={f.key} type="button" className={`chip ${has(f.key) ? 'on' : ''}`} onClick={() => toggle(f.key)}>
+            {['vegetarian', 'vegan', 'halal'].includes(f.key) && <span className="chip-ic"><CategoryIcon slug={f.key} /></span>}
             {f.key === 'delivery' && district ? `Delivers to ${district}` : f.label}
           </button>
         ))}
@@ -113,7 +115,7 @@ export default function Explore() {
       <div className="chips">
         <button type="button" className={`chip ${!category ? 'on' : ''}`} onClick={() => setCategory('')}>All food</button>
         {categories.map((c) => (
-          <button key={c.id} type="button" className={`chip ${category === c.slug ? 'on' : ''}`} onClick={() => setCategory(category === c.slug ? '' : c.slug)}>{c.name}</button>
+          <button key={c.id} type="button" className={`chip ${category === c.slug ? 'on' : ''}`} onClick={() => setCategory(category === c.slug ? '' : c.slug)}><span className="chip-ic"><CategoryIcon slug={c.slug} /></span>{c.name}</button>
         ))}
       </div>
       <div className="segmented">

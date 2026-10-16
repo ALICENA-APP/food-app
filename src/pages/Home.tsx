@@ -6,6 +6,7 @@ import { dishQuery, loadRatings, useCategories, type Dish, type Rating } from '.
 import { loadOpenStates, type OpenState } from '../lib/hours'
 import { InstallPrompt } from '../lib/install'
 import { PostcodePicker } from '../lib/PostcodePicker'
+import { CategoryIcon } from '../lib/categoryIcons'
 import { loadDeliveryTo, postcodeDistrict, usePostcode } from '../lib/postcode'
 import { BowlArt, DishCard, SellerCard, type ShopCardData } from '../lib/ui'
 
@@ -62,13 +63,14 @@ export default function Home() {
           <Icon name="search" />
           <input type="search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search dishes, cooks or cuisines" aria-label="Search" />
         </form>
-        <div className="chips">
-          <a className="chip on" href="/explore" onClick={link('/explore')}>All</a>
-          {categories.map((c) => (
-            <a key={c.id} className="chip" href={`/explore?c=${c.slug}`} onClick={link(`/explore?c=${c.slug}`)}>{c.name}</a>
-          ))}
-          <a className="chip" href="/explore?diet=vegan" onClick={link('/explore?diet=vegan')}>Vegan</a>
-        </div>
+      </div>
+
+      <div className="cat-row" role="list">
+        <CatTile slug="all" name="All" to="/explore" />
+        {categories.map((c) => <CatTile key={c.id} slug={c.slug} name={shortName(c.name)} to={`/explore?c=${c.slug}`} />)}
+        <CatTile slug="halal" name="Halal" to="/explore?diet=halal" />
+        <CatTile slug="vegetarian" name="Vegetarian" to="/explore?diet=vegetarian" />
+        <CatTile slug="vegan" name="Vegan" to="/explore?diet=vegan" />
       </div>
 
       <InstallPrompt />
@@ -134,5 +136,17 @@ export default function Home() {
         <BowlArt />
       </section>
     </div>
+  )
+}
+
+// "Cakes and bakes" -> "Cakes", so labels fit under the round icons.
+const shortName = (name: string) => name.split(' and ')[0]
+
+function CatTile({ slug, name, to }: { slug: string; name: string; to: string }) {
+  return (
+    <a className="cat-tile" href={to} onClick={link(to)} role="listitem">
+      <span className="cat-ic"><CategoryIcon slug={slug} /></span>
+      <span>{name}</span>
+    </a>
   )
 }

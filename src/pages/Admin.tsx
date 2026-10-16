@@ -52,12 +52,24 @@ function AdminTabs() {
   )
 }
 
+type Pending = { id: string; qr: string; secret: string; uri: string }
+const PENDING_KEY = 'adminTwoStepSetup'
+
+function readPending(): Pending | null {
+  try {
+    return JSON.parse(localStorage.getItem(PENDING_KEY) ?? 'null')
+  } catch {
+    return null
+  }
+}
+
 function TwoStep({ onDone }: { onDone: () => void }) {
   const [factorId, setFactorId] = useState<string | null>(null)
-  const [qr, setQr] = useState<string | null>(null)
-  const [secret, setSecret] = useState<string | null>(null)
+  const [setup, setSetup] = useState<Pending | null>(null)
   const [code, setCode] = useState('')
   const [message, setMessage] = useState('')
+  const [copied, setCopied] = useState(false)
+  const onPhone = /android|iphone|ipad|ipod/i.test(navigator.userAgent)
 
   useEffect(() => {
     ;(async () => {
@@ -65,41 +77,88 @@ function TwoStep({ onDone }: { onDone: () => void }) {
       const { data } = await mfa.listFactors()
       const verified = data?.totp?.[0]
       if (verified) return setFactorId(verified.id)
-      // Clear any half-finished set-up, then start a fresh one.
-      for (const f of data?.all ?? []) {
-        if (f.status !== 'verified') await mfa.unenroll({ factorId: f.id })
+      // Leaving for the authenticator app can reload this page, so a set-up
+      // that was already started is kept rather than replaced with a new key.
+      const pending = readPending()
+      const unverified = (data?.all ?? []).filter((f) => f.status !== 'verified')
+      if (pending && unverified.some((f) => f.id === pending.id)) {
+        setFactorId(pending.id)
+        return setSetup(pending)
       }
+      for (const f of unverified) await mfa.unenroll({ factorId: f.id })
       const { data: enrolled, error } = await mfa.enroll({ factorType: 'totp', friendlyName: 'BiteBY admin' })
       if (error) return setMessage(error.message)
+      const next = { id: enrolled.id, qr: enrolled.totp.qr_code, secret: enrolled.totp.secret, uri: enrolled.totp.uri }
+      try {
+        localStorage.setItem(PENDING_KEY, JSON.stringify(next))
+      } catch {
+        // storage unavailable
+      }
       setFactorId(enrolled.id)
-      setQr(enrolled.totp.qr_code)
-      setSecret(enrolled.totp.secret)
+      setSetup(next)
     })()
   }, [])
 
+  async function copyKey() {
+    try {
+      await navigator.clipboard.writeText(setup!.secret)
+      setCopied(true)
+    } catch {
+      setMessage('Copy didn’t work. Press and hold the key to copy it.')
+    }
+  }
+
   async function onSubmit(e: FormEvent) {
     e.preventDefault()
-    const { error } = await supabase!.auth.mfa.challengeAndVerify({ factorId: factorId!, code: code.trim() })
+    const { error } = await supabase!.auth.mfa.challengeAndVerify({ factorId: factorId!, code: code.replace(/\s/g, '') })
     if (error) return setMessage('That code did not work. Try the newest one.')
+    try {
+      localStorage.removeItem(PENDING_KEY)
+    } catch {
+      // storage unavailable
+    }
     onDone()
   }
 
   return (
     <form className="card" onSubmit={onSubmit}>
       <h2>Two-step sign-in</h2>
-      {qr ? (
+      {setup ? (
         <>
           <p className="muted">
-            Admin pages need an authenticator app (Google Authenticator, Microsoft Authenticator or
-            similar). Scan this code with the app, then type the 6-digit number it shows.
+            Admin pages need a 6-digit code from an authenticator app, so nobody else can get in even if they know your password.
+            You set this up once.
           </p>
-          <img src={qr} alt="QR code for your authenticator app" width={200} height={200} className="qr" />
-          <p className="muted small">Can't scan? Enter this key in the app: <code>{secret}</code></p>
+          <ol className="steps">
+            <li>
+              Install <strong>Google Authenticator</strong> (free):{' '}
+              <a href="https://apps.apple.com/app/google-authenticator/id388497605" target="_blank" rel="noreferrer">iPhone</a> ·{' '}
+              <a href="https://play.google.com/store/apps/details?id=com.google.android.apps.authenticator2" target="_blank" rel="noreferrer">Android</a>
+            </li>
+            {onPhone ? (
+              <li>
+                Tap <strong>Copy key</strong>. In the app tap <strong>+</strong>, then <strong>Enter a setup key</strong>. Type "BiteBY" as the
+                name, paste the key, and save.
+                <div className="row wrap" style={{ marginTop: 8 }}>
+                  <button type="button" className="small-btn" onClick={copyKey}>{copied ? 'Copied ✓' : 'Copy key'}</button>
+                  <a className="button secondary small-btn" href={setup.uri}>Or open in the app</a>
+                </div>
+                <code className="key">{setup.secret}</code>
+              </li>
+            ) : (
+              <li>
+                In the app tap <strong>+</strong>, then <strong>Scan a QR code</strong>, and scan this:
+                <img src={setup.qr} alt="QR code for your authenticator app" width={200} height={200} className="qr" />
+                <span className="muted small">Can't scan? Choose "Enter a setup key" and type: <code className="key">{setup.secret}</code></span>
+              </li>
+            )}
+            <li>Come back here and type the 6-digit code the app shows for BiteBY.</li>
+          </ol>
         </>
       ) : (
-        <p className="muted">Type the 6-digit number from your authenticator app.</p>
+        <p className="muted">Open your authenticator app and type the 6-digit code it shows for BiteBY.</p>
       )}
-      <input inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]{6}" maxLength={6} required value={code} onChange={(e) => setCode(e.target.value)} placeholder="123456" />
+      <input inputMode="numeric" autoComplete="one-time-code" pattern="[0-9 ]{6,7}" maxLength={7} required value={code} onChange={(e) => setCode(e.target.value)} placeholder="123 456" aria-label="6-digit code" />
       <button type="submit" disabled={!factorId}>Continue</button>
       {message && <p className="error">{message}</p>}
     </form>
