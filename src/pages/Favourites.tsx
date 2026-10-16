@@ -50,7 +50,10 @@ export default function Favourites() {
         <div className="grid2">{shownDishes.map((d) => <DishCard key={d.id} dish={d} rating={ratings[d.shop_id]} />)}</div>
       ) : <Empty what="dish" />)}
       {dishes && tab === 'sellers' && (shownShops.length ? (
-        <div className="stack" style={{ gap: 10 }}>{shownShops.map((s) => <SellerRow key={s.id} shop={s} rating={ratings[s.id]} />)}</div>
+        <div className="stack" style={{ gap: 10 }}>
+          <p className="muted small">You’ll get an alert when one of these cooks adds a new dish.</p>
+          {shownShops.map((s) => <SellerRow key={s.id} shop={s} rating={ratings[s.id]} />)}
+        </div>
       ) : <Empty what="cook" />)}
     </div>
   )

@@ -81,16 +81,30 @@ type OrderWithItems = Order & { order_items: Pick<OrderItem, 'id' | 'name' | 'qt
 // Puts the same dishes back in the basket at today's prices.
 export async function reorder(order: Order) {
   const db = supabase!
-  const { data: items } = await db.from('order_items').select('product_id, qty').eq('order_id', order.id)
+  const { data: items } = await db.from('order_items').select('product_id, qty, variant_id, addon_ids').eq('order_id', order.id)
   const ids = (items ?? []).map((i) => i.product_id).filter(Boolean) as string[]
-  const { data: products } = ids.length
-    ? await db.from('products').select('id, name, price_pence, status, product_images(path, sort)').in('id', ids).eq('status', 'published')
-    : { data: [] }
+  const [{ data: products }, { data: variants }, { data: addons }] = ids.length
+    ? await Promise.all([
+        db.from('products').select('id, name, price_pence, status, product_images(path, sort)').in('id', ids).eq('status', 'published'),
+        db.from('product_variants').select('id, product_id, name, price_delta_pence').in('product_id', ids),
+        db.from('product_addons').select('id, product_id, name, price_pence').in('product_id', ids),
+      ])
+    : [{ data: [] }, { data: [] }, { data: [] }]
+  // Same dishes and choices, at today's prices. Dishes whose choices have
+  // changed are left out, so nothing is ordered by mistake.
   const lines = (items ?? []).flatMap((i) => {
     const p = (products ?? []).find((x) => x.id === i.product_id)
     if (!p) return []
+    const hasSizes = (variants ?? []).some((v) => v.product_id === p.id)
+    const v = (variants ?? []).find((x) => x.id === i.variant_id && x.product_id === p.id)
+    const extras = (addons ?? []).filter((a) => a.product_id === p.id && (i.addon_ids ?? []).includes(a.id))
+    if ((hasSizes && !v) || extras.length !== (i.addon_ids ?? []).length) return []
     const photo = [...(p.product_images ?? [])].sort((a, b) => a.sort - b.sort)[0]?.path ?? null
-    return [{ productId: p.id, name: p.name, pricePence: p.price_pence, qty: i.qty, photo }]
+    const options = [v?.name, extras.length ? `+ ${extras.map((a) => a.name).join(', ')}` : ''].filter(Boolean).join(', ')
+    return [{
+      productId: p.id, name: p.name, qty: i.qty, photo, variantId: v?.id ?? null, addonIds: extras.map((a) => a.id), options: options || undefined,
+      pricePence: Math.max(0, p.price_pence + (v?.price_delta_pence ?? 0) + extras.reduce((n, a) => n + a.price_pence, 0)),
+    }]
   })
   if (!lines.length) return window.alert('These dishes are no longer on the menu.')
   const current = readBasket()

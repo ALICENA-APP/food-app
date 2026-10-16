@@ -214,6 +214,7 @@ function ShopForm({ account, shop, settings, priv }: Loaded & { account: SellerA
       </div>
 
       {shop && <ShopPhotos shop={shop} />}
+      {shop && <ShopNotice shop={shop} />}
       {shop && <OpeningHours shopId={shop.id} />}
       {shop && delivery && <DeliveryRadius shopId={shop.id} />}
       {shop && delivery && <DeliveryZones shopId={shop.id} />}
@@ -482,6 +483,40 @@ function ShopPhotos({ shop }: { shop: Shop }) {
           onDone={(blob) => replace(cropping.kind, blob)}
         />
       )}
+    </div>
+  )
+}
+
+// A short message at the top of the shop page, optionally until a date.
+function ShopNotice({ shop }: { shop: Shop }) {
+  const [text, setText] = useState(shop.notice ?? '')
+  const [until, setUntil] = useState(shop.notice_until ?? '')
+  const [message, setMessage] = useState('')
+
+  async function save(clear = false) {
+    setMessage('')
+    const notice = clear ? null : text.trim() || null
+    const { error } = await supabase!.from('shops')
+      .update({ notice, notice_until: notice ? until || null : null }).eq('id', shop.id)
+    if (error) return setMessage(error.message)
+    if (clear) { setText(''); setUntil('') }
+    setMessage(notice ? 'Announcement saved. It shows at the top of your shop.' : 'Announcement removed')
+  }
+
+  return (
+    <div className="card">
+      <h2>Announcement</h2>
+      <p className="muted small">A short message at the top of your shop page, like a special or a change to your hours.</p>
+      <textarea rows={2} maxLength={160} value={text} onChange={(e) => setText(e.target.value)} placeholder="e.g. Jerk chicken this Saturday only. Order by Friday!" aria-label="Announcement" />
+      <label>
+        Show until (optional)
+        <input type="date" value={until} min={new Date().toISOString().slice(0, 10)} onChange={(e) => setUntil(e.target.value)} />
+      </label>
+      <div className="row">
+        <button type="button" className="secondary" onClick={() => save()} disabled={!text.trim()}>Save announcement</button>
+        {shop.notice !== undefined && text && <button type="button" className="secondary" onClick={() => save(true)}>Remove</button>}
+      </div>
+      {message && <p className="muted small">{message}</p>}
     </div>
   )
 }

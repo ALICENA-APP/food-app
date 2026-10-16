@@ -3,7 +3,7 @@ import { supabase } from '../lib/supabase'
 import { link, navigate } from '../lib/router'
 import { askToSignIn, useSession } from '../lib/session'
 import { Icon } from '../lib/icons'
-import { basketCount, basketSubtotal, setQty, useBasket, writeBasket } from '../lib/basket'
+import { basketCount, basketSubtotal, lineKey, setQty, useBasket, writeBasket } from '../lib/basket'
 import { FoodPhoto } from '../lib/ui'
 import { formatPostcode, loadNear, looksLikePostcode, readPostcode, type Point } from '../lib/postcode'
 import { locatePostcode } from '../lib/geo'
@@ -161,7 +161,7 @@ export default function Checkout() {
     setPlacing(true)
     const { data, error } = await supabase!.rpc('place_order', {
       p_shop: basket!.shopId,
-      p_items: basket!.lines.map((l) => ({ product_id: l.productId, qty: l.qty })),
+      p_items: basket!.lines.map((l) => ({ product_id: l.productId, qty: l.qty, variant_id: l.variantId ?? null, addon_ids: l.addonIds ?? [] })),
       p_fulfilment: fulfilment,
       p_customer_name: name,
       p_customer_phone: phone || null,
@@ -194,10 +194,11 @@ export default function Checkout() {
           From <strong>{basket.shopName}</strong>
         </a>
         {basket.lines.map((l) => (
-          <div key={l.productId} className="basket-line">
+          <div key={lineKey(l)} className="basket-line">
             <span className="ph"><FoodPhoto path={l.photo ?? null} alt="" /></span>
             <span style={{ flex: 1, minWidth: 0 }} className="stack-tight">
               <strong>{l.name}</strong>
+              {l.options && <span className="small">{l.options}</span>}
               <span className="muted small">{pounds(l.pricePence)} each</span>
               <span className="stepper">
                 <button type="button" aria-label="One less" onClick={() => setQty(shop, l, l.qty - 1)}>−</button>

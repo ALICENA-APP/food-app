@@ -2,7 +2,16 @@ import { useEffect, useState } from 'react'
 
 // One shop per basket. Kept in this browser only; prices are always worked
 // out again by the database when the order is placed.
-export type BasketLine = { productId: string; name: string; pricePence: number; qty: number; photo?: string | null }
+export type BasketLine = {
+  productId: string
+  name: string
+  pricePence: number // one portion, with any size and extras
+  qty: number
+  photo?: string | null
+  variantId?: string | null
+  addonIds?: string[]
+  options?: string // "Large, + Plantain", shown under the name
+}
 export type Basket = { shopId: string; shopSlug: string; shopName: string; lines: BasketLine[] }
 
 const KEY = 'basket'
@@ -52,13 +61,23 @@ export function basketSubtotal(b: Basket | null) {
   return b ? b.lines.reduce((n, l) => n + l.qty * l.pricePence, 0) : 0
 }
 
+// The same dish with different choices is a separate line.
+export const lineKey = (l: Pick<BasketLine, 'productId' | 'variantId' | 'addonIds'>) =>
+  [l.productId, l.variantId ?? '', ...[...(l.addonIds ?? [])].sort()].join('|')
+
+// How many of a dish are in the basket, across all its choices.
 export function qtyIn(b: Basket | null, shopId: string, productId: string) {
-  return b?.shopId === shopId ? b.lines.find((l) => l.productId === productId)?.qty ?? 0 : 0
+  return b?.shopId === shopId ? b.lines.filter((l) => l.productId === productId).reduce((n, l) => n + l.qty, 0) : 0
+}
+
+// How many of this exact dish and choices are in the basket.
+export function lineQty(b: Basket | null, shopId: string, item: Pick<BasketLine, 'productId' | 'variantId' | 'addonIds'>) {
+  return b?.shopId === shopId ? b.lines.find((l) => lineKey(l) === lineKey(item))?.qty ?? 0 : 0
 }
 
 export function setQty(
   shop: { id: string; slug: string; name: string },
-  item: { productId: string; name: string; pricePence: number; photo?: string | null },
+  item: Omit<BasketLine, 'qty'>,
   qty: number,
 ): boolean {
   let b = readBasket() ?? memory
@@ -68,8 +87,9 @@ export function setQty(
   }
   b = b ?? { shopId: shop.id, shopSlug: shop.slug, shopName: shop.name, lines: [] }
   const line = { ...item, qty: Math.min(qty, 50) }
-  const lines = b.lines.some((l) => l.productId === item.productId)
-    ? b.lines.map((l) => (l.productId === item.productId ? line : l)).filter((l) => l.qty > 0)
+  const key = lineKey(item)
+  const lines = b.lines.some((l) => lineKey(l) === key)
+    ? b.lines.map((l) => (lineKey(l) === key ? line : l)).filter((l) => l.qty > 0)
     : qty > 0 ? [...b.lines, line] : b.lines
   writeBasket({ ...b, lines })
   return true

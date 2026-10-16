@@ -36,6 +36,8 @@ export type Shop = {
   cuisines: string[]
   status: 'draft' | 'live' | 'paused' | 'suspended'
   accepting_orders: boolean
+  notice?: string | null
+  notice_until?: string | null
 }
 
 export type ShopSettings = {
@@ -61,6 +63,9 @@ export type ShopPrivate = {
 }
 
 export type Presence = 'contains' | 'may_contain' | 'not_present'
+
+export type ProductVariant = { id: string; product_id: string; group_name: string; name: string; price_delta_pence: number; sort: number }
+export type ProductAddon = { id: string; product_id: string; name: string; price_pence: number; sort: number }
 
 export type Product = {
   id: string

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import { supabase } from '../lib/supabase'
 import { link, navigate } from '../lib/router'
-import { DIETARY, type Allergen, type Category, type Presence, type Product } from '../lib/types'
+import { DIETARY, pounds, type Allergen, type Category, type Presence, type Product, type ProductAddon, type ProductVariant } from '../lib/types'
 import { deletePhoto, photoUrl, uploadPhoto } from '../lib/images'
 import { ImageCropper } from '../lib/ImageCropper'
 
@@ -216,9 +216,12 @@ function Editor({ shopId, product, allergens, categories, answers: initialAnswer
       </div>
 
       {product ? (
-        <Photos shopId={shopId} productId={product.id} />
+        <>
+          <Photos shopId={shopId} productId={product.id} />
+          <Options productId={product.id} />
+        </>
       ) : (
-        <p className="muted small">Save the item as a draft first, then you can add photos.</p>
+        <p className="muted small">Save the item as a draft first, then you can add photos, sizes and extras.</p>
       )}
 
       <div className="card">
@@ -354,6 +357,100 @@ function Photos({ shopId, productId }: { shopId: string; productId: string }) {
           onDone={add}
         />
       )}
+    </div>
+  )
+}
+
+const toPence = (v: string) => Math.round(parseFloat(v || '0') * 100)
+
+// Sizes (customers pick one) and extras (customers can add any).
+function Options({ productId }: { productId: string }) {
+  const [variants, setVariants] = useState<ProductVariant[]>([])
+  const [addons, setAddons] = useState<ProductAddon[]>([])
+  const [group, setGroup] = useState('Size')
+  const [vName, setVName] = useState('')
+  const [vPrice, setVPrice] = useState('')
+  const [aName, setAName] = useState('')
+  const [aPrice, setAPrice] = useState('')
+  const [message, setMessage] = useState('')
+
+  const load = useCallback(async () => {
+    const db = supabase!
+    const [v, a] = await Promise.all([
+      db.from('product_variants').select('*').eq('product_id', productId).order('sort').order('price_delta_pence'),
+      db.from('product_addons').select('*').eq('product_id', productId).order('sort').order('name'),
+    ])
+    setVariants(v.data ?? [])
+    setAddons(a.data ?? [])
+    if (v.data?.[0]) setGroup(v.data[0].group_name)
+  }, [productId])
+
+  useEffect(() => {
+    load()
+  }, [load])
+
+  async function run(p: PromiseLike<{ error: { message: string } | null }>) {
+    setMessage('')
+    const { error } = await p
+    if (error) setMessage(error.message)
+    load()
+    return !error
+  }
+
+  async function addVariant() {
+    if (!vName.trim()) return
+    const ok = await run(supabase!.from('product_variants').insert({
+      product_id: productId, group_name: group.trim() || 'Size', name: vName.trim(),
+      price_delta_pence: Math.max(0, toPence(vPrice)), sort: variants.length,
+    }))
+    if (ok) { setVName(''); setVPrice('') }
+  }
+
+  async function addAddon() {
+    if (!aName.trim()) return
+    const ok = await run(supabase!.from('product_addons').insert({
+      product_id: productId, name: aName.trim(), price_pence: Math.max(0, toPence(aPrice)), sort: addons.length,
+    }))
+    if (ok) { setAName(''); setAPrice('') }
+  }
+
+  return (
+    <div className="card">
+      <h2>Sizes and extras</h2>
+      <p className="muted small">Optional. Saved straight away. If an extra contains an allergen, make sure it is listed in the dish’s allergens below.</p>
+
+      <h3>Choices (customers pick one)</h3>
+      <label>
+        What are they choosing?
+        <input value={group} maxLength={40} onChange={(e) => setGroup(e.target.value)} placeholder="e.g. Size, Spice level, Portion"
+          onBlur={() => variants.length && group.trim() && run(supabase!.from('product_variants').update({ group_name: group.trim() }).eq('product_id', productId))} />
+      </label>
+      {variants.map((v) => (
+        <div key={v.id} className="check-row">
+          <span className="small"><strong>{v.name}</strong> · {v.price_delta_pence ? `+ ${pounds(v.price_delta_pence)}` : 'no extra cost'}</span>
+          <button type="button" className="secondary small-btn" onClick={() => run(supabase!.from('product_variants').delete().eq('id', v.id))}>Remove</button>
+        </div>
+      ))}
+      <div className="row">
+        <input className="grow" value={vName} maxLength={60} onChange={(e) => setVName(e.target.value)} placeholder={variants.length ? 'e.g. Large' : 'e.g. Regular'} aria-label="Choice name" />
+        <input style={{ width: 110 }} type="number" min="0" max="1000" step="0.5" inputMode="decimal" value={vPrice} onChange={(e) => setVPrice(e.target.value)} placeholder="+ £0" aria-label="Extra cost in pounds" />
+      </div>
+      <button type="button" className="secondary" onClick={addVariant} disabled={!vName.trim()}>Add choice</button>
+      {variants.length === 1 && <p className="muted small">Add at least two choices, so customers have something to pick.</p>}
+
+      <h3>Extras (customers can add any)</h3>
+      {addons.map((a) => (
+        <div key={a.id} className="check-row">
+          <span className="small"><strong>{a.name}</strong> · {a.price_pence ? `+ ${pounds(a.price_pence)}` : 'free'}</span>
+          <button type="button" className="secondary small-btn" onClick={() => run(supabase!.from('product_addons').delete().eq('id', a.id))}>Remove</button>
+        </div>
+      ))}
+      <div className="row">
+        <input className="grow" value={aName} maxLength={60} onChange={(e) => setAName(e.target.value)} placeholder="e.g. Fried plantain" aria-label="Extra name" />
+        <input style={{ width: 110 }} type="number" min="0" max="1000" step="0.5" inputMode="decimal" value={aPrice} onChange={(e) => setAPrice(e.target.value)} placeholder="+ £0" aria-label="Extra price in pounds" />
+      </div>
+      <button type="button" className="secondary" onClick={addAddon} disabled={!aName.trim() || addons.length >= 10}>Add extra</button>
+      {message && <p className="error small">{message}</p>}
     </div>
   )
 }

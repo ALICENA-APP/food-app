@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react'
-import { goBack, link } from '../lib/router'
+import { goBack, link, navigate } from '../lib/router'
 import { photoUrl } from '../lib/images'
 import { Icon, VerifiedTick } from '../lib/icons'
 import { ReviewItem } from '../lib/reviews'
 import { basketCount, basketSubtotal, qtyIn, setQty, useBasket } from '../lib/basket'
-import { averageRating, hoursSummary, loadShop, type ShopData } from '../lib/shopData'
-import { awayUntil, openState, shortDate } from '../lib/hours'
+import { averageRating, hasOptions, hoursSummary, loadShop, type ShopData } from '../lib/shopData'
+import { awayUntil, londonNow, openState, shortDate } from '../lib/hours'
 import { Avatar, BackButton, FoodPhoto, HeartButton, share } from '../lib/ui'
 import { dietaryName, noticeLabel, pounds, type Product } from '../lib/types'
 
@@ -82,6 +82,9 @@ export default function PublicShop({ slug }: { slug: string }) {
       </div>
 
       {isPreview && <p className="status">Preview: only you can see this until your shop goes live.</p>}
+      {shop.notice && (!shop.notice_until || shop.notice_until >= londonNow().date) && (
+        <p className="shop-notice"><Icon name="info" size={18} /> <span>{shop.notice}</span></p>
+      )}
       {back ? (
         <p className="away-note small">
           <strong>{shop.name} is away{awayReason ? ` (${awayReason})` : ''}.</strong> Back on {shortDate(back)}.{canOrder && ' You can order ahead for then at checkout.'}
@@ -108,11 +111,17 @@ export default function PublicShop({ slug }: { slug: string }) {
             </div>
           )}
           {shown.length === 0 && <p className="muted">Nothing on the menu yet.</p>}
-          {shown.map((p) => (
-            <MenuRow key={p.id} product={p} slug={shop.slug} photo={images[p.id]?.[0] ?? null}
-              qty={qtyIn(basket, shop.id, p.id)} canOrder={canOrder && p.status === 'published' && p.stock_qty !== 0}
-              onQty={(n) => setQty(shop, { productId: p.id, name: p.name, pricePence: p.price_pence, photo: images[p.id]?.[0] ?? null }, n)} />
-          ))}
+          {shown.map((p) => {
+            // Dishes with sizes or extras open their page to choose first.
+            const choose = hasOptions(data, p.id)
+            const from = Math.min(p.price_pence, ...data.variants.filter((v) => v.product_id === p.id).map((v) => p.price_pence + v.price_delta_pence))
+            return (
+              <MenuRow key={p.id} product={p} slug={shop.slug} photo={images[p.id]?.[0] ?? null} price={choose ? `from ${pounds(from)}` : pounds(p.price_pence)}
+                qty={choose ? 0 : qtyIn(basket, shop.id, p.id)} canOrder={canOrder && p.status === 'published' && p.stock_qty !== 0}
+                onQty={(n) => (choose ? navigate(`/s/${shop.slug}/i/${p.id}`)
+                  : setQty(shop, { productId: p.id, name: p.name, pricePence: p.price_pence, photo: images[p.id]?.[0] ?? null }, n))} />
+            )
+          })}
           <p className="muted small">
             Have an allergy? Tap a dish to see its ingredients and allergens, and message the cook before ordering if you're unsure.
           </p>
@@ -151,8 +160,8 @@ export default function PublicShop({ slug }: { slug: string }) {
   )
 }
 
-function MenuRow({ product: p, slug, photo, qty, canOrder, onQty }: {
-  product: Product; slug: string; photo: string | null; qty: number; canOrder: boolean; onQty: (n: number) => void
+function MenuRow({ product: p, slug, photo, price, qty, canOrder, onQty }: {
+  product: Product; slug: string; photo: string | null; price: string; qty: number; canOrder: boolean; onQty: (n: number) => void
 }) {
   const to = `/s/${slug}/i/${p.id}`
   return (
@@ -163,7 +172,7 @@ function MenuRow({ product: p, slug, photo, qty, canOrder, onQty }: {
         {p.description && <span className="desc">{p.description}</span>}
         {p.dietary?.length > 0 && <span className="tags">{p.dietary.map((d) => <span key={d} className="tag green">{dietaryName(d)}</span>)}</span>}
         {p.status !== 'published' && <span className="pill">Draft, not visible to customers</span>}
-        <strong>{pounds(p.price_pence)}</strong>
+        <strong>{price}</strong>
         {p.stock_qty === 0 && <span className="tag red">Sold out</span>}
         {p.min_lead_hours ? <span className="muted tiny">{noticeLabel(p.min_lead_hours)}</span> : null}
         {p.stock_qty !== null && p.stock_qty > 0 && p.stock_qty <= 5 && <span className="muted tiny">Only {p.stock_qty} left</span>}

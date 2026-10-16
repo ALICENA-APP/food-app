@@ -1,7 +1,7 @@
 import { supabase } from './supabase'
 import type { Review } from './reviews'
 import { addDays } from './hours'
-import type { Allergen, Presence, Product, Shop, ShopSettings } from './types'
+import type { Allergen, Presence, Product, ProductAddon, ProductVariant, Shop, ShopSettings } from './types'
 
 export type AllergenRow = { product_id: string; allergen_code: string; presence: Presence }
 
@@ -12,6 +12,8 @@ export type ShopData = {
   allergens: Allergen[]
   rows: AllergenRow[]
   images: Record<string, string[]>
+  variants: ProductVariant[]
+  addons: ProductAddon[]
   hours: { weekday: number; opens: string; closes: string }[]
   closedDates: string[]
   awayReason: string | null
@@ -41,16 +43,19 @@ export async function loadShop(slug: string): Promise<ShopData | null> {
   ])
   const products: Product[] = p.data ?? []
   const ids = products.map((x) => x.id)
-  const [rows, imgs] = ids.length
+  const [rows, imgs, vars, adds] = ids.length
     ? await Promise.all([
         db.from('product_allergens').select('product_id, allergen_code, presence').in('product_id', ids).is('variant_id', null).is('addon_id', null),
         db.from('product_images').select('product_id, path, sort').in('product_id', ids).order('sort'),
+        db.from('product_variants').select('*').in('product_id', ids).order('sort').order('price_delta_pence'),
+        db.from('product_addons').select('*').in('product_id', ids).order('sort').order('name'),
       ])
-    : [{ data: [] }, { data: [] }]
+    : [{ data: [] }, { data: [] }, { data: [] }, { data: [] }]
   const images: Record<string, string[]> = {}
   for (const img of imgs.data ?? []) (images[img.product_id] ??= []).push(img.path)
   const data: ShopData = {
     shop, settings: s.data, products, allergens: a.data ?? [], rows: rows.data ?? [], images,
+    variants: (vars.data ?? []) as ProductVariant[], addons: (adds.data ?? []) as ProductAddon[],
     hours: h.data ?? [], closedDates: (c.data ?? []).map((x) => x.closed_on), awayReason: c.data?.[0]?.closed_on === today ? c.data[0].reason : null, reviews: r.data ?? [], categories: cat.data ?? [],
   }
   cache.set(slug, { at: Date.now(), data })
@@ -88,3 +93,7 @@ export function allergenLists(data: ShopData, productId: string) {
 export function averageRating(reviews: Review[]) {
   return reviews.length ? reviews.reduce((n, r) => n + r.rating, 0) / reviews.length : 0
 }
+
+// Whether a dish has sizes or extras to choose before adding it.
+export const hasOptions = (data: ShopData, productId: string) =>
+  data.variants.some((v) => v.product_id === productId) || data.addons.some((a) => a.product_id === productId)

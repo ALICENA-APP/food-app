@@ -2,7 +2,7 @@ import { useEffect, useState, type UIEvent } from 'react'
 import { goBack, link, navigate } from '../lib/router'
 import { photoUrl } from '../lib/images'
 import { Icon, VerifiedTick } from '../lib/icons'
-import { qtyIn, setQty, useBasket } from '../lib/basket'
+import { lineQty, qtyIn, setQty, useBasket } from '../lib/basket'
 import { allergenLists, averageRating, loadShop, type ShopData } from '../lib/shopData'
 import { Avatar, BackButton, FoodPhoto, HeartButton, share } from '../lib/ui'
 import { dietaryName, noticeLabel, pounds } from '../lib/types'
@@ -13,6 +13,8 @@ export default function Dish({ slug, productId }: { slug: string; productId: str
   const [slide, setSlide] = useState(0)
   const [qty, setQtyHere] = useState(1)
   const [added, setAdded] = useState(false)
+  const [variantId, setVariantId] = useState<string | null>(null)
+  const [addonIds, setAddonIds] = useState<string[]>([])
   const basket = useBasket()
 
   useEffect(() => {
@@ -20,6 +22,8 @@ export default function Dish({ slug, productId }: { slug: string; productId: str
     setSlide(0)
     setQtyHere(1)
     setAdded(false)
+    setVariantId(null)
+    setAddonIds([])
   }, [slug, productId])
 
   const product = data?.products.find((p) => p.id === productId)
@@ -50,6 +54,13 @@ export default function Dish({ slug, productId }: { slug: string; productId: str
   const soldOut = product.stock_qty === 0
   const canOrder = shop.status === 'live' && shop.accepting_orders && product.status === 'published' && !soldOut
   const already = qtyIn(basket, shop.id, product.id)
+  const variants = data.variants.filter((v) => v.product_id === product.id)
+  const addons = data.addons.filter((a) => a.product_id === product.id)
+  const variant = variants.find((v) => v.id === variantId) ?? variants[0] ?? null
+  const chosenAddons = addons.filter((a) => addonIds.includes(a.id))
+  const unit = Math.max(0, product.price_pence + (variant?.price_delta_pence ?? 0) + chosenAddons.reduce((n, a) => n + a.price_pence, 0))
+  const options = [variant?.name, chosenAddons.length ? `+ ${chosenAddons.map((a) => a.name).join(', ')}` : ''].filter(Boolean).join(', ')
+  const choice = { productId: product.id, variantId: variant?.id ?? null, addonIds: chosenAddons.map((a) => a.id) }
   const category = categories.find((c) => c.id === product.category_id)?.name
   const others = data.products.filter((p) => p.id !== product.id && p.status === 'published').slice(0, 8)
 
@@ -59,7 +70,8 @@ export default function Dish({ slug, productId }: { slug: string; productId: str
   }
 
   function add() {
-    const ok = setQty(shop, { productId: product!.id, name: product!.name, pricePence: product!.price_pence, photo: photos[0] ?? null }, already + qty)
+    const same = lineQty(basket, shop.id, choice)
+    const ok = setQty(shop, { ...choice, name: product!.name, options: options || undefined, pricePence: unit, photo: photos[0] ?? null }, same + qty)
     if (ok) setAdded(true)
   }
 
@@ -84,7 +96,7 @@ export default function Dish({ slug, productId }: { slug: string; productId: str
       <div className="stack" style={{ gap: 8 }}>
         <div className="item" style={{ alignItems: 'flex-start' }}>
           <h1 style={{ fontSize: '1.5rem' }}>{product.name}</h1>
-          <span className="price-big">{pounds(product.price_pence)}</span>
+          <span className="price-big">{variants.length || addons.length ? `from ${pounds(Math.min(...[product.price_pence, ...variants.map((v) => product.price_pence + v.price_delta_pence)]))}` : pounds(product.price_pence)}</span>
         </div>
         <p className="muted small">
           by <a href={`/s/${slug}`} onClick={link(`/s/${slug}`)}><strong>{shop.name}</strong></a>
@@ -103,6 +115,32 @@ export default function Dish({ slug, productId }: { slug: string; productId: str
       </div>
 
       {product.description && <p className="story">{product.description}</p>}
+
+      {canOrder && variants.length > 0 && (
+        <fieldset className="card options">
+          <legend>{variants[0].group_name || 'Choose one'} <span className="tag grey">Required</span></legend>
+          {variants.map((v) => (
+            <label key={v.id} className="option-row">
+              <input type="radio" name="variant" checked={variant?.id === v.id} onChange={() => { setVariantId(v.id); setAdded(false) }} />
+              <span className="grow">{v.name}</span>
+              <span className="muted small">{pounds(product.price_pence + v.price_delta_pence)}</span>
+            </label>
+          ))}
+        </fieldset>
+      )}
+      {canOrder && addons.length > 0 && (
+        <fieldset className="card options">
+          <legend>Extras <span className="muted small">optional</span></legend>
+          {addons.map((a) => (
+            <label key={a.id} className="option-row">
+              <input type="checkbox" checked={addonIds.includes(a.id)}
+                onChange={(e) => { setAddonIds(e.target.checked ? [...addonIds, a.id] : addonIds.filter((x) => x !== a.id)); setAdded(false) }} />
+              <span className="grow">{a.name}</span>
+              <span className="muted small">{a.price_pence ? `+ ${pounds(a.price_pence)}` : 'Free'}</span>
+            </label>
+          ))}
+        </fieldset>
+      )}
 
       <a className="card seller-strip" href={`/s/${slug}`} onClick={link(`/s/${slug}`)}>
         <Avatar name={shop.name} path={shop.logo_path} size={48} />
@@ -164,7 +202,7 @@ export default function Dish({ slug, productId }: { slug: string; productId: str
                 <span>{qty}</span>
                 <button type="button" className="add" aria-label="One more" onClick={() => setQtyHere(Math.max(1, Math.min(qty + 1, 50, (product.stock_qty ?? 50) - already)))}>+</button>
               </span>
-              <button type="button" className="grow" onClick={add}>Add to basket · {pounds(product.price_pence * qty)}</button>
+              <button type="button" className="grow" onClick={add}>Add to basket · {pounds(unit * qty)}</button>
             </>
           )}
         </div>
