@@ -6,6 +6,7 @@ import { Icon } from '../lib/icons'
 import { readBasket, writeBasket } from '../lib/basket'
 import { Avatar } from '../lib/ui'
 import { OrderChat } from '../lib/chat'
+import { HelpForm } from '../lib/help'
 import { pounds } from '../lib/types'
 import { ReviewForm, ReviewItem, type Review } from '../lib/reviews'
 
@@ -276,6 +277,14 @@ export function OrderDetail({ id }: { id: string }) {
           <h2>Messages</h2>
           <OrderChat orderId={order.id} asSeller={false} otherName={order.shops?.name ?? 'the cook'} />
         </div>
+      )}
+
+      {order.status !== 'awaiting_payment' && (
+        <details className="card" id="problem">
+          <summary>Report a problem with this order</summary>
+          <p className="muted small">Message the cook first if it’s something they can sort out. If not, tell the BiteBY team and we’ll help.</p>
+          <HelpForm orderId={order.id} plain />
+        </details>
       )}
     </div>
   )

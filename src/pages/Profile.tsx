@@ -4,6 +4,7 @@ import { link, navigate } from '../lib/router'
 import { useSession } from '../lib/session'
 import { Icon, type IconName } from '../lib/icons'
 import { Avatar, BowlArt, useFavourites } from '../lib/ui'
+import { HelpForm } from '../lib/help'
 
 function Tile({ to, icon, title, sub, tone = 'var(--yellow-soft)', wide, onClick }: {
   to?: string; icon: IconName; title: string; sub?: string; tone?: string; wide?: boolean; onClick?: () => void
@@ -170,6 +171,9 @@ export function Help() {
           <p className="muted">{a}</p>
         </details>
       ))}
+      <h2>Contact the BiteBY team</h2>
+      <HelpForm />
+      <a href="/help/requests" onClick={link('/help/requests')}>Your messages to BiteBY and our replies</a>
       <LegalLinks />
     </div>
   )

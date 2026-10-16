@@ -18,11 +18,29 @@ export function londonNow(now = new Date()) {
   }
 }
 
+// "2026-10-16" plus a number of days, as a date string again.
+export function addDays(date: string, days: number) {
+  const d = new Date(date + 'T12:00:00Z')
+  d.setUTCDate(d.getUTCDate() + days)
+  return d.toISOString().slice(0, 10)
+}
+
+export const shortDate = (date: string) => new Date(date + 'T12:00:00Z').toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' })
+
+// The cook's next run of days off starting today, if any: "back on" is the day after.
+export function awayUntil(closedDates: string[], today = londonNow().date): string | null {
+  if (!closedDates.includes(today)) return null
+  let d = today
+  while (closedDates.includes(addDays(d, 1))) d = addDays(d, 1)
+  return addDays(d, 1)
+}
+
 const mins = (t: string) => Number(t.slice(0, 2)) * 60 + Number(t.slice(3, 5))
 
 // "Open now · until 18:00", "Opens 17:00", "Opens Tue 10:00" or "Closed today".
 // Null when the shop hasn't set opening hours.
-export function openState(hours: Hours[], closedToday: boolean, now = londonNow()): OpenState {
+export function openState(hours: Hours[], closedDates: string[], now = londonNow()): OpenState {
+  const closedToday = closedDates.includes(now.date)
   if (!hours.length) return null
   const today = hours.filter((h) => h.weekday === now.weekday).sort((a, b) => mins(a.opens) - mins(b.opens))
   if (!closedToday) {
@@ -31,11 +49,11 @@ export function openState(hours: Hours[], closedToday: boolean, now = londonNow(
     const later = today.find((h) => mins(h.opens) > now.minutes)
     if (later) return { open: false, label: `Opens ${later.opens.slice(0, 5)}` }
   }
-  for (let i = 1; i <= 7; i++) {
+  for (let i = 1; i <= 60; i++) {
     const day = (now.weekday + i) % 7
     const next = hours.filter((h) => h.weekday === day).sort((a, b) => mins(a.opens) - mins(b.opens))[0]
-    if (next) {
-      const when = `${i === 1 ? 'tomorrow' : DAY[day]} ${next.opens.slice(0, 5)}`
+    if (next && !closedDates.includes(addDays(now.date, i))) {
+      const when = i === 1 ? `tomorrow ${next.opens.slice(0, 5)}` : i < 7 ? `${DAY[day]} ${next.opens.slice(0, 5)}` : shortDate(addDays(now.date, i))
       return { open: false, label: closedToday ? `Closed today · opens ${when}` : `Opens ${when}` }
     }
   }
@@ -49,8 +67,8 @@ export async function loadOpenStates(shopIds: string[]): Promise<Record<string, 
   const now = londonNow()
   const [h, c] = await Promise.all([
     supabase!.from('shop_hours').select('shop_id, weekday, opens, closes').in('shop_id', ids),
-    supabase!.from('shop_closures').select('shop_id').in('shop_id', ids).eq('closed_on', now.date),
+    supabase!.from('shop_closures').select('shop_id, closed_on').in('shop_id', ids).gte('closed_on', now.date).lte('closed_on', addDays(now.date, 60)),
   ])
-  const closed = new Set((c.data ?? []).map((x) => x.shop_id))
-  return Object.fromEntries(ids.map((id) => [id, openState((h.data ?? []).filter((x) => x.shop_id === id), closed.has(id), now)]))
+  const closed = (id: string) => (c.data ?? []).filter((x) => x.shop_id === id).map((x) => x.closed_on)
+  return Object.fromEntries(ids.map((id) => [id, openState((h.data ?? []).filter((x) => x.shop_id === id), closed(id), now)]))
 }

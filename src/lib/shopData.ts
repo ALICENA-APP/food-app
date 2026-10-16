@@ -1,5 +1,6 @@
 import { supabase } from './supabase'
 import type { Review } from './reviews'
+import { addDays } from './hours'
 import type { Allergen, Presence, Product, Shop, ShopSettings } from './types'
 
 export type AllergenRow = { product_id: string; allergen_code: string; presence: Presence }
@@ -12,7 +13,8 @@ export type ShopData = {
   rows: AllergenRow[]
   images: Record<string, string[]>
   hours: { weekday: number; opens: string; closes: string }[]
-  closedToday: boolean
+  closedDates: string[]
+  awayReason: string | null
   reviews: Review[]
   categories: { id: string; name: string }[]
 }
@@ -33,7 +35,7 @@ export async function loadShop(slug: string): Promise<ShopData | null> {
     db.from('products').select('*').eq('shop_id', shop.id).neq('status', 'archived').order('created_at'),
     db.from('allergens').select('code, name'),
     db.from('shop_hours').select('weekday, opens, closes').eq('shop_id', shop.id),
-    db.from('shop_closures').select('id').eq('shop_id', shop.id).eq('closed_on', today),
+    db.from('shop_closures').select('closed_on, reason').eq('shop_id', shop.id).gte('closed_on', today).lte('closed_on', addDays(today, 60)).order('closed_on'),
     db.from('reviews').select('*').eq('shop_id', shop.id).eq('hidden', false).order('created_at', { ascending: false }).limit(50),
     db.from('categories').select('id, name').order('sort'),
   ])
@@ -49,7 +51,7 @@ export async function loadShop(slug: string): Promise<ShopData | null> {
   for (const img of imgs.data ?? []) (images[img.product_id] ??= []).push(img.path)
   const data: ShopData = {
     shop, settings: s.data, products, allergens: a.data ?? [], rows: rows.data ?? [], images,
-    hours: h.data ?? [], closedToday: (c.data ?? []).length > 0, reviews: r.data ?? [], categories: cat.data ?? [],
+    hours: h.data ?? [], closedDates: (c.data ?? []).map((x) => x.closed_on), awayReason: c.data?.[0]?.closed_on === today ? c.data[0].reason : null, reviews: r.data ?? [], categories: cat.data ?? [],
   }
   cache.set(slug, { at: Date.now(), data })
   return data

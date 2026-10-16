@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import { lazy, Suspense, type ReactNode } from 'react'
 import { isConfigured } from './lib/supabase'
 import { link, usePath } from './lib/router'
 import { askToSignIn, useSession } from './lib/session'
@@ -26,6 +26,8 @@ import ProductEditor from './pages/ProductEditor'
 import SellerOrders from './pages/SellerOrders'
 import { SellerEarnings, SellerReviews } from './pages/SellerInsights'
 import Admin from './pages/Admin'
+const Poster = lazy(() => import('./pages/Poster'))
+import { MyRequests } from './lib/help'
 
 const TABS: { to: string; label: string; icon: IconName }[] = [
   { to: '/', label: 'Home', icon: 'home' },
@@ -83,6 +85,8 @@ function App() {
     page = <AllergenInfo />
   } else if (path === '/seller-terms') {
     page = <SellerTerms />
+  } else if (path === '/help/requests') {
+    page = needsAccount(<MyRequests />, 'Sign in to see your messages to the BiteBY team.')
   } else if (path === '/help') {
     page = <Help />
   } else if (path === '/profile') {
@@ -104,6 +108,7 @@ function App() {
   } else if (path.startsWith('/sell')) {
     if (!session) page = <SignInPrompt why="Sign in or create an account to open your food shop." />
     else if (path === '/sell/shop') page = <ShopSetup />
+    else if (path === '/sell/poster') page = <Suspense fallback={<p className="muted">Loading…</p>}><Poster /></Suspense>
     else if (path === '/sell/earnings') page = <SellerEarnings />
     else if (path === '/sell/reviews') page = <SellerReviews />
     else if (path === '/sell/orders') page = <SellerOrders />
@@ -116,7 +121,7 @@ function App() {
 
   const name = session?.user.user_metadata?.name || session?.user.email || ''
   const activeTab = path === '/' ? '/' : TABS.slice(1).find((t) => path.startsWith(t.to))?.to
-    ?? (path.startsWith('/sell') || path.startsWith('/favourites') || path === '/addresses' || path.startsWith('/account') || ['/help', '/alerts', '/terms', '/privacy', '/allergens', '/seller-terms'].includes(path) ? '/profile' : null)
+    ?? (path.startsWith('/sell') || path.startsWith('/favourites') || path === '/addresses' || path.startsWith('/account') || ['/help', '/help/requests', '/alerts', '/terms', '/privacy', '/allergens', '/seller-terms'].includes(path) ? '/profile' : null)
 
   return (
     <>

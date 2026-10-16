@@ -5,7 +5,7 @@ import { Icon, VerifiedTick } from '../lib/icons'
 import { ReviewItem } from '../lib/reviews'
 import { basketCount, basketSubtotal, qtyIn, setQty, useBasket } from '../lib/basket'
 import { averageRating, hoursSummary, loadShop, type ShopData } from '../lib/shopData'
-import { openState } from '../lib/hours'
+import { awayUntil, openState, shortDate } from '../lib/hours'
 import { Avatar, BackButton, FoodPhoto, HeartButton, share } from '../lib/ui'
 import { dietaryName, noticeLabel, pounds, type Product } from '../lib/types'
 
@@ -40,7 +40,7 @@ export default function PublicShop({ slug }: { slug: string }) {
     )
   }
 
-  const { shop, settings, products, images, hours, closedToday, reviews, categories } = data
+  const { shop, settings, products, images, hours, closedDates, awayReason, reviews, categories } = data
   const average = averageRating(reviews)
   const isPreview = shop.status !== 'live'
   const canOrder = !isPreview && shop.accepting_orders
@@ -48,7 +48,8 @@ export default function PublicShop({ slug }: { slug: string }) {
   const shown = products.filter((p) => !category || p.category_id === category)
   const options = [settings?.offers_delivery && 'Delivery', settings?.offers_collection && 'Collection'].filter(Boolean) as string[]
   const inBasket = basket?.shopId === shop.id ? basketCount(basket) : 0
-  const state = openState(hours, closedToday)
+  const state = openState(hours, closedDates)
+  const back = awayUntil(closedDates)
 
   return (
     <div className="stack">
@@ -81,7 +82,11 @@ export default function PublicShop({ slug }: { slug: string }) {
       </div>
 
       {isPreview && <p className="status">Preview: only you can see this until your shop goes live.</p>}
-      {state && !state.open && canOrder && <p className="status small">You can still order ahead: choose a time at checkout.</p>}
+      {back ? (
+        <p className="away-note small">
+          <strong>{shop.name} is away{awayReason ? ` (${awayReason})` : ''}.</strong> Back on {shortDate(back)}.{canOrder && ' You can order ahead for then at checkout.'}
+        </p>
+      ) : state && !state.open && canOrder && <p className="status small">You can still order ahead: choose a time at checkout.</p>}
       {!isPreview && !shop.accepting_orders && <p className="status">This shop isn't taking orders right now.</p>}
 
       <div className="tabs" role="tablist">

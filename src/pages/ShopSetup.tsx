@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import { supabase } from '../lib/supabase'
 import { locatePostcode } from '../lib/geo'
+import { addDays, shortDate } from '../lib/hours'
 import { link, navigate } from '../lib/router'
 import { deletePhoto, photoUrl, uploadPhoto } from '../lib/images'
 import { pounds, type SellerAccount, type Shop, type ShopPrivate, type ShopSettings } from '../lib/types'
@@ -476,11 +477,24 @@ const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'
 type Day = { open: boolean; opens: string; closes: string }
 type Closure = { id: string; closed_on: string; reason: string | null }
 
+// Days off in a row with the same reason show as one holiday.
+function closureRuns(list: Closure[]) {
+  const runs: Closure[][] = []
+  for (const c of list) {
+    const run = runs[runs.length - 1]
+    const prev = run?.[run.length - 1]
+    if (prev && addDays(prev.closed_on, 1) === c.closed_on && prev.reason === c.reason) run.push(c)
+    else runs.push([c])
+  }
+  return runs
+}
+
 // Weekly opening hours (one time range per day) and days off.
 function OpeningHours({ shopId }: { shopId: string }) {
   const [days, setDays] = useState<Day[] | null>(null)
   const [closures, setClosures] = useState<Closure[]>([])
   const [offDate, setOffDate] = useState('')
+  const [offUntil, setOffUntil] = useState('')
   const [offReason, setOffReason] = useState('')
   const [message, setMessage] = useState('')
 
@@ -525,15 +539,22 @@ function OpeningHours({ shopId }: { shopId: string }) {
 
   async function addClosure() {
     if (!offDate) return
-    const { error } = await supabase!.from('shop_closures').insert({ shop_id: shopId, closed_on: offDate, reason: offReason.trim() || null })
-    if (error) return setMessage(error.code === '23505' ? 'That day is already marked off.' : error.message)
+    const last = offUntil && offUntil > offDate ? offUntil : offDate
+    const dates: string[] = []
+    for (let d = offDate; d <= last && dates.length < 60; d = addDays(d, 1)) dates.push(d)
+    const reason = offReason.trim() || null
+    const { error } = await supabase!.from('shop_closures')
+      .upsert(dates.map((closed_on) => ({ shop_id: shopId, closed_on, reason })), { onConflict: 'shop_id,closed_on', ignoreDuplicates: true })
+    if (error) return setMessage(error.message)
+    setMessage(dates.length > 1 ? `Away for ${dates.length} days. Customers can't order for those days.` : 'Day off added')
     setOffDate('')
+    setOffUntil('')
     setOffReason('')
     load()
   }
 
-  async function removeClosure(id: string) {
-    await supabase!.from('shop_closures').delete().eq('id', id)
+  async function removeClosures(ids: string[]) {
+    await supabase!.from('shop_closures').delete().in('id', ids)
     load()
   }
 
@@ -560,18 +581,20 @@ function OpeningHours({ shopId }: { shopId: string }) {
       ))}
       <button type="button" className="secondary" onClick={saveHours}>Save hours</button>
 
-      <h2>Days off</h2>
-      {closures.map((c) => (
-        <div key={c.id} className="check-row">
-          <span className="small">{new Date(c.closed_on + 'T12:00').toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })}{c.reason && ` · ${c.reason}`}</span>
-          <button type="button" className="secondary small-btn" onClick={() => removeClosure(c.id)}>Remove</button>
+      <h2>Days off and holidays</h2>
+      <p className="muted small">Customers can’t order for these days, and your shop shows when you’re back.</p>
+      {closureRuns(closures).map((run) => (
+        <div key={run[0].id} className="check-row">
+          <span className="small">{shortDate(run[0].closed_on)}{run.length > 1 && ` to ${shortDate(run[run.length - 1].closed_on)}`}{run[0].reason && ` · ${run[0].reason}`}</span>
+          <button type="button" className="secondary small-btn" onClick={() => removeClosures(run.map((c) => c.id))}>Remove</button>
         </div>
       ))}
       <div className="row">
-        <input type="date" value={offDate} min={new Date().toISOString().slice(0, 10)} onChange={(e) => setOffDate(e.target.value)} aria-label="Day off" />
-        <input value={offReason} maxLength={200} onChange={(e) => setOffReason(e.target.value)} placeholder="Reason (optional)" />
+        <label className="grow">From<input type="date" value={offDate} min={new Date().toISOString().slice(0, 10)} onChange={(e) => setOffDate(e.target.value)} /></label>
+        <label className="grow">Until (optional)<input type="date" value={offUntil} min={offDate || new Date().toISOString().slice(0, 10)} onChange={(e) => setOffUntil(e.target.value)} /></label>
       </div>
-      <button type="button" className="secondary" onClick={addClosure} disabled={!offDate}>Add day off</button>
+      <input value={offReason} maxLength={200} onChange={(e) => setOffReason(e.target.value)} placeholder="Reason, shown to customers (optional), e.g. On holiday" aria-label="Reason" />
+      <button type="button" className="secondary" onClick={addClosure} disabled={!offDate}>{offUntil && offUntil > offDate ? 'Add holiday' : 'Add day off'}</button>
       {message && <p className="muted">{message}</p>}
     </div>
   )

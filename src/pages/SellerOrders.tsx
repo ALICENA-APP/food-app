@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase'
 import { tidyOrders } from '../lib/alerts'
 import { link, queryParam } from '../lib/router'
 import { OrderChat } from '../lib/chat'
+import { HelpForm } from '../lib/help'
 import { pounds } from '../lib/types'
 import { ORDER_STATUS, when, type Order, type OrderItem, type OrderStatus } from './Orders'
 
@@ -138,6 +139,10 @@ function SellerOrderCard({ order, onChanged }: { order: Order & { order_items: O
         {chat ? 'Hide messages' : `Message ${order.customer_name}`}
       </button>
       {chat && <OrderChat orderId={order.id} asSeller otherName={order.customer_name} />}
+      <details>
+        <summary className="small">Need help from BiteBY with this order?</summary>
+        <HelpForm orderId={order.id} seller plain />
+      </details>
     </article>
   )
 }

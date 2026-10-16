@@ -162,6 +162,7 @@ function Dashboard({ shop, account, onChanged }: { shop: Shop; account: SellerAc
         {error && <p className="error small">{error}</p>}
         <div className="row">
           <button type="button" className="secondary small-btn" onClick={() => share(shop.name, url)}><Icon name="share" size={16} /> Share your shop link</button>
+          <a className="button secondary small-btn" href="/sell/poster" onClick={link('/sell/poster')}>QR poster</a>
         </div>
       </div>
 

@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase'
 import { link } from '../lib/router'
 import { pounds } from '../lib/types'
 import { ReviewItem, type Review } from '../lib/reviews'
+import { TOPIC_LABEL, type Topic } from '../lib/help'
 import { ORDER_STATUS, when, type Order, type OrderStatus } from './Orders'
 
 const FILTERS: { key: string; label: string; statuses: OrderStatus[] | null }[] = [
@@ -154,7 +155,7 @@ function AdminReviewCard({ review, onChanged }: { review: Review & { shops?: { n
 type Overview = {
   users: number; new_users_7d: number; sellers: Record<string, number>; live_shops: number; dishes_on_sale: number
   orders_7d: number; orders_30d: number; sales_30d_pence: number; fees_30d_pence: number; open_orders: number
-  reviews_30d: number; deletion_requests: number
+  reviews_30d: number; deletion_requests: number; open_help?: number
 }
 
 // Platform numbers at a glance, and account deletions waiting to be finished.
@@ -184,6 +185,7 @@ export function AdminOverview() {
     ['Sales, 30 days', pounds(data.sales_30d_pence)],
     ['BiteBY fees, 30 days', pounds(data.fees_30d_pence)],
     ['Reviews, 30 days', data.reviews_30d],
+    ['Help requests to answer', data.open_help ?? 0],
   ]
   return (
     <div className="stack">
@@ -208,5 +210,77 @@ export function AdminOverview() {
         </div>
       )}
     </div>
+  )
+}
+
+type AdminHelp = {
+  id: string; topic: Topic; details: string; status: 'open' | 'resolved'; admin_reply: string | null
+  created_at: string; resolved_at: string | null; email: string | null; name: string | null; is_seller: boolean
+  order_id: string | null; order_code: string | null; order_status: OrderStatus | null; total_pence: number | null; shop_name: string | null
+}
+
+// Messages from customers and sellers, answered in the app.
+export function AdminHelpInbox() {
+  const [status, setStatus] = useState<'open' | 'resolved'>('open')
+  const [list, setList] = useState<AdminHelp[] | null>(null)
+  const [error, setError] = useState('')
+
+  const load = useCallback(async () => {
+    const { data, error: e } = await supabase!.rpc('admin_help_requests', { p_status: status })
+    if (e) return setError(e.message)
+    setList(data ?? [])
+  }, [status])
+
+  useEffect(() => {
+    setList(null)
+    load()
+  }, [load])
+
+  return (
+    <div className="stack">
+      <div className="segmented">
+        <label className={status === 'open' ? 'on' : ''}><input type="radio" checked={status === 'open'} onChange={() => setStatus('open')} />To answer</label>
+        <label className={status === 'resolved' ? 'on' : ''}><input type="radio" checked={status === 'resolved'} onChange={() => setStatus('resolved')} />Answered</label>
+      </div>
+      {error && <p className="error">{error}</p>}
+      {list === null && !error && <p className="muted">Loading…</p>}
+      {list?.length === 0 && <p className="muted">{status === 'open' ? 'Nothing waiting. Nice.' : 'No answered requests yet.'}</p>}
+      {list?.map((h) => <HelpCard key={h.id} help={h} onDone={load} />)}
+    </div>
+  )
+}
+
+function HelpCard({ help: h, onDone }: { help: AdminHelp; onDone: () => void }) {
+  const [reply, setReply] = useState('')
+  const [message, setMessage] = useState('')
+
+  async function send() {
+    const { error } = await supabase!.rpc('admin_answer_help', { p_id: h.id, p_reply: reply })
+    if (error) return setMessage(error.message)
+    onDone()
+  }
+
+  return (
+    <article className="card stack" style={{ gap: 6 }}>
+      <div className="item">
+        <strong>{TOPIC_LABEL[h.topic]}</strong>
+        {h.is_seller && <span className="tag grey">Seller</span>}
+      </div>
+      <p className="muted small">{h.name || 'No name'} · {h.email ?? 'deleted account'} · {new Date(h.created_at).toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short' })}</p>
+      {h.order_code && (
+        <p className="small">Order <strong>{h.order_code}</strong> · {h.shop_name} · {h.order_status ? ORDER_STATUS[h.order_status] : ''} · {pounds(h.total_pence ?? 0)}</p>
+      )}
+      <p className="story">{h.details}</p>
+      {h.status === 'resolved' ? (
+        <div className="bubble-reply"><strong className="small">Your reply</strong><p className="small">{h.admin_reply}</p></div>
+      ) : (
+        <>
+          <textarea rows={3} maxLength={1000} value={reply} onChange={(e) => setReply(e.target.value)} placeholder="Reply to them (they get an alert in the app)" aria-label="Reply" />
+          <button type="button" onClick={send} disabled={!reply.trim()}>Send reply and close</button>
+          {h.email && <a className="small" href={`mailto:${h.email}`}>Or email them</a>}
+        </>
+      )}
+      {message && <p className="error small">{message}</p>}
+    </article>
   )
 }

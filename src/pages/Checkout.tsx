@@ -9,6 +9,7 @@ import { formatPostcode, loadNear, looksLikePostcode, readPostcode, type Point }
 import { locatePostcode } from '../lib/geo'
 import { loadAddresses, saveAddress, type SavedAddress } from './Addresses'
 import { noticeLabel, pounds, type ShopSettings } from '../lib/types'
+import { addDays, londonNow, shortDate } from '../lib/hours'
 
 const niceTime = (d: Date) => d.toLocaleString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
 
@@ -46,6 +47,7 @@ export default function Checkout() {
   const [saved, setSaved] = useState<SavedAddress[]>([])
   const [keepAddress, setKeepAddress] = useState(true)
   const [lead, setLead] = useState(0)
+  const [away, setAway] = useState<string[]>([])
   // For cooks who deliver within a distance: where the delivery postcode is,
   // and whether this cook reaches it.
   const [spot, setSpot] = useState<{ postcode: string; point: Point | null; delivers: boolean } | null>(null)
@@ -84,6 +86,14 @@ export default function Checkout() {
     }, 400)
     return () => window.clearTimeout(timer)
   }, [radius, deliveryPostcode, shopId])
+
+  // Days the cook is away, so nobody orders for one of them.
+  useEffect(() => {
+    if (!shopId) return
+    const today = londonNow().date
+    supabase!.from('shop_closures').select('closed_on').eq('shop_id', shopId).gte('closed_on', today).lte('closed_on', addDays(today, 60))
+      .then(({ data }) => setAway((data ?? []).map((x) => x.closed_on)))
+  }, [shopId])
 
   // The most notice any dish in the basket needs.
   const productKey = basket?.lines.map((l) => l.productId).join(',') ?? ''
@@ -136,6 +146,8 @@ export default function Checkout() {
   const shop = { id: basket.shopId, slug: basket.shopSlug, name: basket.shopName }
   const earliest = new Date(Date.now() + lead * 3600000 + 5 * 60000)
   const sameAddress = (a: SavedAddress) => a.address.trim() === address.trim() && a.postcode.replace(/\s/g, '').toUpperCase() === postcode.replace(/\s/g, '').toUpperCase()
+  const wantedDay = when ? londonNow(new Date(when)).date : londonNow().date
+  const awayThen = away.includes(wantedDay)
   const isNewAddress = address.trim().length > 2 && !saved.some(sameAddress)
 
   async function onSubmit(e: FormEvent) {
@@ -144,6 +156,7 @@ export default function Checkout() {
     if (lead && (!when || new Date(when) < earliest)) {
       return setMessage(`Some dishes need more notice. Choose ${niceTime(earliest)} or later.`)
     }
+    if (awayThen) return setMessage(`The cook is away on ${shortDate(wantedDay)}. Please choose another day.`)
     if (!session) return askToSignIn('/basket')
     setPlacing(true)
     const { data, error } = await supabase!.rpc('place_order', {
@@ -252,6 +265,7 @@ export default function Checkout() {
           {lead ? 'When would you like it?' : 'When would you like it? (optional)'}
           <input type="datetime-local" required={lead > 0} min={localInput(lead ? earliest : new Date())} value={when} onChange={(e) => update({ when: e.target.value })} />
         </label>
+        {awayThen && <p className="error small">The cook is away on {shortDate(wantedDay)}{away.length > 1 ? ` (days off: ${away.slice(0, 5).map(shortDate).join(', ')}${away.length > 5 ? '…' : ''})` : ''}. Choose another day.</p>}
         {lead > 0 && <p className="muted small">Some dishes are made to order: {noticeLabel(lead).toLowerCase()}. The earliest is {niceTime(earliest)}.</p>}
         <label>
           Your name

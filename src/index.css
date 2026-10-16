@@ -428,3 +428,32 @@ ol.steps .qr { display: block; margin: 8px 0; }
 .halal-mark { width: 44px; height: 44px; }
 .chip-ic { font-size: 1rem; line-height: 1; display: inline-flex; }
 .chip-ic .halal-mark { width: 20px; height: 20px; }
+
+/* Help requests */
+.bubble-reply { background: var(--yellow-soft); border-radius: 12px; padding: 8px 12px; display: flex; flex-direction: column; gap: 2px; }
+details[open] > summary + * { margin-top: 10px; }
+.away-note { background: var(--yellow-soft); border-radius: 12px; padding: 10px 14px; }
+
+/* Shop poster */
+.poster { background: #fff; color: #111; border: 1px solid var(--line); border-radius: 20px; padding: 28px 22px; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 8px; border-top: 14px solid var(--yellow); }
+.poster .wordmark { pointer-events: none; color: #111; }
+.poster-kicker { margin: 10px 0 0; font-weight: 600; color: #555; letter-spacing: 0.04em; text-transform: uppercase; font-size: 0.85rem; }
+.poster-name { font-size: 2.1rem; line-height: 1.1; margin: 0; color: #111; overflow-wrap: anywhere; }
+.poster-sub { margin: 0; color: #555; }
+.poster-qr { width: min(70vw, 280px); margin: 12px 0 4px; }
+.poster-qr svg { width: 100%; height: auto; display: block; }
+.poster-cta { font-weight: 700; font-size: 1.15rem; margin: 0; }
+.poster-url { margin: 0; font-weight: 600; background: var(--yellow); padding: 4px 12px; border-radius: 999px; overflow-wrap: anywhere; }
+.poster-foot { margin: 10px 0 0; color: #777; font-size: 0.9rem; }
+@media print {
+  @page { size: A4; margin: 14mm; }
+  body { background: #fff !important; }
+  body * { visibility: hidden; }
+  .poster, .poster * { visibility: visible; }
+  .poster { position: absolute; left: 0; top: 0; width: 100%; border: 0; border-top: 18px solid #FFC72C; padding: 40px 30px; gap: 14px; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+  .poster-name { font-size: 3.4rem; }
+  .poster-qr { width: 110mm; }
+  .poster-cta { font-size: 1.7rem; }
+  .poster-url { font-size: 1.3rem; }
+  .no-print { display: none; }
+}
