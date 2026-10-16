@@ -20,6 +20,11 @@ export async function shrinkImage(file: File, maxSide = 1200, types = ['image/we
   canvas.height = Math.round(bitmap.height * scale)
   canvas.getContext('2d')!.drawImage(bitmap, 0, 0, canvas.width, canvas.height)
   bitmap.close()
+  return encodeCanvas(canvas, types)
+}
+
+// The canvas as a small WebP (or JPEG), quality stepped down until it's under 250 KB.
+export async function encodeCanvas(canvas: HTMLCanvasElement, types = ['image/webp', 'image/jpeg']): Promise<Blob> {
   for (const type of types) {
     for (let q = 0.82; q >= 0.4; q -= 0.12) {
       const blob = await new Promise<Blob | null>((r) => canvas.toBlob(r, type, q))
@@ -29,12 +34,14 @@ export async function shrinkImage(file: File, maxSide = 1200, types = ['image/we
   throw new Error('This photo is too large. Try a smaller one.')
 }
 
-// Uploads a shrunk photo under the shop's folder and returns its path.
+// Uploads a photo (a phone file, shrunk first, or an already cropped image)
+// under a folder (the shop's id, or the person's own id for a profile
+// picture) and returns its path.
 // `jpeg` is for photos used in link previews, which some apps can't show as WebP.
-export async function uploadPhoto(shopId: string, file: File, maxSide?: number, jpeg = false) {
-  const blob = await shrinkImage(file, maxSide, jpeg ? ['image/jpeg'] : undefined)
+export async function uploadPhoto(folder: string, file: File | Blob, maxSide?: number, jpeg = false) {
+  const blob = file instanceof File ? await shrinkImage(file, maxSide, jpeg ? ['image/jpeg'] : undefined) : file
   const ext = blob.type === 'image/webp' ? 'webp' : 'jpg'
-  const path = `${shopId}/${crypto.randomUUID()}.${ext}`
+  const path = `${folder}/${crypto.randomUUID()}.${ext}`
   const { error } = await supabase!.storage.from(BUCKET).upload(path, blob, { contentType: blob.type, cacheControl: '31536000' })
   if (error) throw new Error(error.message)
   return path

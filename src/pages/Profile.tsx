@@ -5,6 +5,9 @@ import { useSession } from '../lib/session'
 import { Icon, type IconName } from '../lib/icons'
 import { Avatar, BowlArt, useFavourites } from '../lib/ui'
 import { HelpForm } from '../lib/help'
+import { ImageCropper } from '../lib/ImageCropper'
+import { deletePhoto, uploadPhoto } from '../lib/images'
+import { setMyAvatar, useMyAvatar } from '../lib/myAvatar'
 
 function Tile({ to, icon, title, sub, tone = 'var(--yellow-soft)', wide, onClick }: {
   to?: string; icon: IconName; title: string; sub?: string; tone?: string; wide?: boolean; onClick?: () => void
@@ -68,7 +71,7 @@ export default function Profile() {
   return (
     <div className="stack-lg">
       <div className="profile-head">
-        <Avatar name={shown} />
+        <ProfilePicture userId={session.user.id} name={shown} />
         <div style={{ minWidth: 0, flex: 1 }}>
           {editing ? (
             <NameForm initial={name ?? ''} onDone={(n) => { setName(n); setEditing(false) }} />
@@ -110,6 +113,61 @@ export default function Profile() {
         <Tile icon="logout" title="Sign out" tone="var(--line)" wide onClick={async () => { await supabase!.auth.signOut(); navigate('/') }} />
       </div>
       <LegalLinks />
+    </div>
+  )
+}
+
+// Your round profile picture: tap to add or change it, then crop.
+function ProfilePicture({ userId, name }: { userId: string; name: string }) {
+  const path = useMyAvatar(userId)
+  const [file, setFile] = useState<File | null>(null)
+  const [busy, setBusy] = useState(false)
+  const [menu, setMenu] = useState(false)
+  const [error, setError] = useState('')
+
+  async function save(blob: Blob) {
+    setFile(null)
+    setBusy(true)
+    setError('')
+    try {
+      const next = await uploadPhoto(userId, blob)
+      const { error: err } = await supabase!.from('profiles').update({ avatar_path: next }).eq('id', userId)
+      if (err) {
+        await deletePhoto(next)
+        throw new Error(err.message)
+      }
+      if (path) await deletePhoto(path)
+      setMyAvatar(userId, next)
+    } catch (e) {
+      setError((e as Error).message)
+    }
+    setBusy(false)
+  }
+
+  async function removePicture() {
+    setMenu(false)
+    if (!path) return
+    const { error: err } = await supabase!.from('profiles').update({ avatar_path: null }).eq('id', userId)
+    if (err) return setError(err.message)
+    await deletePhoto(path)
+    setMyAvatar(userId, null)
+  }
+
+  return (
+    <div className="profile-pic">
+      <label className="profile-pic-btn" aria-label={path ? 'Change your profile picture' : 'Add a profile picture'}>
+        <Avatar name={name} path={path} />
+        <span className="profile-pic-badge" aria-hidden="true">{busy ? '…' : <Icon name="edit" size={14} />}</span>
+        <input type="file" accept="image/*" disabled={busy} onChange={(e) => { const f = e.target.files?.[0]; if (f) setFile(f); e.target.value = '' }} />
+      </label>
+      {path && !busy && (
+        <button type="button" className="link tiny" onClick={() => (menu ? removePicture() : setMenu(true))}>{menu ? 'Tap again to remove' : 'Remove photo'}</button>
+      )}
+      {error && <p className="error tiny">{error}</p>}
+      {file && (
+        <ImageCropper file={file} aspect={1} round width={400} title="Profile picture" hint="Fit your face inside the circle."
+          onCancel={() => setFile(null)} onDone={save} />
+      )}
     </div>
   )
 }

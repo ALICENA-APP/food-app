@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase'
 import { link, navigate } from '../lib/router'
 import { DIETARY, type Allergen, type Category, type Presence, type Product } from '../lib/types'
 import { deletePhoto, photoUrl, uploadPhoto } from '../lib/images'
+import { ImageCropper } from '../lib/ImageCropper'
 
 const PRESENCE_LABEL: Record<Presence, string> = {
   contains: 'Contains',
@@ -271,6 +272,7 @@ function Photos({ shopId, productId }: { shopId: string; productId: string }) {
   const [photos, setPhotos] = useState<Photo[]>([])
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState('')
+  const [queue, setQueue] = useState<File[]>([])
 
   const load = useCallback(async () => {
     const { data } = await supabase!.from('product_images').select('id, path, sort').eq('product_id', productId).order('sort')
@@ -281,19 +283,23 @@ function Photos({ shopId, productId }: { shopId: string; productId: string }) {
     load()
   }, [load])
 
-  async function add(files: FileList | null) {
+  // Chosen photos are cropped one at a time, then saved.
+  function choose(files: FileList | null) {
     if (!files?.length) return
-    setBusy(true)
     setMessage('')
+    setQueue(Array.from(files).slice(0, 4 - photos.length))
+  }
+
+  async function add(blob: Blob) {
+    setQueue((q) => q.slice(1))
+    setBusy(true)
     try {
-      for (const file of Array.from(files).slice(0, 4 - photos.length)) {
-        const path = await uploadPhoto(shopId, file)
-        const sort = photos.length ? Math.max(...photos.map((p) => p.sort)) + 1 : 0
-        const { error } = await supabase!.from('product_images').insert({ product_id: productId, path, sort })
-        if (error) {
-          await deletePhoto(path)
-          throw new Error(error.message)
-        }
+      const path = await uploadPhoto(shopId, blob)
+      const sort = photos.length ? Math.max(...photos.map((p) => p.sort)) + 1 : 0
+      const { error } = await supabase!.from('product_images').insert({ product_id: productId, path, sort })
+      if (error) {
+        await deletePhoto(path)
+        throw new Error(error.message)
       }
     } catch (e) {
       setMessage((e as Error).message)
@@ -317,7 +323,7 @@ function Photos({ shopId, productId }: { shopId: string; productId: string }) {
   return (
     <div className="card">
       <h2>Photos</h2>
-      <p className="muted small">Up to 4. The first one is shown on your menu. Photos are shrunk automatically.</p>
+      <p className="muted small">Up to 4. The first one is shown on your menu. You can drag and zoom each photo to frame your dish.</p>
       <div className="photos">
         {photos.map((p, i) => (
           <figure key={p.id}>
@@ -332,10 +338,22 @@ function Photos({ shopId, productId }: { shopId: string; productId: string }) {
       {photos.length < 4 && (
         <label className="button secondary upload">
           {busy ? 'Uploading…' : 'Add photos'}
-          <input type="file" accept="image/*" multiple disabled={busy} onChange={(e) => { add(e.target.files); e.target.value = '' }} />
+          <input type="file" accept="image/*" multiple disabled={busy} onChange={(e) => { choose(e.target.files); e.target.value = '' }} />
         </label>
       )}
       {message && <p className="error">{message}</p>}
+      {queue.length > 0 && (
+        <ImageCropper
+          key={`${queue.length}-${queue[0].name}`}
+          file={queue[0]}
+          aspect={4 / 3}
+          width={1200}
+          title={queue.length > 1 ? `Dish photo (${queue.length} to go)` : 'Dish photo'}
+          hint="This is how it looks on your menu and the dish page."
+          onCancel={() => setQueue((q) => q.slice(1))}
+          onDone={add}
+        />
+      )}
     </div>
   )
 }

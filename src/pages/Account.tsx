@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase'
 import { link, navigate } from '../lib/router'
 import { useSession } from '../lib/session'
 import { Icon } from '../lib/icons'
+import { deletePhoto } from '../lib/images'
 
 // Download a copy of your data, or delete your account.
 export default function Account() {
@@ -40,9 +41,11 @@ export default function Account() {
   async function remove() {
     setBusy(true)
     setError('')
+    const { data: me } = await supabase!.from('profiles').select('avatar_path').eq('id', session!.user.id).maybeSingle()
     const { error: err } = await supabase!.rpc('delete_my_account')
     setBusy(false)
     if (err) return setError(err.message)
+    if (me?.avatar_path) await deletePhoto(me.avatar_path)
     try {
       localStorage.removeItem('checkoutDraft')
       localStorage.removeItem('myPostcode')

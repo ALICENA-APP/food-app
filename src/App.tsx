@@ -6,6 +6,7 @@ import { basketCount, useBasket } from './lib/basket'
 import { useUnreadAlerts } from './lib/alerts'
 import { Icon, type IconName } from './lib/icons'
 import { Avatar, Wordmark } from './lib/ui'
+import { useMyAvatar } from './lib/myAvatar'
 import Home from './pages/Home'
 import Explore from './pages/Explore'
 import Dish from './pages/Dish'
@@ -45,6 +46,7 @@ function App() {
   const { session, ready } = useSession()
   const basket = useBasket()
   const unread = useUnreadAlerts(session?.user.id)
+  const avatar = useMyAvatar(session?.user.id)
   const count = basketCount(basket)
 
   const shopMatch = path.match(/^\/s\/([a-z0-9-]+)\/?$/)
@@ -137,7 +139,7 @@ function App() {
                 </a>
               )}
               {session ? (
-                <a href="/profile" onClick={link('/profile')} aria-label="Your profile"><Avatar name={name} size={42} /></a>
+                <a href="/profile" onClick={link('/profile')} aria-label="Your profile"><Avatar name={name} path={avatar} size={42} /></a>
               ) : (
                 <button type="button" className="small-btn" onClick={() => askToSignIn()}>Sign in</button>
               )}

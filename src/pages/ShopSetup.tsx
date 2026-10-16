@@ -4,6 +4,7 @@ import { locatePostcode } from '../lib/geo'
 import { addDays, shortDate } from '../lib/hours'
 import { link, navigate } from '../lib/router'
 import { deletePhoto, photoUrl, uploadPhoto } from '../lib/images'
+import { ImageCropper } from '../lib/ImageCropper'
 import { pounds, type SellerAccount, type Shop, type ShopPrivate, type ShopSettings } from '../lib/types'
 
 function toSlug(text: string) {
@@ -424,13 +425,14 @@ function ShopPhotos({ shop }: { shop: Shop }) {
   const [cover, setCover] = useState(shop.cover_path)
   const [busy, setBusy] = useState('')
   const [message, setMessage] = useState('')
+  const [cropping, setCropping] = useState<{ kind: 'logo' | 'cover'; file: File } | null>(null)
 
-  async function replace(kind: 'logo' | 'cover', file: File | undefined) {
-    if (!file) return
+  async function replace(kind: 'logo' | 'cover', blob: Blob) {
+    setCropping(null)
     setBusy(kind)
     setMessage('')
     try {
-      const path = await uploadPhoto(shop.id, file, kind === 'logo' ? 400 : 1600, kind === 'cover')
+      const path = await uploadPhoto(shop.id, blob)
       const column = kind === 'logo' ? 'logo_path' : 'cover_path'
       const { error } = await supabase!.from('shops').update({ [column]: path }).eq('id', shop.id)
       if (error) {
@@ -456,7 +458,7 @@ function ShopPhotos({ shop }: { shop: Shop }) {
           {logo ? <img className="logo" src={photoUrl(logo)!} alt="" /> : <div className="logo placeholder" />}
           <label className="button secondary upload small-btn">
             {busy === 'logo' ? 'Uploading…' : logo ? 'Change' : 'Add'}
-            <input type="file" accept="image/*" disabled={Boolean(busy)} onChange={(e) => { replace('logo', e.target.files?.[0]); e.target.value = '' }} />
+            <input type="file" accept="image/*" disabled={Boolean(busy)} onChange={(e) => { const f = e.target.files?.[0]; if (f) setCropping({ kind: 'logo', file: f }); e.target.value = '' }} />
           </label>
         </div>
         <div className="grow">
@@ -464,11 +466,22 @@ function ShopPhotos({ shop }: { shop: Shop }) {
           {cover ? <img className="cover" src={photoUrl(cover)!} alt="" /> : <div className="cover placeholder" />}
           <label className="button secondary upload small-btn">
             {busy === 'cover' ? 'Uploading…' : cover ? 'Change' : 'Add'}
-            <input type="file" accept="image/*" disabled={Boolean(busy)} onChange={(e) => { replace('cover', e.target.files?.[0]); e.target.value = '' }} />
+            <input type="file" accept="image/*" disabled={Boolean(busy)} onChange={(e) => { const f = e.target.files?.[0]; if (f) setCropping({ kind: 'cover', file: f }); e.target.value = '' }} />
           </label>
         </div>
       </div>
+      <p className="muted small">After choosing a photo you can drag and zoom to pick exactly what shows.</p>
       {message && <p className="error">{message}</p>}
+      {cropping && (
+        <ImageCropper
+          file={cropping.file}
+          {...(cropping.kind === 'logo'
+            ? { aspect: 1, round: true, width: 400, title: 'Logo or your photo', hint: 'Fit your face or logo inside the circle.' }
+            : { aspect: 2, width: 1600, jpeg: true, title: 'Cover photo', hint: 'This is the banner at the top of your shop page.' })}
+          onCancel={() => setCropping(null)}
+          onDone={(blob) => replace(cropping.kind, blob)}
+        />
+      )}
     </div>
   )
 }
