@@ -66,6 +66,7 @@ export type Product = {
   price_pence: number
   portion: string | null
   stock_qty: number | null
+  min_lead_hours: number | null
   ingredients: string | null
   may_contain_notes: string | null
   collection_ok: boolean
@@ -85,6 +86,13 @@ export const DIETARY = [
   { code: 'halal', name: 'Halal' },
   { code: 'spicy', name: 'Spicy' },
 ]
+// How much notice a dish needs, e.g. "Order 1 day ahead".
+export function noticeLabel(hours: number | null | undefined) {
+  if (!hours) return ''
+  if (hours % 24 === 0) return `Order ${hours / 24} ${hours === 24 ? 'day' : 'days'} ahead`
+  return `Order ${hours} hours ahead`
+}
+
 export const dietaryName = (code: string) => DIETARY.find((d) => d.code === code)?.name ?? code
 
 export const TERMS_VERSION = '2026-10-v1'

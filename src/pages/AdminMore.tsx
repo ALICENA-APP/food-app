@@ -150,3 +150,63 @@ function AdminReviewCard({ review, onChanged }: { review: Review & { shops?: { n
     </div>
   )
 }
+
+type Overview = {
+  users: number; new_users_7d: number; sellers: Record<string, number>; live_shops: number; dishes_on_sale: number
+  orders_7d: number; orders_30d: number; sales_30d_pence: number; fees_30d_pence: number; open_orders: number
+  reviews_30d: number; deletion_requests: number
+}
+
+// Platform numbers at a glance, and account deletions waiting to be finished.
+export function AdminOverview() {
+  const [data, setData] = useState<Overview | null>(null)
+  const [deletions, setDeletions] = useState<{ user_id: string; email: string; requested_at: string }[]>([])
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    supabase!.rpc('admin_overview').then(({ data: d, error: e }) => (e ? setError(e.message) : setData(d)))
+    supabase!.rpc('admin_deletion_requests').then(({ data: d }) => setDeletions(d ?? []))
+  }, [])
+
+  if (error) return <p className="error">{error}</p>
+  if (!data) return <p className="muted">Loading…</p>
+  const waiting = (data.sellers.submitted ?? 0) + (data.sellers.in_review ?? 0)
+  const tiles: [string, string | number][] = [
+    ['People signed up', data.users],
+    ['New this week', data.new_users_7d],
+    ['Sellers to check', waiting],
+    ['Approved sellers', data.sellers.approved ?? 0],
+    ['Live shops', data.live_shops],
+    ['Dishes on sale', data.dishes_on_sale],
+    ['Orders in progress', data.open_orders],
+    ['Paid orders, 7 days', data.orders_7d],
+    ['Paid orders, 30 days', data.orders_30d],
+    ['Sales, 30 days', pounds(data.sales_30d_pence)],
+    ['BiteBY fees, 30 days', pounds(data.fees_30d_pence)],
+    ['Reviews, 30 days', data.reviews_30d],
+  ]
+  return (
+    <div className="stack">
+      <div className="grid2">
+        {tiles.map(([label, value]) => (
+          <div key={label} className="card" style={{ gap: 2 }}>
+            <strong style={{ fontSize: '1.4rem' }}>{value}</strong>
+            <span className="muted tiny">{label}</span>
+          </div>
+        ))}
+      </div>
+      {deletions.length > 0 && (
+        <div className="card">
+          <h2>Accounts to remove</h2>
+          <p className="muted small">
+            These people deleted their account. Their personal details are already wiped. To finish, remove their sign-in:
+            in Supabase open Authentication, then Users, search for the email, and choose Delete user. It disappears from this list after that.
+          </p>
+          {deletions.map((d) => (
+            <div key={d.user_id} className="item"><span>{d.email}</span><span className="muted small">{when(d.requested_at)}</span></div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}

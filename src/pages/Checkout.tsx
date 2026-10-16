@@ -5,8 +5,17 @@ import { askToSignIn, useSession } from '../lib/session'
 import { Icon } from '../lib/icons'
 import { basketCount, basketSubtotal, setQty, useBasket, writeBasket } from '../lib/basket'
 import { FoodPhoto } from '../lib/ui'
+import { formatPostcode, readPostcode } from '../lib/postcode'
 import { loadAddresses, saveAddress, type SavedAddress } from './Addresses'
-import { pounds, type ShopSettings } from '../lib/types'
+import { noticeLabel, pounds, type ShopSettings } from '../lib/types'
+
+const niceTime = (d: Date) => d.toLocaleString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
+
+// A date in the format a datetime-local box uses, in the phone's own time.
+function localInput(d: Date) {
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
+}
 
 type Zone = { name: string; postcode_districts: string[]; fee_pence: number; min_order_pence: number }
 type Draft = { fulfilment: 'collection' | 'delivery'; name: string; phone: string; address: string; postcode: string; when: string; note: string }
@@ -16,7 +25,8 @@ const emptyDraft: Draft = { fulfilment: 'collection', name: '', phone: '', addre
 
 function readDraft(): Draft {
   try {
-    return { ...emptyDraft, ...JSON.parse(localStorage.getItem(DRAFT_KEY) ?? '{}') }
+    const draft = { ...emptyDraft, ...JSON.parse(localStorage.getItem(DRAFT_KEY) ?? '{}') }
+    return draft.postcode ? draft : { ...draft, postcode: readPostcode() }
   } catch {
     return emptyDraft
   }
@@ -34,6 +44,7 @@ export default function Checkout() {
   const [placing, setPlacing] = useState(false)
   const [saved, setSaved] = useState<SavedAddress[]>([])
   const [keepAddress, setKeepAddress] = useState(true)
+  const [lead, setLead] = useState(0)
   const shopId = basket?.shopId
   const userId = session?.user.id
 
@@ -57,6 +68,15 @@ export default function Checkout() {
     })
     db.from('shop_delivery_zones').select('name, postcode_districts, fee_pence, min_order_pence').eq('shop_id', shopId).then(({ data }) => setZones(data ?? []))
   }, [shopId])
+
+  // The most notice any dish in the basket needs.
+  const productKey = basket?.lines.map((l) => l.productId).join(',') ?? ''
+  useEffect(() => {
+    if (!productKey) return
+    supabase!.from('products').select('min_lead_hours').in('id', productKey.split(',')).then(({ data }) => {
+      setLead(Math.max(0, ...(data ?? []).map((p) => p.min_lead_hours ?? 0)))
+    })
+  }, [productKey])
 
   // Fill in the name and phone from their profile the first time.
   useEffect(() => {
@@ -86,19 +106,23 @@ export default function Checkout() {
 
   const { fulfilment, name, phone, address, postcode, when, note } = draft
   const subtotal = basketSubtotal(basket)
-  const district = postcode.trim().toUpperCase().split(/\s+/)[0]
+  const district = postcode.trim() ? formatPostcode(postcode).split(' ')[0] : ''
   const zone = fulfilment === 'delivery' && district
     ? zones.filter((z) => z.postcode_districts.includes(district)).sort((a, b) => a.fee_pence - b.fee_pence)[0]
     : undefined
   const fee = zone?.fee_pence ?? 0
   const minOrder = Math.max(settings?.min_order_pence ?? 0, zone?.min_order_pence ?? 0)
   const shop = { id: basket.shopId, slug: basket.shopSlug, name: basket.shopName }
+  const earliest = new Date(Date.now() + lead * 3600000 + 5 * 60000)
   const sameAddress = (a: SavedAddress) => a.address.trim() === address.trim() && a.postcode.replace(/\s/g, '').toUpperCase() === postcode.replace(/\s/g, '').toUpperCase()
   const isNewAddress = address.trim().length > 2 && !saved.some(sameAddress)
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault()
     setMessage('')
+    if (lead && (!when || new Date(when) < earliest)) {
+      return setMessage(`Some dishes need more notice. Choose ${niceTime(earliest)} or later.`)
+    }
     if (!session) return askToSignIn('/basket')
     setPlacing(true)
     const { data, error } = await supabase!.rpc('place_order', {
@@ -192,7 +216,7 @@ export default function Checkout() {
             </label>
             <label>
               Postcode
-              <input required maxLength={10} value={postcode} onChange={(e) => update({ postcode: e.target.value })} autoComplete="postal-code" />
+              <input required maxLength={10} value={postcode} onChange={(e) => update({ postcode: e.target.value })} onBlur={() => postcode && update({ postcode: formatPostcode(postcode) })} autoComplete="postal-code" />
             </label>
             {district && !zone && <p className="error">This cook doesn't deliver to {district}.</p>}
             {session && isNewAddress && saved.length < 5 && (
@@ -201,9 +225,10 @@ export default function Checkout() {
           </>
         )}
         <label>
-          When would you like it? (optional)
-          <input type="datetime-local" value={when} onChange={(e) => update({ when: e.target.value })} />
+          {lead ? 'When would you like it?' : 'When would you like it? (optional)'}
+          <input type="datetime-local" required={lead > 0} min={localInput(lead ? earliest : new Date())} value={when} onChange={(e) => update({ when: e.target.value })} />
         </label>
+        {lead > 0 && <p className="muted small">Some dishes are made to order: {noticeLabel(lead).toLowerCase()}. The earliest is {niceTime(earliest)}.</p>}
         <label>
           Your name
           <input required maxLength={80} value={name} onChange={(e) => update({ name: e.target.value })} autoComplete="name" />

@@ -4,6 +4,7 @@ import { navigate, queryParam } from '../lib/router'
 import { Icon } from '../lib/icons'
 import { dishQuery, loadRatings, loadShopOptions, useCategories, type Dish, type Rating } from '../lib/catalogue'
 import { loadOpenStates, type OpenState } from '../lib/hours'
+import { loadDeliveryTo, postcodeDistrict, usePostcode } from '../lib/postcode'
 import { DishCard, SellerRow, type ShopCardData } from '../lib/ui'
 
 type Filter = 'delivery' | 'collection' | 'rated' | 'under10' | 'vegetarian' | 'vegan' | 'halal' | 'open'
@@ -31,6 +32,9 @@ export default function Explore() {
   const [shops, setShops] = useState<ShopRow[]>([])
   const [ratings, setRatings] = useState<Record<string, Rating>>({})
   const [open, setOpen] = useState<Record<string, OpenState>>({})
+  const [postcode] = usePostcode()
+  const district = postcode ? postcodeDistrict(postcode) : ''
+  const [delivers, setDelivers] = useState<Record<string, number>>({})
   const [options, setOptions] = useState<Record<string, { collection: boolean; delivery: boolean }>>({})
 
   useEffect(() => {
@@ -49,6 +53,10 @@ export default function Explore() {
     })()
   }, [])
 
+  useEffect(() => {
+    loadDeliveryTo(shops.map((x) => x.id), district).then(setDelivers)
+  }, [shops, district])
+
   // Keep the address bar in step so the back button and shared links work.
   useEffect(() => {
     const params = new URLSearchParams()
@@ -65,7 +73,7 @@ export default function Explore() {
   const categoryId = categories.find((c) => c.slug === category)?.id
 
   const shopOk = (id: string, accepting: boolean) =>
-    (!has('delivery') || options[id]?.delivery) &&
+    (!has('delivery') || (options[id]?.delivery && (!district || delivers[id] !== undefined))) &&
     (!has('collection') || options[id]?.collection !== false) &&
     (!has('rated') || (ratings[id]?.average ?? 0) >= 4.5) &&
     (!has('open') || (accepting && open[id]?.open !== false))
@@ -97,7 +105,9 @@ export default function Explore() {
       </form>
       <div className="chips">
         {FILTERS.map((f) => (
-          <button key={f.key} type="button" className={`chip ${has(f.key) ? 'on' : ''}`} onClick={() => toggle(f.key)}>{f.label}</button>
+          <button key={f.key} type="button" className={`chip ${has(f.key) ? 'on' : ''}`} onClick={() => toggle(f.key)}>
+            {f.key === 'delivery' && district ? `Delivers to ${district}` : f.label}
+          </button>
         ))}
       </div>
       <div className="chips">

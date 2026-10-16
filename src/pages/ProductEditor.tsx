@@ -68,6 +68,7 @@ function Editor({ shopId, product, allergens, categories, answers: initialAnswer
   const [mayContainNotes, setMayContainNotes] = useState(product?.may_contain_notes ?? '')
   const [collectionOk, setCollectionOk] = useState(product?.collection_ok ?? true)
   const [deliveryOk, setDeliveryOk] = useState(product?.delivery_ok ?? true)
+  const [lead, setLead] = useState(String(product?.min_lead_hours ?? 0))
   const [dietary, setDietary] = useState<string[]>(product?.dietary ?? [])
   const [answers, setAnswers] = useState<Record<string, Presence>>(initialAnswers)
   const [confirmed, setConfirmed] = useState(false)
@@ -97,6 +98,7 @@ function Editor({ shopId, product, allergens, categories, answers: initialAnswer
       collection_ok: collectionOk,
       delivery_ok: deliveryOk,
       dietary,
+      min_lead_hours: Number(lead) || null,
     }
 
     // 1. Save the item as a draft (new items get their id here).
@@ -182,6 +184,13 @@ function Editor({ shopId, product, allergens, categories, answers: initialAnswer
             {categories.map((c) => (
               <option key={c.id} value={c.id}>{c.name}</option>
             ))}
+          </select>
+        </label>
+        <label>
+          Notice needed
+          <select value={lead} onChange={(e) => setLead(e.target.value)}>
+            <option value="0">None: can be ordered for today</option>
+            {[2, 4, 12, 24, 48, 72].map((h) => <option key={h} value={h}>{h < 24 ? `${h} hours` : `${h / 24} ${h === 24 ? 'day' : 'days'}`} ahead</option>)}
           </select>
         </label>
         <div className="stack" style={{ gap: 8 }}>

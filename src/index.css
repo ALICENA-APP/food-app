@@ -413,3 +413,6 @@ details.card > .card { border: 0; padding: 0; }
 .legal section { display: flex; flex-direction: column; gap: 6px; }
 .legal p, .legal li { line-height: 1.55; }
 .legal ul { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 6px; }
+button.location { background: none; padding: 0; color: var(--text); font-weight: 600; justify-content: flex-start; align-self: flex-start; }
+button.danger { color: var(--red); border-color: #f0c4c4; }
+button.danger-solid { background: var(--red); color: #fff; }

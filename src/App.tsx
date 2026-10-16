@@ -15,6 +15,7 @@ import { MyOrders, OrderDetail } from './pages/Orders'
 import Profile, { Help } from './pages/Profile'
 import Favourites from './pages/Favourites'
 import Addresses from './pages/Addresses'
+import Account from './pages/Account'
 import { AllergenInfo, Privacy, SellerTerms, Terms } from './pages/Legal'
 import SignIn, { SetPassword } from './pages/SignIn'
 import Alerts from './pages/Alerts'
@@ -88,6 +89,8 @@ function App() {
     page = <Profile />
   } else if (path === '/account/password') {
     page = needsAccount(<SetPassword />, 'Sign in to change your password.')
+  } else if (path === '/account') {
+    page = needsAccount(<Account />, 'Sign in to manage your account.')
   } else if (path === '/addresses') {
     page = needsAccount(<Addresses />, 'Sign in to manage your saved addresses.')
   } else if (path === '/favourites') {

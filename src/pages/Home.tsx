@@ -5,6 +5,8 @@ import { Icon } from '../lib/icons'
 import { dishQuery, loadRatings, useCategories, type Dish, type Rating } from '../lib/catalogue'
 import { loadOpenStates, type OpenState } from '../lib/hours'
 import { InstallPrompt } from '../lib/install'
+import { PostcodePicker } from '../lib/PostcodePicker'
+import { loadDeliveryTo, postcodeDistrict, usePostcode } from '../lib/postcode'
 import { BowlArt, DishCard, SellerCard, type ShopCardData } from '../lib/ui'
 
 // The first screen everyone sees, signed in or not.
@@ -15,6 +17,8 @@ export default function Home() {
   const [ratings, setRatings] = useState<Record<string, Rating>>({})
   const [query, setQuery] = useState('')
   const [open, setOpen] = useState<Record<string, OpenState>>({})
+  const [postcode] = usePostcode()
+  const [delivers, setDelivers] = useState<Record<string, number>>({})
 
   useEffect(() => {
     ;(async () => {
@@ -32,6 +36,11 @@ export default function Home() {
     })()
   }, [])
 
+  const district = postcode ? postcodeDistrict(postcode) : ''
+  useEffect(() => {
+    loadDeliveryTo(shops.map((x) => x.id), district).then(setDelivers)
+  }, [shops, district])
+
   function search(e: FormEvent) {
     e.preventDefault()
     navigate(`/explore${query.trim() ? `?q=${encodeURIComponent(query.trim())}` : ''}`)
@@ -39,14 +48,16 @@ export default function Home() {
 
   const desserts = categories.filter((c) => ['desserts', 'cakes-bakes'].includes(c.slug)).map((c) => c.id)
   const rated = (shopId: string) => ratings[shopId]?.average ?? 0
-  const popular = [...(dishes ?? [])].sort((a, b) => rated(b.shop_id) - rated(a.shop_id)).slice(0, 10)
+  // With a postcode set, shops that deliver there come first.
+  const near = (shopId: string) => (district && delivers[shopId] !== undefined ? 1 : 0)
+  const popular = [...(dishes ?? [])].sort((a, b) => near(b.shop_id) - near(a.shop_id) || rated(b.shop_id) - rated(a.shop_id)).slice(0, 10)
   const sweet = (dishes ?? []).filter((d) => d.category_id && desserts.includes(d.category_id)).slice(0, 10)
   const topShops = [...shops].sort((a, b) => rated(b.id) - rated(a.id) || (ratings[b.id]?.reviews ?? 0) - (ratings[a.id]?.reviews ?? 0)).slice(0, 10)
 
   return (
     <div className="stack-lg">
       <div className="stack">
-        <p className="location"><Icon name="pin" size={18} /> East London</p>
+        <PostcodePicker />
         <form className="search" onSubmit={search} role="search">
           <Icon name="search" />
           <input type="search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search dishes, cooks or cuisines" aria-label="Search" />

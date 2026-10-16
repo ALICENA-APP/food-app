@@ -104,6 +104,7 @@ export default function Profile() {
         <Tile to="/alerts" icon="bell" title="Notifications" sub="Order updates" tone="var(--line)" />
         <Tile to="/account/password" icon="lock" title="Password" sub="Set or change it" tone="var(--line)" />
         <Tile to="/help" icon="help" title="Help and support" sub="How BiteBY works" tone="var(--line)" />
+        <Tile to="/account" icon="shield" title="Your data" sub="Download or delete" tone="var(--line)" />
         {isAdmin && <Tile to="/admin" icon="shield" title="Admin" sub="BiteBY team tools" tone="var(--yellow)" wide />}
         <Tile icon="logout" title="Sign out" tone="var(--line)" wide onClick={async () => { await supabase!.auth.signOut(); navigate('/') }} />
       </div>

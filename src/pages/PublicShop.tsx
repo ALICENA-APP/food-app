@@ -7,7 +7,7 @@ import { basketCount, basketSubtotal, qtyIn, setQty, useBasket } from '../lib/ba
 import { averageRating, hoursSummary, loadShop, type ShopData } from '../lib/shopData'
 import { openState } from '../lib/hours'
 import { Avatar, BackButton, FoodPhoto, HeartButton, share } from '../lib/ui'
-import { dietaryName, pounds, type Product } from '../lib/types'
+import { dietaryName, noticeLabel, pounds, type Product } from '../lib/types'
 
 // The shareable shop page at /s/<slug>. Visitors see live shops only; the
 // owner can also preview their own shop before it goes live.
@@ -160,6 +160,7 @@ function MenuRow({ product: p, slug, photo, qty, canOrder, onQty }: {
         {p.status !== 'published' && <span className="pill">Draft, not visible to customers</span>}
         <strong>{pounds(p.price_pence)}</strong>
         {p.stock_qty === 0 && <span className="tag red">Sold out</span>}
+        {p.min_lead_hours ? <span className="muted tiny">{noticeLabel(p.min_lead_hours)}</span> : null}
         {p.stock_qty !== null && p.stock_qty > 0 && p.stock_qty <= 5 && <span className="muted tiny">Only {p.stock_qty} left</span>}
       </span>
       {canOrder && (

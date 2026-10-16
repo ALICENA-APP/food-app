@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import { supabase } from '../lib/supabase'
 import { link } from '../lib/router'
-import { AdminOrders, AdminReviews } from './AdminMore'
+import { AdminOrders, AdminOverview, AdminReviews } from './AdminMore'
 import type { SellerAccount, SellerStatus, Shop, Verification } from '../lib/types'
 
 // Admin screen. Needs an admin account and a two-step (authenticator app)
@@ -28,13 +28,14 @@ export default function Admin() {
 }
 
 const TABS = [
+  { key: 'overview', label: 'Overview' },
   { key: 'sellers', label: 'Sellers' },
   { key: 'orders', label: 'Orders' },
   { key: 'reviews', label: 'Reviews' },
 ] as const
 
 function AdminTabs() {
-  const [tab, setTab] = useState<(typeof TABS)[number]['key']>('sellers')
+  const [tab, setTab] = useState<(typeof TABS)[number]['key']>('overview')
   return (
     <div className="stack">
       <h1>Admin</h1>
@@ -43,6 +44,7 @@ function AdminTabs() {
           <button key={t.key} type="button" className={tab === t.key ? 'on' : ''} onClick={() => setTab(t.key)}>{t.label}</button>
         ))}
       </div>
+      {tab === 'overview' && <AdminOverview />}
       {tab === 'sellers' && <Sellers />}
       {tab === 'orders' && <AdminOrders />}
       {tab === 'reviews' && <AdminReviews />}

@@ -5,7 +5,7 @@ import { Icon, VerifiedTick } from '../lib/icons'
 import { qtyIn, setQty, useBasket } from '../lib/basket'
 import { allergenLists, averageRating, loadShop, type ShopData } from '../lib/shopData'
 import { Avatar, BackButton, FoodPhoto, HeartButton, share } from '../lib/ui'
-import { dietaryName, pounds } from '../lib/types'
+import { dietaryName, noticeLabel, pounds } from '../lib/types'
 
 // One dish: photos, description, ingredients, allergens and add to basket.
 export default function Dish({ slug, productId }: { slug: string; productId: string }) {
@@ -94,6 +94,7 @@ export default function Dish({ slug, productId }: { slug: string; productId: str
         </p>
         <div className="tags">
           <span className="tag">Homemade</span>
+          {product.min_lead_hours ? <span className="tag">{noticeLabel(product.min_lead_hours)}</span> : null}
           {category && <span className="tag grey">{category}</span>}
           {product.dietary?.map((d) => <span key={d} className="tag green">{dietaryName(d)}</span>)}
           {product.collection_ok && <span className="tag grey">Collection</span>}
