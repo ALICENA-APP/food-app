@@ -391,12 +391,60 @@ export function AdminPromoted() {
   )
 }
 
-type Flag = { id: number; source: string; reason: string; excerpt: string | null; created_at: string; shop_name: string | null; slug: string | null; order_code: string | null; email: string | null; shop_total: number }
+type Flag = {
+  id: number; source: string; reason: string; excerpt: string | null; created_at: string; shop_id: string | null; shop_name: string | null
+  slug: string | null; shop_status: ShopState | null; product_name: string | null; order_code: string | null; email: string | null; shop_total: number
+}
+type ShopState = 'draft' | 'live' | 'paused' | 'suspended'
 
-// Attempts to move orders, payment or contact off BiteBY.
+const SHOP_STATE: Record<ShopState, string> = { draft: 'Not live yet', live: 'Live', paused: 'Paused', suspended: 'Suspended' }
+
+// Pause, suspend or restore a shop. The cook gets a notification with the note.
+function ShopActions({ shopId, status, onChanged }: { shopId: string; status: ShopState; onChanged: (s: ShopState) => void }) {
+  const [note, setNote] = useState('')
+  const [open, setOpen] = useState(false)
+  const [error, setError] = useState('')
+
+  async function set(next: ShopState) {
+    if (next === 'suspended' && !note.trim()) return setError('Add a note saying why. The cook will see it.')
+    if (next === 'suspended' && !confirm('Suspend this shop? It disappears from BiteBY and the cook can’t turn it back on.')) return
+    setError('')
+    const { error: e } = await supabase!.rpc('admin_set_shop_status', { p_shop: shopId, p_status: next, p_note: note.trim() || null })
+    if (e) return setError(e.message)
+    setNote('')
+    setOpen(false)
+    onChanged(next)
+  }
+
+  if (!open) {
+    return (
+      <div className="row wrap">
+        {status === 'suspended'
+          ? <button type="button" className="secondary small-btn" onClick={() => set('paused')}>Restore shop</button>
+          : <button type="button" className="secondary small-btn" onClick={() => setOpen(true)}>Pause or suspend…</button>}
+        {error && <p className="error small">{error}</p>}
+      </div>
+    )
+  }
+  return (
+    <div className="stack" style={{ gap: 6 }}>
+      <textarea rows={2} maxLength={500} value={note} onChange={(e) => setNote(e.target.value)} placeholder="Note for the cook (needed to suspend)" />
+      <p className="muted tiny">Pause: the shop goes offline and the cook can turn it back on. Suspend: it stays offline until you restore it.</p>
+      <div className="row wrap">
+        {status === 'live' && <button type="button" className="secondary small-btn" onClick={() => set('paused')}>Pause shop</button>}
+        <button type="button" className="danger-solid small-btn" onClick={() => set('suspended')}>Suspend shop</button>
+        <button type="button" className="link" onClick={() => setOpen(false)}>Cancel</button>
+      </div>
+      {error && <p className="error small">{error}</p>}
+    </div>
+  )
+}
+
+// Reports from customers, and attempts to move orders, payment or contact off BiteBY.
 export function AdminSafety() {
   const [flags, setFlags] = useState<Flag[] | null>(null)
   const [error, setError] = useState('')
+  const [only, setOnly] = useState<'all' | 'report'>('all')
 
   useEffect(() => {
     supabase!.rpc('admin_safety_flags').then(({ data, error: e }) => (e ? setError(e.message) : setFlags(data ?? [])))
@@ -404,21 +452,71 @@ export function AdminSafety() {
 
   if (error) return <p className="error">{error}</p>
   if (!flags) return <p className="muted">Loading…</p>
+  const shown = only === 'report' ? flags.filter((f) => f.source === 'report') : flags
+  const setShopStatus = (shopId: string, s: ShopState) => setFlags((list) => list!.map((f) => (f.shop_id === shopId ? { ...f, shop_status: s } : f)))
   return (
     <div className="stack">
       <p className="muted small">
-        Messages with phone numbers, emails, links, bank details or talk of paying outside BiteBY are hidden automatically and listed here.
+        Customer reports, plus messages with phone numbers, emails, links, bank details or talk of paying outside BiteBY (those are hidden automatically).
         Shop pages and dishes can’t be saved with them at all. A cook who keeps appearing here may be taking customers off the app.
       </p>
-      {flags.length === 0 && <p className="muted">Nothing flagged. Good.</p>}
-      {flags.map((f) => (
+      <div className="chips">
+        <button type="button" className={`chip ${only === 'all' ? 'on' : ''}`} onClick={() => setOnly('all')}>Everything ({flags.length})</button>
+        <button type="button" className={`chip ${only === 'report' ? 'on' : ''}`} onClick={() => setOnly('report')}>Customer reports ({flags.filter((f) => f.source === 'report').length})</button>
+      </div>
+      {shown.length === 0 && <p className="muted">Nothing here. Good.</p>}
+      {shown.map((f) => (
         <article key={f.id} className="card stack" style={{ gap: 4 }}>
           <div className="item">
-            <strong>{f.shop_name ?? 'Unknown shop'}</strong>
+            <strong>{f.slug ? <a href={`/s/${f.slug}`} onClick={link(`/s/${f.slug}`)}>{f.shop_name}</a> : f.shop_name ?? 'Unknown shop'}</strong>
             <span className={`tag ${f.shop_total >= 3 ? 'red' : 'grey'}`}>{f.shop_total} flagged</span>
           </div>
-          <p className="muted tiny">{f.source} · {f.reason}{f.order_code ? ` · order ${f.order_code}` : ''} · {f.email ?? ''} · {when(f.created_at)}</p>
+          <p className="small"><strong>{f.reason}</strong>{f.product_name ? ` · ${f.product_name}` : ''}</p>
+          <p className="muted tiny">{f.source === 'report' ? 'customer report' : f.source}{f.order_code ? ` · order ${f.order_code}` : ''} · {f.email ?? ''} · {when(f.created_at)}{f.shop_status ? ` · shop ${SHOP_STATE[f.shop_status].toLowerCase()}` : ''}</p>
           {f.excerpt && <p className="story small">{f.excerpt}</p>}
+          {f.shop_id && f.shop_status && <ShopActions shopId={f.shop_id} status={f.shop_status} onChanged={(s) => setShopStatus(f.shop_id!, s)} />}
+        </article>
+      ))}
+    </div>
+  )
+}
+
+type AdminShop = {
+  id: string; name: string; slug: string; status: ShopState; accepting_orders: boolean; is_demo: boolean; area_label: string | null
+  created_at: string; seller_status: string; email: string | null; orders: number; flags: number; reports: number
+}
+
+// Every shop, with a search, its state, and pause, suspend or restore.
+export function AdminShops() {
+  const [search, setSearch] = useState('')
+  const [shops, setShops] = useState<AdminShop[] | null>(null)
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      supabase!.rpc('admin_shops', { p_search: search.trim() || null })
+        .then(({ data, error: e }) => (e ? setError(e.message) : setShops(data ?? [])))
+    }, 250)
+    return () => window.clearTimeout(timer)
+  }, [search])
+
+  if (error) return <p className="error">{error}</p>
+  return (
+    <div className="stack">
+      <input type="search" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search by shop name, link or email" aria-label="Search shops" />
+      {!shops && <p className="muted">Loading…</p>}
+      {shops?.length === 0 && <p className="muted">No shops found.</p>}
+      {shops?.map((s) => (
+        <article key={s.id} className="card stack" style={{ gap: 4 }}>
+          <div className="item">
+            <strong><a href={`/s/${s.slug}`} onClick={link(`/s/${s.slug}`)}>{s.name}</a></strong>
+            <span className={`tag ${s.status === 'live' ? 'green' : s.status === 'suspended' ? 'red' : 'grey'}`}>{SHOP_STATE[s.status]}</span>
+          </div>
+          <p className="muted tiny">
+            {[s.area_label, s.email, s.is_demo && 'demo', `seller ${s.seller_status.replace('_', ' ')}`, s.status === 'live' && !s.accepting_orders && 'orders paused by cook'].filter(Boolean).join(' · ')}
+          </p>
+          <p className="small">{s.orders} paid {s.orders === 1 ? 'order' : 'orders'} · {s.reports} {s.reports === 1 ? 'report' : 'reports'} · {s.flags} flagged in total</p>
+          <ShopActions shopId={s.id} status={s.status} onChanged={(next) => setShops((list) => list!.map((x) => (x.id === s.id ? { ...x, status: next } : x)))} />
         </article>
       ))}
     </div>

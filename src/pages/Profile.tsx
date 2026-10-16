@@ -5,10 +5,28 @@ import { useSession } from '../lib/session'
 import { Icon, type IconName } from '../lib/icons'
 import { Avatar, BowlArt, useFavourites } from '../lib/ui'
 import { HelpForm } from '../lib/help'
+import { setTheme, useTheme } from '../lib/theme'
 import { ImageCropper } from '../lib/ImageCropper'
 import { deletePhoto, uploadPhoto } from '../lib/images'
 import { setMyAvatar, useMyAvatar } from '../lib/myAvatar'
 import { useCommission } from '../lib/platform'
+
+// Light, dark, or follow the phone.
+function ThemePicker() {
+  const theme = useTheme()
+  return (
+    <div className="card stack" style={{ gap: 8 }}>
+      <strong className="row" style={{ gap: 6 }}><Icon name="moon" size={18} /> Appearance</strong>
+      <div className="theme-choice" role="radiogroup" aria-label="Appearance">
+        {(['system', 'light', 'dark'] as const).map((t) => (
+          <button key={t} type="button" role="radio" aria-checked={theme === t} className={`small-btn ${theme === t ? '' : 'secondary'}`} onClick={() => setTheme(t)}>
+            {t === 'system' ? 'Same as phone' : t === 'light' ? 'Light' : 'Dark'}
+          </button>
+        ))}
+      </div>
+    </div>
+  )
+}
 
 function Tile({ to, icon, title, sub, tone = 'var(--yellow-soft)', wide, onClick }: {
   to?: string; icon: IconName; title: string; sub?: string; tone?: string; wide?: boolean; onClick?: () => void
@@ -59,6 +77,7 @@ export default function Profile() {
         <div className="menu-tiles">
           <Tile to="/help" icon="help" title="Help and support" sub="How BiteBY works" tone="var(--line)" wide />
         </div>
+        <ThemePicker />
         <LegalLinks />
       </div>
     )
@@ -113,6 +132,7 @@ export default function Profile() {
         {isAdmin && <Tile to="/admin" icon="shield" title="Admin" sub="BiteBY team tools" tone="var(--yellow)" wide />}
         <Tile icon="logout" title="Sign out" tone="var(--line)" wide onClick={async () => { await supabase!.auth.signOut(); navigate('/') }} />
       </div>
+      <ThemePicker />
       <LegalLinks />
     </div>
   )

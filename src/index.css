@@ -519,3 +519,41 @@ fieldset.options legend { font-weight: 700; padding: 0 4px; display: flex; gap: 
 .mini-bars > span { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; gap: 4px; }
 .mini-bars i { display: block; width: 100%; max-width: 28px; background: var(--yellow); border-radius: 6px 6px 2px 2px; }
 .mini-bars small { color: var(--muted); font-size: 0.7rem; }
+
+/* ---------- Discounts and reports ---------- */
+.code-chip { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-weight: 700; letter-spacing: 0.04em; background: var(--yellow-soft); border: 1px dashed var(--yellow); border-radius: 6px; padding: 1px 6px; }
+.offers { display: flex; flex-direction: column; gap: 8px; }
+.offer { display: flex; gap: 10px; align-items: center; text-align: left; width: 100%; background: var(--yellow-soft); color: var(--text); border: 1px dashed var(--yellow); border-radius: 12px; padding: 10px 14px; font-weight: 400; }
+.offer svg { flex: none; }
+.discount-on { align-items: center; }
+.report-link { display: inline-flex; align-items: center; gap: 6px; color: var(--muted) !important; font-size: 0.85rem; align-self: flex-start; padding-left: 0; }
+
+/* ---------- Dark mode ---------- */
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --yellow-soft: #3a3116;
+  --text: #f2f2f2;
+  --muted: #a9a9a9;
+  --bg: #121212;
+  --card: #1d1d1d;
+  --border: #303030;
+  --line: #262626;
+  --green-soft: #15301f;
+}
+:root[data-theme='dark'] a, :root[data-theme='dark'] .wordmark, :root[data-theme='dark'] .bottom-nav a.on,
+:root[data-theme='dark'] button.secondary, :root[data-theme='dark'] a.button.secondary, :root[data-theme='dark'] label.button.secondary,
+:root[data-theme='dark'] button.link, :root[data-theme='dark'] .tabs button.on, :root[data-theme='dark'] .location svg { color: var(--text); }
+:root[data-theme='dark'] .bottom-nav a.on svg { color: var(--yellow); stroke: var(--text); }
+:root[data-theme='dark'] a.button, :root[data-theme='dark'] .chip.on, :root[data-theme='dark'] .segmented label.on { color: #111; }
+:root[data-theme='dark'] a.button.secondary { color: var(--text); }
+:root[data-theme='dark'] button.dark, :root[data-theme='dark'] a.button.dark, :root[data-theme='dark'] span.button.dark,
+:root[data-theme='dark'] .tag.sponsored, :root[data-theme='dark'] .shop-notice { background: #f2f2f2; color: #111; }
+:root[data-theme='dark'] .hero, :root[data-theme='dark'] .promo { background: linear-gradient(120deg, #2a2412 0%, #3d3214 100%); }
+:root[data-theme='dark'] .hero p, :root[data-theme='dark'] .promo p { color: #dcdcdc; }
+:root[data-theme='dark'] .tag.green, :root[data-theme='dark'] .pill-published, :root[data-theme='dark'] .pill.green, :root[data-theme='dark'] .open-label.on { color: #6bd697; }
+:root[data-theme='dark'] .tag.red { background: #3a1c1c; color: #ff9d9d; }
+:root[data-theme='dark'] .tag.demo, :root[data-theme='dark'] .demo-banner { background: #10283a; color: #92caff; }
+:root[data-theme='dark'] .error { color: #ff7b7b; }
+:root[data-theme='dark'] .wordmark .by { color: var(--yellow); }
+.theme-choice { display: flex; gap: 8px; }
+.theme-choice button { flex: 1; }

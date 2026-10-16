@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import { goBack, link, navigate } from '../lib/router'
 import { recordView } from '../lib/views'
+import { ShopOffers } from '../lib/discounts'
+import { ReportLink } from '../lib/report'
 import { photoUrl } from '../lib/images'
 import { Icon, VerifiedTick } from '../lib/icons'
 import { ReviewItem } from '../lib/reviews'
@@ -90,6 +92,7 @@ export default function PublicShop({ slug }: { slug: string }) {
       {shop.notice && (!shop.notice_until || shop.notice_until >= londonNow().date) && (
         <p className="shop-notice"><Icon name="info" size={18} /> <span>{shop.notice}</span></p>
       )}
+      {!isPreview && <ShopOffers shopId={shop.id} />}
       {back ? (
         <p className="away-note small">
           <strong>{shop.name} is away{awayReason ? ` (${awayReason})` : ''}.</strong> Back on {shortDate(back)}.{canOrder && ' You can order ahead for then at checkout.'}
@@ -153,6 +156,7 @@ export default function PublicShop({ slug }: { slug: string }) {
           {!isPreview && (
             <div className="info-row"><span className="ic"><Icon name="shield" /></span><div><strong>Checked by BiteBY</strong><p className="muted small">This cook has registered with their local council and been approved by our team.</p></div></div>
           )}
+          {!isPreview && <ReportLink shopId={shop.id} />}
         </div>
       )}
 

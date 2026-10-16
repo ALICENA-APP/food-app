@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import { supabase } from '../lib/supabase'
 import { link, queryParam } from '../lib/router'
-import { AdminHelpInbox, AdminOrders, AdminOverview, AdminPromoted, AdminReviews, AdminSafety, AdminSettings } from './AdminMore'
+import { AdminHelpInbox, AdminOrders, AdminOverview, AdminPromoted, AdminReviews, AdminSafety, AdminSettings, AdminShops } from './AdminMore'
 import type { SellerAccount, SellerStatus, Shop, Verification } from '../lib/types'
 
 // Admin screen. Needs an admin account and a two-step (authenticator app)
@@ -30,6 +30,7 @@ export default function Admin() {
 const TABS = [
   { key: 'overview', label: 'Overview' },
   { key: 'sellers', label: 'Sellers' },
+  { key: 'shops', label: 'Shops' },
   { key: 'orders', label: 'Orders' },
   { key: 'reviews', label: 'Reviews' },
   { key: 'help', label: 'Help' },
@@ -50,6 +51,7 @@ function AdminTabs() {
       </div>
       {tab === 'overview' && <AdminOverview />}
       {tab === 'sellers' && <Sellers />}
+      {tab === 'shops' && <AdminShops />}
       {tab === 'orders' && <AdminOrders />}
       {tab === 'reviews' && <AdminReviews />}
       {tab === 'help' && <AdminHelpInbox />}

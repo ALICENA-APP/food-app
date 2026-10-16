@@ -29,6 +29,9 @@ const PATHS = {
   edit: 'M4 20h4L19 9l-4-4L4 16zM14 6l4 4',
   pound: 'M16 6.5A3.5 3.5 0 0 0 9.5 8v12M7 13h7M7 20h10',
   close: 'M6 6l12 12M18 6 6 18',
+  tag: 'M3 12V4h8l10 10-8 8zM7.5 8.5h.01',
+  flag: 'M5 21V4M5 4h11l-2 4 2 4H5',
+  moon: 'M20 14.5A8 8 0 0 1 9.5 4 8 8 0 1 0 20 14.5z',
 } as const
 
 export type IconName = keyof typeof PATHS

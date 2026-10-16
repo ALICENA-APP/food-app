@@ -10,6 +10,7 @@ import { locatePostcode } from '../lib/geo'
 import { loadAddresses, saveAddress, type SavedAddress } from './Addresses'
 import { noticeLabel, pounds, type ShopSettings } from '../lib/types'
 import { addDays, londonNow, shortDate } from '../lib/hours'
+import { DiscountBox, type AppliedCode } from '../lib/discounts'
 
 const niceTime = (d: Date) => d.toLocaleString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
 
@@ -49,6 +50,7 @@ export default function Checkout() {
   const [lead, setLead] = useState(0)
   const [away, setAway] = useState<string[]>([])
   const [demo, setDemo] = useState(false)
+  const [applied, setApplied] = useState<AppliedCode | null>(null)
   // For cooks who deliver within a distance: where the delivery postcode is,
   // and whether this cook reaches it.
   const [spot, setSpot] = useState<{ postcode: string; point: Point | null; delivers: boolean } | null>(null)
@@ -151,6 +153,8 @@ export default function Checkout() {
   const wantedDay = when ? londonNow(new Date(when)).date : londonNow().date
   const awayThen = away.includes(wantedDay)
   const isNewAddress = address.trim().length > 2 && !saved.some(sameAddress)
+  const off = applied ? Math.min(applied.discount_pence, subtotal) : 0
+  const total = subtotal - off + fee
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault()
@@ -173,6 +177,7 @@ export default function Checkout() {
       p_delivery_postcode: fulfilment === 'delivery' ? postcode : null,
       p_lat: fulfilment === 'delivery' && !areaZone ? spotNow?.point?.lat ?? null : null,
       p_lng: fulfilment === 'delivery' && !areaZone ? spotNow?.point?.lng ?? null : null,
+      p_discount_code: applied?.code ?? null,
     })
     setPlacing(false)
     if (error) return setMessage(error.message)
@@ -288,15 +293,17 @@ export default function Checkout() {
       <div className="card">
         <h2>Order summary</h2>
         <div className="item"><span>Food</span><span>{pounds(subtotal)}</span></div>
+        {applied && <div className="item"><span>Discount ({applied.code})</span><span>−{pounds(off)}</span></div>}
         {fulfilment === 'delivery' && <div className="item"><span>Delivery</span><span>{zone ? (fee ? pounds(fee) : 'Free') : '–'}</span></div>}
-        <div className="item total"><strong>Total</strong><strong>{pounds(subtotal + fee)}</strong></div>
+        <div className="item total"><strong>Total</strong><strong>{pounds(total)}</strong></div>
+        <DiscountBox shopId={basket.shopId} subtotal={subtotal} applied={applied} onChange={setApplied} />
         {minOrder > subtotal && <p className="error small">This cook's minimum order is {pounds(minOrder)}.</p>}
         <p className="muted tiny">You pay before the cook starts. If they can't take your order, you get your money back.</p>
       </div>
 
       <p className="safety-tip small"><Icon name="shield" size={18} /> <span>Only pay through BiteBY. If a cook asks for cash or a bank transfer, don’t pay and tap “Report a problem” on your order. Payments made outside BiteBY can’t be refunded by us.</span></p>
       <button type="submit" className="dark block action-bar" disabled={placing}>
-        {placing ? 'Placing order…' : session ? `Place order · ${pounds(subtotal + fee)}` : 'Sign in to place your order'}
+        {placing ? 'Placing order…' : session ? `Place order · ${pounds(total)}` : 'Sign in to place your order'}
       </button>
       {message && <p className="error">{message}</p>}
     </form>

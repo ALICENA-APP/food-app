@@ -12,7 +12,7 @@ async function myShopIds() {
   return (data ?? []).map((s) => s.id as string)
 }
 
-type Row = { subtotal_pence: number; delivery_fee_pence: number; platform_fee_pence: number; completed_at: string }
+type Row = { subtotal_pence: number; discount_pence: number; delivery_fee_pence: number; platform_fee_pence: number; completed_at: string }
 
 const PERIODS = [
   { key: 'week', label: 'Last 7 days', days: 7 },
@@ -31,7 +31,7 @@ export function SellerEarnings() {
       if (!ids.length) return setRows([])
       const { data } = await supabase!
         .from('orders')
-        .select('subtotal_pence, delivery_fee_pence, platform_fee_pence, completed_at')
+        .select('subtotal_pence, discount_pence, delivery_fee_pence, platform_fee_pence, completed_at')
         .in('shop_id', ids)
         .eq('status', 'completed')
         .order('completed_at', { ascending: false })
@@ -45,6 +45,7 @@ export function SellerEarnings() {
   const since = days ? Date.now() - days * 86400000 : 0
   const shown = rows.filter((r) => new Date(r.completed_at).getTime() >= since)
   const food = shown.reduce((n, r) => n + r.subtotal_pence, 0)
+  const discounts = shown.reduce((n, r) => n + (r.discount_pence ?? 0), 0)
   const delivery = shown.reduce((n, r) => n + r.delivery_fee_pence, 0)
   const fees = shown.reduce((n, r) => n + r.platform_fee_pence, 0)
 
@@ -63,9 +64,10 @@ export function SellerEarnings() {
       <div className="card">
         <div className="item"><span>Completed orders</span><strong>{shown.length}</strong></div>
         <div className="item"><span>Food sales</span><span>{pounds(food)}</span></div>
+        {discounts > 0 && <div className="item"><span>Your discount codes</span><span>−{pounds(discounts)}</span></div>}
         <div className="item"><span>Delivery fees (all yours)</span><span>{pounds(delivery)}</span></div>
         <div className="item"><span>BiteBY fee (on food only)</span><span>−{pounds(fees)}</span></div>
-        <div className="item total"><strong>You earned</strong><strong>{pounds(food + delivery - fees)}</strong></div>
+        <div className="item total"><strong>You earned</strong><strong>{pounds(food - discounts + delivery - fees)}</strong></div>
       </div>
       <p className="muted small">Payouts go straight to your bank account through Stripe once payments are switched on.</p>
     </div>

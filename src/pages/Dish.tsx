@@ -3,6 +3,7 @@ import { goBack, link, navigate } from '../lib/router'
 import { photoUrl } from '../lib/images'
 import { Icon, VerifiedTick } from '../lib/icons'
 import { lineQty, qtyIn, setQty, useBasket } from '../lib/basket'
+import { ReportLink } from '../lib/report'
 import { recordView, rememberDish } from '../lib/views'
 import { allergenLists, averageRating, loadShop, type ShopData } from '../lib/shopData'
 import { Avatar, BackButton, FoodPhoto, HeartButton, share } from '../lib/ui'
@@ -214,6 +215,7 @@ export default function Dish({ slug, productId }: { slug: string; productId: str
       ) : (
         <p className="status">{shop.status !== 'live' ? 'Preview: customers can order once your shop is live.' : soldOut ? 'Sold out for now. Save it with the heart and check back soon.' : "This dish can't be ordered right now."}</p>
       )}
+      {shop.status === 'live' && <ReportLink shopId={shop.id} productId={product.id} />}
     </div>
   )
 }

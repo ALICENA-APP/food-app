@@ -33,6 +33,7 @@ const SellerEarnings = lazy(() => import('./pages/SellerInsights').then((m) => (
 const SellerReviews = lazy(() => import('./pages/SellerInsights').then((m) => ({ default: m.SellerReviews })))
 const Admin = lazy(() => import('./pages/Admin'))
 const Poster = lazy(() => import('./pages/Poster'))
+const Discounts = lazy(() => import('./pages/Discounts'))
 import { MyRequests } from './lib/help'
 
 const TABS: { to: string; label: string; icon: IconName }[] = [
@@ -116,6 +117,7 @@ function App() {
     if (!session) page = <SignInPrompt why="Sign in or create an account to open your food shop." />
     else if (path === '/sell/shop') page = <ShopSetup />
     else if (path === '/sell/poster') page = <Poster />
+    else if (path === '/sell/discounts') page = <Discounts />
     else if (path === '/sell/earnings') page = <SellerEarnings />
     else if (path === '/sell/reviews') page = <SellerReviews />
     else if (path === '/sell/orders') page = <SellerOrders />

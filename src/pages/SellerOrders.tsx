@@ -89,7 +89,7 @@ function SellerOrderCard({ order, onChanged }: { order: Order & { order_items: O
     onChanged()
   }
 
-  const yourShare = order.subtotal_pence - order.platform_fee_pence + order.delivery_fee_pence
+  const yourShare = order.total_pence - order.platform_fee_pence
 
   return (
     <article className="card" id={`order-${order.id}`}>
@@ -107,6 +107,7 @@ function SellerOrderCard({ order, onChanged }: { order: Order & { order_items: O
       {order.delivery_address && <p className="small story">{order.delivery_address}{'\n'}{order.delivery_postcode}</p>}
       {order.customer_note && <p className="small"><strong>Note:</strong> {order.customer_note}</p>}
       {order.customer_phone && <p className="small">Phone: <a href={`tel:${order.customer_phone}`}>{order.customer_phone}</a></p>}
+      {(order.discount_pence ?? 0) > 0 && <p className="muted small">Your code {order.discount_code}: −{pounds(order.discount_pence!)}</p>}
       <p className="muted small">Customer paid {pounds(order.total_pence)} · you get {pounds(yourShare)}</p>
 
       {order.status === 'pending_acceptance' && !declining && (

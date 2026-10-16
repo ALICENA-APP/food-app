@@ -11,6 +11,12 @@
     <meta property="og:site_name" content="BiteBY" />
     <meta property="og:title" content="BiteBY · Real food. Real people." />
     <meta property="og:description" content="Homemade food from local cooks near you in East London." />
+    <script>
+      try {
+        var t = localStorage.getItem('theme')
+        if (t === 'dark' || (t !== 'light' && matchMedia('(prefers-color-scheme: dark)').matches)) document.documentElement.dataset.theme = 'dark'
+      } catch (e) {}
+    </script>
   </head>
   <body>
     <div id="root"></div>

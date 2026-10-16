@@ -29,6 +29,8 @@ export type Order = {
   subtotal_pence: number
   delivery_fee_pence: number
   total_pence: number
+  discount_code?: string | null
+  discount_pence?: number
   platform_fee_pence: number
   decline_reason: string | null
   created_at: string
@@ -261,6 +263,7 @@ export function OrderDetail({ id }: { id: string }) {
             {i.may_contain.length > 0 && <p className="muted small">May contain: {i.may_contain.map((c) => allergenNames[c] ?? c).join(', ')}</p>}
           </div>
         ))}
+        {(order.discount_pence ?? 0) > 0 && <div className="item"><span>Discount ({order.discount_code})</span><span>−{pounds(order.discount_pence!)}</span></div>}
         {order.delivery_fee_pence > 0 && <div className="item"><span>Delivery</span><span>{pounds(order.delivery_fee_pence)}</span></div>}
         <div className="item total"><strong>Total</strong><strong>{pounds(order.total_pence)}</strong></div>
         <p className="muted tiny">Ordered {when(order.created_at)}</p>

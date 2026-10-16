@@ -114,13 +114,13 @@ function Dashboard({ shop, account, onChanged }: { shop: Shop; account: SellerAc
       since.setHours(0, 0, 0, 0)
       const [todo, today, ratings] = await Promise.all([
         db.from('orders').select('id', { count: 'exact', head: true }).eq('shop_id', shop.id).in('status', ['pending_acceptance', 'accepted', 'ready', 'out_for_delivery']),
-        db.from('orders').select('subtotal_pence, platform_fee_pence, delivery_fee_pence').eq('shop_id', shop.id).gte('created_at', since.toISOString())
+        db.from('orders').select('total_pence, platform_fee_pence').eq('shop_id', shop.id).gte('created_at', since.toISOString())
           .not('status', 'in', '(awaiting_payment,declined,cancelled,expired,refunded)'),
         loadRatings([shop.id]),
       ])
       setStats({
         todo: todo.count ?? 0,
-        today: (today.data ?? []).reduce((n, o) => n + o.subtotal_pence - o.platform_fee_pence + o.delivery_fee_pence, 0),
+        today: (today.data ?? []).reduce((n, o) => n + o.total_pence - o.platform_fee_pence, 0),
         rating: ratings[shop.id],
       })
     })()
@@ -146,7 +146,9 @@ function Dashboard({ shop, account, onChanged }: { shop: Shop; account: SellerAc
           <span style={{ flex: 1, minWidth: 0 }}>
             <strong>{shop.name}</strong>
             <span className="muted small" style={{ display: 'block' }}>
-              {live ? 'Live' : account.status === 'approved' ? 'Ready to go live once payments are set up' : 'Not live yet'}
+              {live ? 'Live' : shop.status === 'suspended' ? 'Suspended by the BiteBY team. Check your notifications, or contact us under Help.'
+                : shop.status === 'paused' ? 'Offline. Turn your shop on again under Shop details.'
+                : account.status === 'approved' ? 'Ready to go live once payments are set up' : 'Not live yet'}
             </span>
           </span>
           <a className="button secondary small-btn" href={`/s/${shop.slug}`} onClick={link(`/s/${shop.slug}`)}>View</a>
@@ -181,6 +183,7 @@ function Dashboard({ shop, account, onChanged }: { shop: Shop; account: SellerAc
         <SellerTile to="/sell/shop" icon="store" title="Shop details" sub="Photos, hours, delivery" tone="var(--line)" />
         <SellerTile to="/sell/earnings" icon="pound" title="Earnings" sub="What you've made" tone="var(--line)" />
         <SellerTile to="/sell/reviews" icon="star" title="Reviews" sub="Read and reply" tone="var(--line)" />
+        <SellerTile to="/sell/discounts" icon="tag" title="Discount codes" sub="Offers for customers" tone="var(--yellow-soft)" />
         <SellerTile to="/help" icon="help" title="Help" sub="How selling works" tone="var(--line)" />
       </div>
       <GetFeatured shopLive={shop.status === 'live'} />
