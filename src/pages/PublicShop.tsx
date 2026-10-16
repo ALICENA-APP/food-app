@@ -156,9 +156,10 @@ export default function PublicShop({ slug }: { slug: string }) {
           {!isPreview && (
             <div className="info-row"><span className="ic"><Icon name="shield" /></span><div><strong>Checked by BiteBY</strong><p className="muted small">This cook has registered with their local council and been approved by our team.</p></div></div>
           )}
-          {!isPreview && <ReportLink shopId={shop.id} />}
         </div>
       )}
+
+      {!isPreview && <ReportLink shopId={shop.id} />}
 
       {inBasket > 0 && (
         <a className="button dark basket-bar" href="/basket" onClick={link('/basket')}>

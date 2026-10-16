@@ -41,7 +41,7 @@ export function PostcodePicker() {
   return (
     <button type="button" className="location" onClick={() => { setValue(postcode); setEditing(true) }}>
       <Icon name="pin" size={18} />
-      {postcode ? <>Delivering to {formatPostcode(postcode)}</> : 'East London · set your postcode'}
+      {postcode ? <>Delivering to {formatPostcode(postcode)}</> : 'Set your postcode'}
       <span className="muted" aria-hidden="true">▾</span>
     </button>
   )

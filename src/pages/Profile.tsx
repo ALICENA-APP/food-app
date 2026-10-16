@@ -15,13 +15,20 @@ import { useCommission } from '../lib/platform'
 function ThemePicker() {
   const theme = useTheme()
   return (
-    <div className="card stack" style={{ gap: 8 }}>
-      <strong className="row" style={{ gap: 6 }}><Icon name="moon" size={18} /> Appearance</strong>
-      <div className="theme-choice" role="radiogroup" aria-label="Appearance">
+    <div className="tile appearance">
+      <div className="head">
+        <span className="ic" style={{ background: 'var(--line)' }}><Icon name="moon" /></span>
+        <span style={{ minWidth: 0 }}>
+          <span className="t" style={{ display: 'block' }}>Appearance</span>
+          <span className="s">Light, dark, or the same as your phone</span>
+        </span>
+      </div>
+      <div className="segmented" role="radiogroup" aria-label="Appearance">
         {(['system', 'light', 'dark'] as const).map((t) => (
-          <button key={t} type="button" role="radio" aria-checked={theme === t} className={`small-btn ${theme === t ? '' : 'secondary'}`} onClick={() => setTheme(t)}>
-            {t === 'system' ? 'Same as phone' : t === 'light' ? 'Light' : 'Dark'}
-          </button>
+          <label key={t} className={theme === t ? 'on not_present' : ''}>
+            <input type="radio" name="appearance" checked={theme === t} onChange={() => setTheme(t)} />
+            {t === 'system' ? 'Phone' : t === 'light' ? 'Light' : 'Dark'}
+          </label>
         ))}
       </div>
     </div>

@@ -177,6 +177,8 @@ export default function Dish({ slug, productId }: { slug: string; productId: str
         </div>
       </div>
 
+      {shop.status === 'live' && <ReportLink shopId={shop.id} productId={product.id} />}
+
       {others.length > 0 && (
         <section className="stack">
           <h2>You might also like</h2>
@@ -215,7 +217,6 @@ export default function Dish({ slug, productId }: { slug: string; productId: str
       ) : (
         <p className="status">{shop.status !== 'live' ? 'Preview: customers can order once your shop is live.' : soldOut ? 'Sold out for now. Save it with the heart and check back soon.' : "This dish can't be ordered right now."}</p>
       )}
-      {shop.status === 'live' && <ReportLink shopId={shop.id} productId={product.id} />}
     </div>
   )
 }

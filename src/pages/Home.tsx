@@ -117,7 +117,7 @@ export default function Home() {
         <section className="card empty">
           <span className="big">👩🏾‍🍳</span>
           <h2 style={{ color: 'var(--text)' }}>The first cooks are getting ready</h2>
-          <p>BiteBY is opening in East London soon. Have a look around, and check back for the first menus.</p>
+          <p>BiteBY is opening near you soon. Have a look around, and check back for the first menus.</p>
         </section>
       )}
 

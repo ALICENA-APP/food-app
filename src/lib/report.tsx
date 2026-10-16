@@ -24,11 +24,15 @@ export function ReportLink({ shopId, productId }: { shopId: string; productId?: 
   const [sent, setSent] = useState(false)
   const what = productId ? 'dish' : 'shop'
 
-  if (sent) return <p className="tick small">Thanks. The BiteBY team will look into it. The cook isn’t told who reported.</p>
+  if (sent) return <p className="card tick small">Thanks. The BiteBY team will look into it. The cook isn’t told who reported.</p>
   if (!open) {
     return (
-      <button type="button" className="link report-link" onClick={() => (session ? setOpen(true) : askToSignIn(location.pathname))}>
-        <Icon name="flag" size={15} /> Report this {what}
+      <button type="button" className="tile report-tile" onClick={() => (session ? setOpen(true) : askToSignIn(location.pathname))}>
+        <span className="ic"><Icon name="flag" /></span>
+        <span style={{ minWidth: 0 }}>
+          <span className="t" style={{ display: 'block' }}>Report this {what}</span>
+          <span className="s">Something not right? Tell the BiteBY team.</span>
+        </span>
       </button>
     )
   }

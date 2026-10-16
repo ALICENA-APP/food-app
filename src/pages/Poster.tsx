@@ -57,7 +57,6 @@ export default function Poster() {
 
       <article className="poster" aria-label="Poster preview">
         <div className="poster-top"><Wordmark size={40} /></div>
-        <p className="poster-kicker">Homemade food from</p>
         <h2 className="poster-name">{shop.name}</h2>
         {(shop.area_label || shop.cuisines.length > 0) && (
           <p className="poster-sub">{[shop.cuisines.slice(0, 3).join(' · '), shop.area_label].filter(Boolean).join(' · ')}</p>
