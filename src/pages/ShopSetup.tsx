@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import { supabase } from '../lib/supabase'
+import { locatePostcode } from '../lib/geo'
 import { link, navigate } from '../lib/router'
 import { deletePhoto, photoUrl, uploadPhoto } from '../lib/images'
 import { pounds, type SellerAccount, type Shop, type ShopPrivate, type ShopSettings } from '../lib/types'
@@ -104,6 +105,10 @@ function ShopForm({ account, shop, settings, priv }: Loaded & { account: SellerA
       const { error } = await db.from('shops').insert({ ...shopValues, id: shopId, seller_account_id: account.id })
       if (error) return fail(error.code === '23505' ? 'That link is taken. Try another one.' : error.message)
     }
+    // The home's location (never shown) lets customers find nearby cooks.
+    const cleanPostcode = postcode.trim().toUpperCase()
+    let point = priv?.lat != null && priv.postcode === cleanPostcode ? { lat: priv.lat, lng: priv.lng! } : null
+    if (!point && cleanPostcode) point = await locatePostcode(cleanPostcode)
     const [s, p] = await Promise.all([
       db.from('shop_settings').upsert({
         shop_id: shopId,
@@ -113,6 +118,8 @@ function ShopForm({ account, shop, settings, priv }: Loaded & { account: SellerA
       }),
       db.from('shop_private').upsert({
         shop_id: shopId,
+        lat: point?.lat ?? null,
+        lng: point?.lng ?? null,
         address_line1: address1.trim() || null,
         address_line2: address2.trim() || null,
         city: city.trim() || null,
@@ -206,6 +213,7 @@ function ShopForm({ account, shop, settings, priv }: Loaded & { account: SellerA
 
       {shop && <ShopPhotos shop={shop} />}
       {shop && <OpeningHours shopId={shop.id} />}
+      {shop && delivery && <DeliveryRadius shopId={shop.id} />}
       {shop && delivery && <DeliveryZones shopId={shop.id} />}
 
       <div className="card">
@@ -274,6 +282,66 @@ function ShopForm({ account, shop, settings, priv }: Loaded & { account: SellerA
 type Zone = { id: string; name: string; postcode_districts: string[]; fee_pence: number; min_order_pence: number }
 
 // Delivery areas, by postcode district (e.g. E3, E14), each with its own fee.
+// Deliver to anyone within a number of miles of home.
+function DeliveryRadius({ shopId }: { shopId: string }) {
+  const [miles, setMiles] = useState('')
+  const [fee, setFee] = useState('')
+  const [min, setMin] = useState('')
+  const [located, setLocated] = useState(true)
+  const [message, setMessage] = useState('')
+
+  useEffect(() => {
+    const db = supabase!
+    db.from('shop_settings').select('delivery_radius_miles, radius_fee_pence, radius_min_order_pence').eq('shop_id', shopId).maybeSingle().then(({ data }) => {
+      if (!data) return
+      setMiles(data.delivery_radius_miles ? String(data.delivery_radius_miles) : '')
+      setFee(data.radius_fee_pence ? (data.radius_fee_pence / 100).toFixed(2) : '')
+      setMin(data.radius_min_order_pence ? (data.radius_min_order_pence / 100).toFixed(2) : '')
+    })
+    db.from('shop_private').select('lat').eq('shop_id', shopId).maybeSingle().then(({ data }) => setLocated(data?.lat != null))
+  }, [shopId])
+
+  async function save() {
+    setMessage('')
+    const radius = miles ? Number(miles) : null
+    const { error } = await supabase!.from('shop_settings').update({
+      delivery_radius_miles: radius,
+      radius_fee_pence: Math.round((parseFloat(fee) || 0) * 100),
+      radius_min_order_pence: Math.round((parseFloat(min) || 0) * 100),
+    }).eq('shop_id', shopId)
+    setMessage(error ? error.message : radius ? `Saved: you deliver within ${radius} miles.` : 'Saved: delivery by distance is off.')
+  }
+
+  return (
+    <div className="card">
+      <h2>Deliver by distance</h2>
+      <p className="muted small">The simplest option: deliver to anyone within a set distance of your home. Customers only ever see a rough distance, never your address.</p>
+      {!located && <p className="status small">Add your postcode in "Collection address" above and save, so we know where you are.</p>}
+      <label>
+        Deliver within
+        <select value={miles} onChange={(e) => setMiles(e.target.value)}>
+          <option value="">Off (use postcode areas below)</option>
+          {[0.5, 1, 1.5, 2, 3, 4, 5, 7, 10].map((m) => <option key={m} value={m}>{m} {m === 1 ? 'mile' : 'miles'}</option>)}
+        </select>
+      </label>
+      {miles && (
+        <div className="row">
+          <label>
+            Delivery fee (£)
+            <input type="number" min="0" max="100" step="0.5" value={fee} onChange={(e) => setFee(e.target.value)} placeholder="0" />
+          </label>
+          <label>
+            Minimum order (£)
+            <input type="number" min="0" max="1000" step="0.5" value={min} onChange={(e) => setMin(e.target.value)} placeholder="0" />
+          </label>
+        </div>
+      )}
+      <button type="button" className="secondary" onClick={save}>Save</button>
+      {message && <p className="muted small">{message}</p>}
+    </div>
+  )
+}
+
 function DeliveryZones({ shopId }: { shopId: string }) {
   const [zones, setZones] = useState<Zone[]>([])
   const [name, setName] = useState('')
@@ -317,8 +385,8 @@ function DeliveryZones({ shopId }: { shopId: string }) {
 
   return (
     <div className="card">
-      <h2>Where you deliver</h2>
-      <p className="muted small">Use the first part of the postcode, like E3 or E14. Customers outside these areas can only collect.</p>
+      <h2>Or deliver to postcode areas</h2>
+      <p className="muted small">Use the first part of the postcode, like E3 or E14. You can use this as well as, or instead of, a distance. Customers you don't deliver to can still collect.</p>
       {zones.map((z) => (
         <div key={z.id} className="check-row">
           <div className="small">

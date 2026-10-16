@@ -159,7 +159,7 @@ export function Help() {
     ['I have an allergy', 'Every dish lists the 14 main allergens. Food is made in home kitchens, so if your allergy is severe, check with the cook before ordering.'],
     ['Who are the cooks?', 'Local home cooks. Each one registers their food business with their council and is checked by the BiteBY team before their shop can open.'],
     ['Reviews', 'Only people who ordered can leave a review, after the order is complete.'],
-    ['Selling on BiteBY', 'Tap Profile, then Become a seller. There’s no monthly fee: BiteBY keeps 5% of the food price of each order, and delivery fees are all yours.'],
+    ['Selling on BiteBY', 'Tap Profile, then Become a seller. There’s no monthly fee: BiteBY keeps 10% of the food price of each order, and delivery fees are all yours.'],
   ]
   return (
     <div className="stack">

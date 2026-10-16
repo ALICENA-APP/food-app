@@ -4,7 +4,8 @@ import { navigate, queryParam } from '../lib/router'
 import { Icon } from '../lib/icons'
 import { dishQuery, loadRatings, loadShopOptions, useCategories, type Dish, type Rating } from '../lib/catalogue'
 import { loadOpenStates, type OpenState } from '../lib/hours'
-import { loadDeliveryTo, postcodeDistrict, usePostcode } from '../lib/postcode'
+import { loadDeliveryTo, loadNear, postcodeDistrict, usePostcode, type Near } from '../lib/postcode'
+import { PostcodePicker } from '../lib/PostcodePicker'
 import { CategoryIcon } from '../lib/categoryIcons'
 import { DishCard, SellerRow, type ShopCardData } from '../lib/ui'
 
@@ -33,7 +34,9 @@ export default function Explore() {
   const [shops, setShops] = useState<ShopRow[]>([])
   const [ratings, setRatings] = useState<Record<string, Rating>>({})
   const [open, setOpen] = useState<Record<string, OpenState>>({})
-  const [postcode] = usePostcode()
+  const [postcode, , point] = usePostcode()
+  const [near, setNear] = useState<Record<string, Near>>({})
+  const [within, setWithin] = useState(0)
   const district = postcode ? postcodeDistrict(postcode) : ''
   const [delivers, setDelivers] = useState<Record<string, number>>({})
   const [options, setOptions] = useState<Record<string, { collection: boolean; delivery: boolean }>>({})
@@ -57,6 +60,9 @@ export default function Explore() {
   useEffect(() => {
     loadDeliveryTo(shops.map((x) => x.id), district).then(setDelivers)
   }, [shops, district])
+  useEffect(() => {
+    loadNear(point).then(setNear)
+  }, [point])
 
   // Keep the address bar in step so the back button and shared links work.
   useEffect(() => {
@@ -74,7 +80,8 @@ export default function Explore() {
   const categoryId = categories.find((c) => c.slug === category)?.id
 
   const shopOk = (id: string, accepting: boolean) =>
-    (!has('delivery') || (options[id]?.delivery && (!district || delivers[id] !== undefined))) &&
+    (!has('delivery') || (options[id]?.delivery && (!district || delivers[id] !== undefined || near[id]?.delivers))) &&
+    (!within || (near[id] && near[id].miles <= within)) &&
     (!has('collection') || options[id]?.collection !== false) &&
     (!has('rated') || (ratings[id]?.average ?? 0) >= 4.5) &&
     (!has('open') || (accepting && open[id]?.open !== false))
@@ -92,7 +99,7 @@ export default function Explore() {
 
   const withDishes = new Set(shownDishes.map((d) => d.shop_id))
   const dishFilterOn = Boolean(categoryId) || ['under10', 'vegetarian', 'vegan', 'halal'].some((f) => has(f as Filter))
-  const shownShops = shops.filter((s) =>
+  const shownShops = [...shops].sort((a, b) => (near[a.id]?.miles ?? 99) - (near[b.id]?.miles ?? 99)).filter((s) =>
     (!q || [s.name, s.area_label ?? '', ...s.cuisines].some((t) => t.toLowerCase().includes(q)) || withDishes.has(s.id)) &&
     (!dishFilterOn || withDishes.has(s.id)) &&
     shopOk(s.id, s.accepting_orders))
@@ -104,6 +111,16 @@ export default function Explore() {
         <Icon name="search" />
         <input type="search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search dishes, cooks or cuisines" aria-label="Search" />
       </form>
+      <PostcodePicker />
+      {point && (
+        <div className="chips">
+          {[0, 1, 2, 3, 5].map((m) => (
+            <button key={m} type="button" className={`chip ${within === m ? 'on' : ''}`} onClick={() => setWithin(m)}>
+              {m ? `Within ${m} mi` : 'Any distance'}
+            </button>
+          ))}
+        </div>
+      )}
       <div className="chips">
         {FILTERS.map((f) => (
           <button key={f.key} type="button" className={`chip ${has(f.key) ? 'on' : ''}`} onClick={() => toggle(f.key)}>
@@ -137,7 +154,7 @@ export default function Explore() {
       ) : <NothingFound empty={dishes.length === 0} />)}
       {dishes && view === 'sellers' && (shownShops.length ? (
         <div className="stack" style={{ gap: 10 }}>
-          {shownShops.map((s) => <SellerRow key={s.id} shop={s} rating={ratings[s.id]} open={open[s.id]} />)}
+          {shownShops.map((s) => <SellerRow key={s.id} shop={s} rating={ratings[s.id]} open={open[s.id]} miles={near[s.id]?.miles} />)}
         </div>
       ) : <NothingFound empty={shops.length === 0} />)}
     </div>

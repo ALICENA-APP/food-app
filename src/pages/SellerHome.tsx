@@ -327,7 +327,7 @@ function Terms({ account, editable, onSaved }: { account: SellerAccount; editabl
     <form className="card" onSubmit={onSubmit}>
       <h2>4. Seller terms {done && <span className="tick">✓</span>}</h2>
       <ul className="muted small">
-        <li>No monthly fee. BiteBY keeps 5% of the food price of each order. Delivery fees are all yours.</li>
+        <li>No monthly fee. BiteBY keeps 10% of the food price of each order. Delivery fees are all yours.</li>
         <li>Customers pay up front. You accept or decline each order.</li>
         <li>Your home address is never shown publicly.</li>
         <li>You are responsible for food safety and accurate allergen information.</li>

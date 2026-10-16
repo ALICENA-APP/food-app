@@ -64,7 +64,7 @@ export function SellerEarnings() {
         <div className="item"><span>Completed orders</span><strong>{shown.length}</strong></div>
         <div className="item"><span>Food sales</span><span>{pounds(food)}</span></div>
         <div className="item"><span>Delivery fees (all yours)</span><span>{pounds(delivery)}</span></div>
-        <div className="item"><span>BiteBY fee (5% of food)</span><span>−{pounds(fees)}</span></div>
+        <div className="item"><span>BiteBY fee (on food only)</span><span>−{pounds(fees)}</span></div>
         <div className="item total"><strong>You earned</strong><strong>{pounds(food + delivery - fees)}</strong></div>
       </div>
       <p className="muted small">Payouts go straight to your bank account through Stripe once payments are switched on.</p>

@@ -7,7 +7,7 @@ import { loadOpenStates, type OpenState } from '../lib/hours'
 import { InstallPrompt } from '../lib/install'
 import { PostcodePicker } from '../lib/PostcodePicker'
 import { CategoryIcon } from '../lib/categoryIcons'
-import { loadDeliveryTo, postcodeDistrict, usePostcode } from '../lib/postcode'
+import { loadDeliveryTo, loadNear, postcodeDistrict, usePostcode, type Near } from '../lib/postcode'
 import { BowlArt, DishCard, SellerCard, type ShopCardData } from '../lib/ui'
 
 // The first screen everyone sees, signed in or not.
@@ -18,7 +18,8 @@ export default function Home() {
   const [ratings, setRatings] = useState<Record<string, Rating>>({})
   const [query, setQuery] = useState('')
   const [open, setOpen] = useState<Record<string, OpenState>>({})
-  const [postcode] = usePostcode()
+  const [postcode, , point] = usePostcode()
+  const [near, setNear] = useState<Record<string, Near>>({})
   const [delivers, setDelivers] = useState<Record<string, number>>({})
 
   useEffect(() => {
@@ -41,6 +42,9 @@ export default function Home() {
   useEffect(() => {
     loadDeliveryTo(shops.map((x) => x.id), district).then(setDelivers)
   }, [shops, district])
+  useEffect(() => {
+    loadNear(point).then(setNear)
+  }, [point])
 
   function search(e: FormEvent) {
     e.preventDefault()
@@ -50,10 +54,13 @@ export default function Home() {
   const desserts = categories.filter((c) => ['desserts', 'cakes-bakes'].includes(c.slug)).map((c) => c.id)
   const rated = (shopId: string) => ratings[shopId]?.average ?? 0
   // With a postcode set, shops that deliver there come first.
-  const near = (shopId: string) => (district && delivers[shopId] !== undefined ? 1 : 0)
-  const popular = [...(dishes ?? [])].sort((a, b) => near(b.shop_id) - near(a.shop_id) || rated(b.shop_id) - rated(a.shop_id)).slice(0, 10)
+  // With a postcode set, cooks who deliver there come first, then the nearest.
+  const reach = (shopId: string) => (delivers[shopId] !== undefined || near[shopId]?.delivers ? 1 : 0)
+  const away = (shopId: string) => near[shopId]?.miles ?? 99
+  const closer = (a: string, b: string) => reach(b) - reach(a) || away(a) - away(b)
+  const popular = [...(dishes ?? [])].sort((a, b) => closer(a.shop_id, b.shop_id) || rated(b.shop_id) - rated(a.shop_id)).slice(0, 10)
   const sweet = (dishes ?? []).filter((d) => d.category_id && desserts.includes(d.category_id)).slice(0, 10)
-  const topShops = [...shops].sort((a, b) => rated(b.id) - rated(a.id) || (ratings[b.id]?.reviews ?? 0) - (ratings[a.id]?.reviews ?? 0)).slice(0, 10)
+  const topShops = [...shops].sort((a, b) => (point ? closer(a.id, b.id) : 0) || rated(b.id) - rated(a.id) || (ratings[b.id]?.reviews ?? 0) - (ratings[a.id]?.reviews ?? 0)).slice(0, 10)
 
   return (
     <div className="stack-lg">
@@ -108,11 +115,11 @@ export default function Home() {
       {topShops.length > 0 && (
         <section className="stack">
           <div className="section-head">
-            <h2>Top rated sellers</h2>
+            <h2>{point ? 'Cooks near you' : 'Top rated sellers'}</h2>
             <a href="/explore?view=sellers" onClick={link('/explore?view=sellers')}>See all</a>
           </div>
           <div className="hscroll">
-            {topShops.map((s) => <SellerCard key={s.id} shop={s} rating={ratings[s.id]} open={open[s.id]} />)}
+            {topShops.map((s) => <SellerCard key={s.id} shop={s} rating={ratings[s.id]} open={open[s.id]} miles={near[s.id]?.miles} />)}
           </div>
         </section>
       )}
@@ -131,7 +138,7 @@ export default function Home() {
 
       <section className="promo">
         <h2>Cook at home? Sell on BiteBY</h2>
-        <p>Open your own food shop with a link you can share. No monthly fee: we take 5% of the food price only when you sell.</p>
+        <p>Open your own food shop with a link you can share. No monthly fee: we take 10% of the food price only when you sell.</p>
         <a className="button dark" href="/sell" onClick={link('/sell')}>Become a seller</a>
         <BowlArt />
       </section>

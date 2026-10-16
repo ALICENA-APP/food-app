@@ -5,7 +5,8 @@ import { askToSignIn, useSession } from '../lib/session'
 import { Icon } from '../lib/icons'
 import { basketCount, basketSubtotal, setQty, useBasket, writeBasket } from '../lib/basket'
 import { FoodPhoto } from '../lib/ui'
-import { formatPostcode, readPostcode } from '../lib/postcode'
+import { formatPostcode, loadNear, looksLikePostcode, readPostcode, type Point } from '../lib/postcode'
+import { locatePostcode } from '../lib/geo'
 import { loadAddresses, saveAddress, type SavedAddress } from './Addresses'
 import { noticeLabel, pounds, type ShopSettings } from '../lib/types'
 
@@ -45,6 +46,9 @@ export default function Checkout() {
   const [saved, setSaved] = useState<SavedAddress[]>([])
   const [keepAddress, setKeepAddress] = useState(true)
   const [lead, setLead] = useState(0)
+  // For cooks who deliver within a distance: where the delivery postcode is,
+  // and whether this cook reaches it.
+  const [spot, setSpot] = useState<{ postcode: string; point: Point | null; delivers: boolean } | null>(null)
   const shopId = basket?.shopId
   const userId = session?.user.id
 
@@ -68,6 +72,18 @@ export default function Checkout() {
     })
     db.from('shop_delivery_zones').select('name, postcode_districts, fee_pence, min_order_pence').eq('shop_id', shopId).then(({ data }) => setZones(data ?? []))
   }, [shopId])
+
+  const radius = settings?.delivery_radius_miles ?? null
+  const deliveryPostcode = draft.fulfilment === 'delivery' && looksLikePostcode(draft.postcode) ? formatPostcode(draft.postcode) : ''
+  useEffect(() => {
+    if (!radius || !deliveryPostcode || !shopId) return
+    const timer = window.setTimeout(async () => {
+      const point = await locatePostcode(deliveryPostcode)
+      const near = await loadNear(point)
+      setSpot({ postcode: deliveryPostcode, point, delivers: Boolean(near[shopId]?.delivers) })
+    }, 400)
+    return () => window.clearTimeout(timer)
+  }, [radius, deliveryPostcode, shopId])
 
   // The most notice any dish in the basket needs.
   const productKey = basket?.lines.map((l) => l.productId).join(',') ?? ''
@@ -107,9 +123,14 @@ export default function Checkout() {
   const { fulfilment, name, phone, address, postcode, when, note } = draft
   const subtotal = basketSubtotal(basket)
   const district = postcode.trim() ? formatPostcode(postcode).split(' ')[0] : ''
-  const zone = fulfilment === 'delivery' && district
+  const areaZone = fulfilment === 'delivery' && district
     ? zones.filter((z) => z.postcode_districts.includes(district)).sort((a, b) => a.fee_pence - b.fee_pence)[0]
     : undefined
+  const spotNow = spot && spot.postcode === formatPostcode(postcode) ? spot : null
+  const zone = areaZone ?? (fulfilment === 'delivery' && spotNow?.delivers && settings
+    ? { name: 'distance', postcode_districts: [], fee_pence: settings.radius_fee_pence, min_order_pence: settings.radius_min_order_pence }
+    : undefined)
+  const checking = fulfilment === 'delivery' && !areaZone && Boolean(radius) && looksLikePostcode(postcode) && !spotNow
   const fee = zone?.fee_pence ?? 0
   const minOrder = Math.max(settings?.min_order_pence ?? 0, zone?.min_order_pence ?? 0)
   const shop = { id: basket.shopId, slug: basket.shopSlug, name: basket.shopName }
@@ -135,6 +156,8 @@ export default function Checkout() {
       p_requested_for: when ? new Date(when).toISOString() : null,
       p_delivery_address: fulfilment === 'delivery' ? address : null,
       p_delivery_postcode: fulfilment === 'delivery' ? postcode : null,
+      p_lat: fulfilment === 'delivery' && !areaZone ? spotNow?.point?.lat ?? null : null,
+      p_lng: fulfilment === 'delivery' && !areaZone ? spotNow?.point?.lng ?? null : null,
     })
     setPlacing(false)
     if (error) return setMessage(error.message)
@@ -218,7 +241,8 @@ export default function Checkout() {
               Postcode
               <input required maxLength={10} value={postcode} onChange={(e) => update({ postcode: e.target.value })} onBlur={() => postcode && update({ postcode: formatPostcode(postcode) })} autoComplete="postal-code" />
             </label>
-            {district && !zone && <p className="error">This cook doesn't deliver to {district}.</p>}
+            {checking && <p className="muted small">Checking whether the cook delivers there…</p>}
+            {district && !zone && !checking && <p className="error">This cook doesn't deliver to {formatPostcode(postcode)}.</p>}
             {session && isNewAddress && saved.length < 5 && (
               <label className="check"><input type="checkbox" checked={keepAddress} onChange={(e) => setKeepAddress(e.target.checked)} /> Save this address for next time</label>
             )}

@@ -43,6 +43,9 @@ export type ShopSettings = {
   offers_collection: boolean
   offers_delivery: boolean
   min_order_pence: number
+  delivery_radius_miles: number | null
+  radius_fee_pence: number
+  radius_min_order_pence: number
 }
 
 export type ShopPrivate = {
@@ -53,6 +56,8 @@ export type ShopPrivate = {
   postcode: string | null
   collection_instructions: string | null
   contact_phone: string | null
+  lat: number | null
+  lng: number | null
 }
 
 export type Presence = 'contains' | 'may_contain' | 'not_present'
@@ -95,7 +100,7 @@ export function noticeLabel(hours: number | null | undefined) {
 
 export const dietaryName = (code: string) => DIETARY.find((d) => d.code === code)?.name ?? code
 
-export const TERMS_VERSION = '2026-10-v1'
+export const TERMS_VERSION = '2026-10-v2'
 
 export function pounds(pence: number) {
   return `£${(pence / 100).toFixed(2)}`

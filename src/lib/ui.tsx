@@ -152,12 +152,18 @@ export function DishCard({ dish, rating }: { dish: Dish; rating?: Rating }) {
 
 export type ShopCardData = { id: string; name: string; slug: string; logo_path: string | null; area_label: string | null; cuisines: string[] }
 
+// Distances come rounded to whole miles from the database.
+export function distanceLabel(miles?: number) {
+  if (!miles) return ''
+  return miles <= 1 ? 'Under 1 mi' : `About ${miles} mi`
+}
+
 function OpenLabel({ state }: { state?: OpenState }) {
   if (!state) return null
   return <span className={`open-label ${state.open ? 'on' : ''}`}>{state.open ? 'Open now' : state.label}</span>
 }
 
-export function SellerCard({ shop, rating, open }: { shop: ShopCardData; rating?: Rating; open?: OpenState }) {
+export function SellerCard({ shop, rating, open, miles }: { shop: ShopCardData; rating?: Rating; open?: OpenState; miles?: number }) {
   const to = `/s/${shop.slug}`
   return (
     <a className="seller-card" href={to} onClick={link(to)}>
@@ -165,21 +171,21 @@ export function SellerCard({ shop, rating, open }: { shop: ShopCardData; rating?
       <Avatar name={shop.name} path={shop.logo_path} />
       <strong>{shop.name}</strong>
       <RatingBadge rating={rating} />
-      {shop.area_label && <span className="muted tiny">{shop.area_label}</span>}
+      {(shop.area_label || miles) && <span className="muted tiny">{[shop.area_label, distanceLabel(miles)].filter(Boolean).join(' · ')}</span>}
       <OpenLabel state={open} />
       {shop.cuisines.length > 0 && <span className="tags">{shop.cuisines.slice(0, 2).map((c) => <span key={c} className="tag">{c}</span>)}</span>}
     </a>
   )
 }
 
-export function SellerRow({ shop, rating, open }: { shop: ShopCardData; rating?: Rating; open?: OpenState }) {
+export function SellerRow({ shop, rating, open, miles }: { shop: ShopCardData; rating?: Rating; open?: OpenState; miles?: number }) {
   const to = `/s/${shop.slug}`
   return (
     <a className="seller-row card" href={to} onClick={link(to)} style={{ flexDirection: 'row' }}>
       <Avatar name={shop.name} path={shop.logo_path} />
       <span className="stack" style={{ gap: 3, flex: 1, minWidth: 0 }}>
         <strong>{shop.name}</strong>
-        <span className="muted tiny">{[shop.area_label, ...shop.cuisines].filter(Boolean).join(' · ')}</span>
+        <span className="muted tiny">{[distanceLabel(miles), shop.area_label, ...shop.cuisines].filter(Boolean).join(' · ')}</span>
         <span className="row wrap" style={{ gap: 8, alignItems: 'center' }}><RatingBadge rating={rating} /><OpenLabel state={open} /></span>
       </span>
       <HeartButton shopId={shop.id} className="heart inline" />
