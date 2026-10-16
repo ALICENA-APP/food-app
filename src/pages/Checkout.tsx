@@ -8,7 +8,7 @@ import { FoodPhoto } from '../lib/ui'
 import { formatPostcode, loadNear, looksLikePostcode, readPostcode, type Point } from '../lib/postcode'
 import { locatePostcode } from '../lib/geo'
 import { loadAddresses, saveAddress, type SavedAddress } from './Addresses'
-import { noticeLabel, pounds, type ShopSettings } from '../lib/types'
+import { daysLabel, noticeLabel, pounds, type ShopSettings } from '../lib/types'
 import { addDays, londonNow, shortDate } from '../lib/hours'
 import { DiscountBox, type AppliedCode } from '../lib/discounts'
 
@@ -48,6 +48,7 @@ export default function Checkout() {
   const [saved, setSaved] = useState<SavedAddress[]>([])
   const [keepAddress, setKeepAddress] = useState(true)
   const [lead, setLead] = useState(0)
+  const [dayLimits, setDayLimits] = useState<{ name: string; days: number[] }[]>([])
   const [away, setAway] = useState<string[]>([])
   const [demo, setDemo] = useState(false)
   const [applied, setApplied] = useState<AppliedCode | null>(null)
@@ -103,8 +104,9 @@ export default function Checkout() {
   const productKey = basket?.lines.map((l) => l.productId).join(',') ?? ''
   useEffect(() => {
     if (!productKey) return
-    supabase!.from('products').select('min_lead_hours').in('id', productKey.split(',')).then(({ data }) => {
+    supabase!.from('products').select('name, min_lead_hours, available_days').in('id', productKey.split(',')).then(({ data }) => {
       setLead(Math.max(0, ...(data ?? []).map((p) => p.min_lead_hours ?? 0)))
+      setDayLimits((data ?? []).filter((p) => p.available_days?.length).map((p) => ({ name: p.name, days: p.available_days })))
     })
   }, [productKey])
 
@@ -152,6 +154,8 @@ export default function Checkout() {
   const sameAddress = (a: SavedAddress) => a.address.trim() === address.trim() && a.postcode.replace(/\s/g, '').toUpperCase() === postcode.replace(/\s/g, '').toUpperCase()
   const wantedDay = when ? londonNow(new Date(when)).date : londonNow().date
   const awayThen = away.includes(wantedDay)
+  const wantedWeekday = (new Date(wantedDay + 'T12:00:00Z').getUTCDay() + 6) % 7
+  const wrongDay = dayLimits.find((d) => !d.days.includes(wantedWeekday))
   const isNewAddress = address.trim().length > 2 && !saved.some(sameAddress)
   const off = applied ? Math.min(applied.discount_pence, subtotal) : 0
   const total = subtotal - off + fee
@@ -162,6 +166,7 @@ export default function Checkout() {
     if (lead && (!when || new Date(when) < earliest)) {
       return setMessage(`Some dishes need more notice. Choose ${niceTime(earliest)} or later.`)
     }
+    if (wrongDay) return setMessage(`${wrongDay.name} is made on ${daysLabel(wrongDay.days).replace(' only', '')} only. Choose one of those days.`)
     if (awayThen) return setMessage(`The cook is away on ${shortDate(wantedDay)}. Please choose another day.`)
     if (!session) return askToSignIn('/basket')
     setPlacing(true)
@@ -275,6 +280,7 @@ export default function Checkout() {
           <input type="datetime-local" required={lead > 0} min={localInput(lead ? earliest : new Date())} value={when} onChange={(e) => update({ when: e.target.value })} />
         </label>
         {awayThen && <p className="error small">The cook is away on {shortDate(wantedDay)}{away.length > 1 ? ` (days off: ${away.slice(0, 5).map(shortDate).join(', ')}${away.length > 5 ? '…' : ''})` : ''}. Choose another day.</p>}
+        {wrongDay && <p className="error small">{wrongDay.name} is made on {daysLabel(wrongDay.days).replace(' only', '')} only. Choose one of those days{when ? '' : ' above'}.</p>}
         {lead > 0 && <p className="muted small">Some dishes are made to order: {noticeLabel(lead).toLowerCase()}. The earliest is {niceTime(earliest)}.</p>}
         <label>
           Your name

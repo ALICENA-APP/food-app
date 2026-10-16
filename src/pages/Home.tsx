@@ -7,6 +7,7 @@ import { loadOpenStates, type OpenState } from '../lib/hours'
 import { InstallPrompt } from '../lib/install'
 import { PostcodePicker } from '../lib/PostcodePicker'
 import { CategoryIcon } from '../lib/categoryIcons'
+import { WaitlistCard } from '../lib/waitlist'
 import { loadDeliveryTo, loadNear, postcodeDistrict, usePostcode, type Near } from '../lib/postcode'
 import { BowlArt, DishCard, FoodPhoto, SellerCard, type ShopCardData } from '../lib/ui'
 import { readRecent } from '../lib/views'
@@ -112,6 +113,10 @@ export default function Home() {
       </section>
 
       {dishes === null && <p className="muted">Loading…</p>}
+
+      {postcode && point && dishes !== null && !shops.some((s) => !s.is_demo && (delivers[s.id] !== undefined || near[s.id]?.delivers || (near[s.id]?.miles ?? 99) <= 10)) && (
+        <WaitlistCard postcode={postcode} />
+      )}
 
       {dishes && dishes.length === 0 && (
         <section className="card empty">

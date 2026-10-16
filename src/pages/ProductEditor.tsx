@@ -71,6 +71,7 @@ function Editor({ shopId, product, allergens, categories, answers: initialAnswer
   const [collectionOk, setCollectionOk] = useState(product?.collection_ok ?? true)
   const [deliveryOk, setDeliveryOk] = useState(product?.delivery_ok ?? true)
   const [lead, setLead] = useState(String(product?.min_lead_hours ?? 0))
+  const [days, setDays] = useState<number[]>(product?.available_days ?? [])
   const [dietary, setDietary] = useState<string[]>(product?.dietary ?? [])
   const [answers, setAnswers] = useState<Record<string, Presence>>(initialAnswers)
   const [confirmed, setConfirmed] = useState(false)
@@ -101,6 +102,7 @@ function Editor({ shopId, product, allergens, categories, answers: initialAnswer
       delivery_ok: deliveryOk,
       dietary,
       min_lead_hours: Number(lead) || null,
+      available_days: days.length === 7 ? [] : [...days].sort(),
     }
 
     // 1. Save the item as a draft (new items get their id here).
@@ -141,6 +143,14 @@ function Editor({ shopId, product, allergens, categories, answers: initialAnswer
     const { error } = await supabase!.from('products').update({ status: 'draft' }).eq('id', product!.id)
     if (error) setMessage(error.message)
     else navigate('/sell/products')
+  }
+
+  // A draft copy with the same details, options and allergens (not photos).
+  async function copy() {
+    if (!confirm('Make a copy of this dish? The copy starts as a draft, without photos.')) return
+    const { data, error } = await supabase!.rpc('copy_product', { p_product: product!.id })
+    if (error) return setMessage(error.message)
+    navigate(`/sell/products/${data}`)
   }
 
   function onSubmit(e: FormEvent) {
@@ -195,6 +205,19 @@ function Editor({ shopId, product, allergens, categories, answers: initialAnswer
             {[2, 4, 12, 24, 48, 72].map((h) => <option key={h} value={h}>{h < 24 ? `${h} hours` : `${h / 24} ${h === 24 ? 'day' : 'days'}`} ahead</option>)}
           </select>
         </label>
+        <div className="stack" style={{ gap: 8 }}>
+          <strong className="small">Days you make it</strong>
+          <div className="tags">
+            <button type="button" className={`chip ${days.length === 0 ? 'on' : ''}`} onClick={() => setDays([])}>Every day</button>
+            {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((d, i) => (
+              <button key={d} type="button" className={`chip ${days.includes(i) ? 'on' : ''}`}
+                onClick={() => setDays(days.includes(i) ? days.filter((x) => x !== i) : [...days, i])}>
+                {d}
+              </button>
+            ))}
+          </div>
+          <span className="muted tiny">Customers can only order it for these days. Good for weekend specials.</span>
+        </div>
         <div className="stack" style={{ gap: 8 }}>
           <strong className="small">Suitable for (optional)</strong>
           <div className="tags">
@@ -264,6 +287,7 @@ function Editor({ shopId, product, allergens, categories, answers: initialAnswer
         {isPublished && (
           <button type="button" className="link" onClick={takeOffSale}>Take off sale</button>
         )}
+        {product && <button type="button" className="link" onClick={copy} disabled={saving}>Make a copy of this dish</button>}
         {message && <p className="error">{message}</p>}
       </div>
     </form>

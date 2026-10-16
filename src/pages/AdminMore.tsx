@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import { supabase } from '../lib/supabase'
 import { link } from '../lib/router'
 import { pounds } from '../lib/types'
@@ -210,7 +210,104 @@ export function AdminOverview() {
           ))}
         </div>
       )}
+      <Waitlist />
       <DemoData />
+    </div>
+  )
+}
+
+type WaitArea = { district: string; waiting: number; total: number; latest: string }
+
+// Postcode areas where people want cooks: where to find sellers next.
+function Waitlist() {
+  const [areas, setAreas] = useState<WaitArea[] | null>(null)
+  useEffect(() => {
+    supabase!.rpc('admin_waitlist').then(({ data }) => setAreas(data ?? []))
+  }, [])
+  if (!areas) return null
+  return (
+    <div className="card stack" style={{ gap: 6 }}>
+      <h2>Waiting for cooks</h2>
+      <p className="muted small">People who tapped “Notify me” because there are no cooks near them yet. They get a notification when a shop opens in their area.</p>
+      {areas.length === 0 && <p className="muted small">Nobody yet.</p>}
+      {areas.slice(0, 20).map((a) => (
+        <div key={a.district} className="item">
+          <strong>{a.district}</strong>
+          <span className="small">{a.waiting} waiting{a.total > a.waiting ? ` · ${a.total - a.waiting} already told` : ''}</span>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+type Announcement = { id: number; audience: string; title: string; body: string | null; link: string | null; recipients: number; created_at: string }
+const AUDIENCE: Record<string, string> = { everyone: 'Everyone', customers: 'Customers', cooks: 'Cooks' }
+
+// Send a notification to everyone, all customers or all cooks.
+export function AdminAnnounce() {
+  const [audience, setAudience] = useState('everyone')
+  const [title, setTitle] = useState('')
+  const [body, setBody] = useState('')
+  const [linkTo, setLinkTo] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [message, setMessage] = useState('')
+  const [sent, setSent] = useState<Announcement[]>([])
+
+  const load = useCallback(() => {
+    supabase!.from('announcements').select('*').order('created_at', { ascending: false }).limit(20).then(({ data }) => setSent(data ?? []))
+  }, [])
+  useEffect(() => { load() }, [load])
+
+  async function send(e: FormEvent) {
+    e.preventDefault()
+    setMessage('')
+    if (!confirm(`Send “${title.trim()}” to ${AUDIENCE[audience].toLowerCase()}? Everyone in that group gets a notification.`)) return
+    setBusy(true)
+    const { data, error } = await supabase!.rpc('admin_announce', { p_audience: audience, p_title: title, p_body: body || null, p_link: linkTo || null })
+    setBusy(false)
+    if (error) return setMessage(error.message)
+    setMessage(`Sent to ${data} ${data === 1 ? 'person' : 'people'}.`)
+    setTitle('')
+    setBody('')
+    setLinkTo('')
+    load()
+  }
+
+  return (
+    <div className="stack">
+      <form className="card stack" onSubmit={send}>
+        <p className="muted small">Shows in people’s notifications (the bell) and as a pop-up if they have alerts on. Up to 5 a day.</p>
+        <div className="segmented">
+          {Object.entries(AUDIENCE).map(([k, v]) => (
+            <label key={k} className={audience === k ? 'on not_present' : ''}>
+              <input type="radio" checked={audience === k} onChange={() => setAudience(k)} /> {v}
+            </label>
+          ))}
+        </div>
+        <label>Title<input value={title} onChange={(e) => setTitle(e.target.value)} maxLength={120} required placeholder="e.g. Discount codes are here" /></label>
+        <label>Message (optional)<textarea rows={3} value={body} onChange={(e) => setBody(e.target.value)} maxLength={300} /></label>
+        <label>
+          Page to open (optional)
+          <select value={linkTo} onChange={(e) => setLinkTo(e.target.value)}>
+            <option value="">Notifications</option>
+            <option value="/">Home</option>
+            <option value="/explore">Explore</option>
+            <option value="/sell">Seller dashboard</option>
+            <option value="/sell/discounts">Discount codes</option>
+            <option value="/help">Help</option>
+          </select>
+        </label>
+        <button type="submit" disabled={busy || title.trim().length < 3}>{busy ? 'Sending…' : 'Send announcement'}</button>
+        {message && <p className={message.startsWith('Sent') ? 'tick small' : 'error small'}>{message}</p>}
+      </form>
+      {sent.length > 0 && <h2>Sent</h2>}
+      {sent.map((a) => (
+        <div key={a.id} className="card stack" style={{ gap: 4 }}>
+          <div className="item"><strong>{a.title}</strong><span className="tag grey">{AUDIENCE[a.audience]}</span></div>
+          {a.body && <p className="small">{a.body}</p>}
+          <p className="muted tiny">{when(a.created_at)} · {a.recipients} {a.recipients === 1 ? 'person' : 'people'}</p>
+        </div>
+      ))}
     </div>
   )
 }

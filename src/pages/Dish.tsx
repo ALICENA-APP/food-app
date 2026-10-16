@@ -7,7 +7,7 @@ import { ReportLink } from '../lib/report'
 import { recordView, rememberDish } from '../lib/views'
 import { allergenLists, averageRating, loadShop, type ShopData } from '../lib/shopData'
 import { Avatar, BackButton, FoodPhoto, HeartButton, share } from '../lib/ui'
-import { dietaryName, noticeLabel, pounds } from '../lib/types'
+import { daysLabel, dietaryName, noticeLabel, pounds } from '../lib/types'
 
 // One dish: photos, description, ingredients, allergens and add to basket.
 export default function Dish({ slug, productId }: { slug: string; productId: string }) {
@@ -112,6 +112,7 @@ export default function Dish({ slug, productId }: { slug: string; productId: str
         </p>
         <div className="tags">
           <span className="tag">Homemade</span>
+          {daysLabel(product.available_days) && <span className="tag">{daysLabel(product.available_days)}</span>}
           {product.min_lead_hours ? <span className="tag">{noticeLabel(product.min_lead_hours)}</span> : null}
           {category && <span className="tag grey">{category}</span>}
           {product.dietary?.map((d) => <span key={d} className="tag green">{dietaryName(d)}</span>)}

@@ -78,6 +78,7 @@ export type Product = {
   portion: string | null
   stock_qty: number | null
   min_lead_hours: number | null
+  available_days?: number[]
   ingredients: string | null
   may_contain_notes: string | null
   collection_ok: boolean
@@ -110,4 +111,12 @@ export const TERMS_VERSION = '2026-10-v3'
 
 export function pounds(pence: number) {
   return `£${(pence / 100).toFixed(2)}`
+}
+
+const DAY_SHORT = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+// "Fri & Sat only", or '' when the dish is made every day.
+export function daysLabel(days: number[] | null | undefined) {
+  if (!days?.length || days.length === 7) return ''
+  const names = [...days].sort((a, b) => a - b).map((d) => DAY_SHORT[d])
+  return `${names.length > 1 ? names.slice(0, -1).join(', ') + ' & ' + names[names.length - 1] : names[0]} only`
 }
