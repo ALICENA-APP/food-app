@@ -643,3 +643,21 @@ fieldset.options legend { font-weight: 700; padding: 0 4px; display: flex; gap: 
 .chat-row .ic { width: 40px; height: 40px; border-radius: 50%; background: var(--line); display: flex; align-items: center; justify-content: center; flex: none; }
 .chat-row.unread .ic { background: var(--yellow); }
 .chat-row .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--yellow); flex: none; }
+
+/* Food hygiene rating, like a small version of the council sticker */
+.hygiene { width: fit-content; display: inline-flex; align-items: center; gap: 8px; margin-top: 10px; padding: 4px 6px 4px 10px; border-radius: 999px; background: #e6f4d9; color: #1f5e0f; font-size: 0.75rem; font-weight: 700; }
+.hygiene .scale { display: inline-flex; gap: 2px; }
+.hygiene .scale span { width: 18px; height: 18px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; color: #6c8f5c; font-size: 0.68rem; }
+.hygiene .scale span.on { background: #1f5e0f; color: #fff; width: 22px; height: 22px; font-size: 0.8rem; }
+:root[data-theme='dark'] .hygiene { background: #1d3316; color: #a6dc8c; }
+:root[data-theme='dark'] .hygiene .scale span.on { background: #a6dc8c; color: #10200a; }
+.checklist .bar { height: 8px; border-radius: 999px; background: var(--line); overflow: hidden; }
+.checklist .bar span { display: block; height: 100%; background: var(--green); border-radius: 999px; }
+.checklist a, .checklist .done { display: flex; align-items: center; gap: 10px; text-decoration: none; color: inherit; padding: 6px 0; font-size: 0.92rem; }
+.checklist .box { width: 22px; height: 22px; border-radius: 50%; border: 2px solid var(--border); flex: none; display: flex; align-items: center; justify-content: center; }
+.checklist .done { color: var(--muted); text-decoration: line-through; }
+.checklist .done .box { background: var(--green); border-color: var(--green); color: #fff; }
+.bars { display: flex; align-items: flex-end; gap: 2px; height: 90px; padding-top: 6px; }
+.bars span { flex: 1; background: var(--yellow); border-radius: 3px 3px 0 0; min-height: 2px; }
+.bars span.zero { background: var(--line); }
+.bars-axis { display: flex; justify-content: space-between; }

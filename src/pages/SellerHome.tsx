@@ -7,6 +7,7 @@ import { Icon, type IconName } from '../lib/icons'
 import { Avatar, share } from '../lib/ui'
 import { loadRatings, type Rating } from '../lib/catalogue'
 import { useCommission } from '../lib/platform'
+import { HygieneCard, SetupChecklist } from './SellerSetup'
 
 const STATUS_TEXT: Record<SellerAccount['status'], string> = {
   draft: 'Not sent yet',
@@ -105,6 +106,7 @@ export default function SellerHome() {
 function Dashboard({ shop, account, onChanged }: { shop: Shop; account: SellerAccount; onChanged: () => void }) {
   const [stats, setStats] = useState<{ todo: number; today: number; rating: Rating | undefined } | null>(null)
   const [accepting, setAccepting] = useState(shop.accepting_orders)
+  const [refresh, setRefresh] = useState(0)
   const [error, setError] = useState('')
   const url = `${window.location.origin}/s/${shop.slug}`
 
@@ -176,6 +178,7 @@ function Dashboard({ shop, account, onChanged }: { shop: Shop; account: SellerAc
         <a href="/sell/reviews" onClick={link('/sell/reviews')}><strong>{stats?.rating ? stats.rating.average.toFixed(1) : '–'}</strong><span className="muted tiny">{stats?.rating ? `${stats.rating.reviews} ${stats.rating.reviews === 1 ? 'review' : 'reviews'}` : 'No reviews yet'}</span></a>
       </div>
 
+      <SetupChecklist shop={shop} refresh={refresh} />
       <ViewsCard shopId={shop.id} />
 
       <div className="menu-tiles">
@@ -191,6 +194,7 @@ function Dashboard({ shop, account, onChanged }: { shop: Shop; account: SellerAc
         <SellerTile to="/help" icon="help" title="Help" sub="How selling works" tone="var(--line)" />
       </div>
       <GetFeatured shopId={shop.id} shopLive={shop.status === 'live'} />
+      <HygieneCard accountId={account.id} onSaved={() => setRefresh((n) => n + 1)} />
     </>
   )
 }

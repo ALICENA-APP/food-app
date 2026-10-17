@@ -22,6 +22,9 @@ export type Verification = {
   reference: string | null
   registered_on: string | null
   notes: string | null
+  rating?: number | null
+  rating_date?: string | null
+  fhrs_id?: string | null
 }
 
 export type Shop = {
@@ -49,6 +52,8 @@ export type ShopSettings = {
   delivery_radius_miles: number | null
   radius_fee_pence: number
   radius_min_order_pence: number
+  max_orders_per_day?: number | null
+  takes_catering?: boolean
 }
 
 export type ShopPrivate = {

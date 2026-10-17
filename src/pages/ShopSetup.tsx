@@ -71,6 +71,7 @@ function ShopForm({ account, shop, settings, priv }: Loaded & { account: SellerA
   const [cuisines, setCuisines] = useState((shop?.cuisines ?? []).join(', '))
   const [collection, setCollection] = useState(settings?.offers_collection ?? true)
   const [delivery, setDelivery] = useState(settings?.offers_delivery ?? false)
+  const [catering, setCatering] = useState(settings?.takes_catering ?? false)
   const [minOrder, setMinOrder] = useState(settings ? String(settings.min_order_pence / 100) : '0')
   const [address1, setAddress1] = useState(priv?.address_line1 ?? '')
   const [address2, setAddress2] = useState(priv?.address_line2 ?? '')
@@ -117,6 +118,7 @@ function ShopForm({ account, shop, settings, priv }: Loaded & { account: SellerA
         shop_id: shopId,
         offers_collection: collection,
         offers_delivery: delivery,
+        takes_catering: catering,
         min_order_pence: Math.round((parseFloat(minOrder) || 0) * 100),
       }),
       db.from('shop_private').upsert({
@@ -207,6 +209,10 @@ function ShopForm({ account, shop, settings, priv }: Loaded & { account: SellerA
         <label className="check">
           <input type="checkbox" checked={delivery} onChange={(e) => setDelivery(e.target.checked)} />
           I deliver myself
+        </label>
+        <label className="check">
+          <input type="checkbox" checked={catering} onChange={(e) => setCatering(e.target.checked)} />
+          I take catering and party orders (customers can ask you for a quote)
         </label>
         <label>
           Minimum order (£)

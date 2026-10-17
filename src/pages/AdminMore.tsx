@@ -164,10 +164,13 @@ export function AdminOverview() {
   const [data, setData] = useState<Overview | null>(null)
   const [deletions, setDeletions] = useState<{ user_id: string; email: string; requested_at: string }[]>([])
   const [error, setError] = useState('')
+  const [hygieneToCheck, setHygieneToCheck] = useState(0)
 
   useEffect(() => {
     supabase!.rpc('admin_overview').then(({ data: d, error: e }) => (e ? setError(e.message) : setData(d)))
     supabase!.rpc('admin_deletion_requests').then(({ data: d }) => setDeletions(d ?? []))
+    supabase!.from('seller_verifications').select('id', { count: 'exact', head: true }).eq('kind', 'hygiene_rating').eq('status', 'pending')
+      .then(({ count }) => setHygieneToCheck(count ?? 0))
   }, [])
 
   if (error) return <p className="error">{error}</p>
@@ -187,6 +190,7 @@ export function AdminOverview() {
     ['BiteBY fees, 30 days', pounds(data.fees_30d_pence)],
     ['Reviews, 30 days', data.reviews_30d],
     ['Help requests to answer', data.open_help ?? 0],
+    ['Hygiene ratings to check', hygieneToCheck],
   ]
   return (
     <div className="stack">
@@ -198,6 +202,7 @@ export function AdminOverview() {
           </div>
         ))}
       </div>
+      <DailyCharts />
       {deletions.length > 0 && (
         <div className="card">
           <h2>Accounts to remove</h2>
@@ -212,6 +217,43 @@ export function AdminOverview() {
       )}
       <Waitlist />
       <DemoData />
+    </div>
+  )
+}
+
+type DayStat = { day: string; orders: number; sales_pence: number; fees_pence: number; new_users: number; new_sellers: number }
+
+// Simple bar charts for the last 30 days.
+function DailyCharts() {
+  const [days, setDays] = useState<DayStat[] | null>(null)
+  useEffect(() => {
+    supabase!.rpc('admin_daily_stats', { p_days: 30 }).then(({ data }) => setDays((data ?? []) as DayStat[]))
+  }, [])
+  if (!days?.length) return null
+  const short = (d: string) => new Date(d + 'T12:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
+  const charts: { title: string; total: string; values: number[] }[] = [
+    { title: 'Paid orders', total: String(days.reduce((n, d) => n + d.orders, 0)), values: days.map((d) => d.orders) },
+    { title: 'Sales', total: pounds(days.reduce((n, d) => n + Number(d.sales_pence), 0)), values: days.map((d) => Number(d.sales_pence)) },
+    { title: 'BiteBY fees', total: pounds(days.reduce((n, d) => n + Number(d.fees_pence), 0)), values: days.map((d) => Number(d.fees_pence)) },
+    { title: 'New sign-ups', total: String(days.reduce((n, d) => n + d.new_users, 0)), values: days.map((d) => d.new_users) },
+    { title: 'New seller applications', total: String(days.reduce((n, d) => n + d.new_sellers, 0)), values: days.map((d) => d.new_sellers) },
+  ]
+  return (
+    <div className="card stack">
+      <h2 style={{ margin: 0 }}>Last 30 days</h2>
+      {charts.map((c) => {
+        const max = Math.max(1, ...c.values)
+        return (
+          <div key={c.title} className="stack" style={{ gap: 4 }}>
+            <div className="item"><span className="small">{c.title}</span><strong>{c.total}</strong></div>
+            <div className="bars" role="img" aria-label={`${c.title} per day`}>
+              {c.values.map((v, i) => <span key={days[i].day} className={v ? '' : 'zero'} style={{ height: `${Math.max(2, (v / max) * 100)}%` }} title={`${short(days[i].day)}: ${c.title === 'Sales' || c.title === 'BiteBY fees' ? pounds(v) : v}`} />)}
+            </div>
+            <div className="bars-axis muted tiny"><span>{short(days[0].day)}</span><span>Today</span></div>
+          </div>
+        )
+      })}
+      <p className="muted tiny">Includes the demo shops’ made-up orders until you remove them.</p>
     </div>
   )
 }

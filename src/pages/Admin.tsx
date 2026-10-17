@@ -309,6 +309,7 @@ function SellerCard({ account, email, verifications, shop, onChanged }: {
           <div className="small">
             <strong>{KIND[v.kind]}</strong> · {v.status}
             {v.authority && <><br />{v.authority}{v.reference && `, ref ${v.reference}`}{v.registered_on && `, registered ${v.registered_on}`}</>}
+            {v.kind === 'hygiene_rating' && <><br />Rating {v.rating}/5{v.rating_date && `, inspected ${v.rating_date}`}{v.fhrs_id ? <> · <a href={`https://ratings.food.gov.uk/business/${v.fhrs_id}`} target="_blank" rel="noopener noreferrer">check on FSA</a></> : ' · no FSA link: ask the cook for proof'}</>}
           </div>
           {v.status === 'pending' && (
             <div className="row">

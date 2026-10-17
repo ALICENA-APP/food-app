@@ -4,6 +4,7 @@ import { recordView } from '../lib/views'
 import { ShopOffers } from '../lib/discounts'
 import { ReportLink } from '../lib/report'
 import { AskCookTile } from '../lib/askCook'
+import { CateringTile, HygieneBadge, fsaLink, hygieneWords, useHygiene } from '../lib/hygiene'
 import { supabase } from '../lib/supabase'
 import { useOrderCounts } from '../lib/popular'
 import { freeFrom, useAllergenHits, useMyAllergies } from '../lib/allergies'
@@ -28,6 +29,7 @@ export default function PublicShop({ slug }: { slug: string }) {
   const mine = useMyAllergies()
   const allergyHits = useAllergenHits(data?.products.map((p) => p.id) ?? [], mine.codes)
   const [showAll, setShowAll] = useState(false)
+  const hygiene = useHygiene(data ? [data.shop.id] : [])
 
   useEffect(() => {
     loadShop(slug).then(setData)
@@ -103,6 +105,7 @@ export default function PublicShop({ slug }: { slug: string }) {
           {shop.cuisines.map((c) => <span key={c} className="tag">{c}</span>)}
           {options.map((o) => <span key={o} className="tag grey">{o}</span>)}
         </div>
+        {hygiene[shop.id] && <HygieneBadge hygiene={hygiene[shop.id]} />}
       </div>
 
       {isPreview && <p className="status">Preview: only you can see this until your shop goes live.</p>}
@@ -181,9 +184,17 @@ export default function PublicShop({ slug }: { slug: string }) {
           {!isPreview && (
             <div className="info-row"><span className="ic"><Icon name="shield" /></span><div><strong>Checked by BiteBY</strong><p className="muted small">This cook has registered with their local council and been approved by our team.</p></div></div>
           )}
+          {hygiene[shop.id] && (
+            <div className="info-row"><span className="ic"><Icon name="check" /></span><div><strong>Food hygiene rating {hygiene[shop.id].rating}: {hygieneWords(hygiene[shop.id].rating).toLowerCase()}</strong>
+              <p className="muted small">
+                From the local council{hygiene[shop.id].rating_date ? `, inspected ${new Date(hygiene[shop.id].rating_date + 'T12:00:00').toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })}` : ''}. Checked by BiteBY.
+                {hygiene[shop.id].fhrs_id && <> <a href={fsaLink(hygiene[shop.id].fhrs_id!)} target="_blank" rel="noopener noreferrer">See it on the FSA website</a></>}
+              </p></div></div>
+          )}
         </div>
       )}
 
+      {!isPreview && settings?.takes_catering && <CateringTile shopId={shop.id} cookName={shop.name} />}
       {!isPreview && <AskCookTile shopId={shop.id} cookName={shop.name} />}
       {!isPreview && <ReportLink shopId={shop.id} />}
 
