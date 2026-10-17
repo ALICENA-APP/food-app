@@ -36,6 +36,8 @@ const Poster = lazy(() => import('./pages/Poster'))
 const Discounts = lazy(() => import('./pages/Discounts'))
 const MyAllergies = lazy(() => import('./pages/MyAllergies'))
 const PrepList = lazy(() => import('./pages/PrepList'))
+const Messages = lazy(() => import('./pages/Messages'))
+const SellerCustomers = lazy(() => import('./pages/SellerCustomers'))
 const Statement = lazy(() => import('./pages/Statements'))
 import { MyRequests } from './lib/help'
 import Intro, { introSeen } from './pages/Intro'
@@ -62,6 +64,7 @@ function App() {
   const shopMatch = path.match(/^\/s\/([a-z0-9-]+)\/?$/)
   const dishMatch = path.match(/^\/s\/([a-z0-9-]+)\/i\/([0-9a-f-]{36})\/?$/)
   const orderMatch = path.match(/^\/orders\/([0-9a-f-]{36})\/?$/)
+  const chatMatch = path.match(/^\/messages\/([0-9a-f-]{36})\/?$/)
   const productMatch = path.match(/^\/sell\/products\/([0-9a-f-]{36}|new)\/?$/)
 
   // Screens that need an account send people to sign in, then straight back.
@@ -115,6 +118,8 @@ function App() {
     page = needsAccount(<Statement kind="customer" />, 'Sign in to see your orders.')
   } else if (path === '/account') {
     page = needsAccount(<Account />, 'Sign in to manage your account.')
+  } else if (path === '/messages' || chatMatch) {
+    page = needsAccount(<Messages asSeller={false} chatId={chatMatch?.[1]} />, 'Sign in to see your messages to cooks.')
   } else if (path === '/addresses') {
     page = needsAccount(<Addresses />, 'Sign in to manage your saved addresses.')
   } else if (path === '/favourites') {
@@ -131,6 +136,8 @@ function App() {
     else if (path === '/sell/poster') page = <Poster />
     else if (path === '/sell/discounts') page = <Discounts />
     else if (path === '/sell/prep') page = <PrepList />
+    else if (path === '/sell/questions') page = <Messages asSeller />
+    else if (path === '/sell/customers') page = <SellerCustomers />
     else if (path === '/sell/statement') page = <Statement kind="seller" />
     else if (path === '/sell/earnings') page = <SellerEarnings />
     else if (path === '/sell/reviews') page = <SellerReviews />

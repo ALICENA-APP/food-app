@@ -635,3 +635,11 @@ fieldset.options legend { font-weight: 700; padding: 0 4px; display: flex; gap: 
 :root[data-theme='dark'] .allergy-warn { background: #3a1c1c; color: #ff9d9d; }
 .sort-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 .sort-row select { width: auto; }
+
+/* Ask the cook */
+.report-tile .ic.ask { background: var(--green-soft); }
+.chat-list.tall { max-height: 55vh; min-height: 160px; }
+.chat-row { display: flex; align-items: center; gap: 12px; text-decoration: none; color: inherit; }
+.chat-row .ic { width: 40px; height: 40px; border-radius: 50%; background: var(--line); display: flex; align-items: center; justify-content: center; flex: none; }
+.chat-row.unread .ic { background: var(--yellow); }
+.chat-row .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--yellow); flex: none; }

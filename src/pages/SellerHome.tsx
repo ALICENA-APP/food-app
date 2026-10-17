@@ -186,6 +186,8 @@ function Dashboard({ shop, account, onChanged }: { shop: Shop; account: SellerAc
         <SellerTile to="/sell/earnings" icon="pound" title="Earnings" sub="What you've made" tone="var(--line)" />
         <SellerTile to="/sell/reviews" icon="star" title="Reviews" sub="Read and reply" tone="var(--line)" />
         <SellerTile to="/sell/discounts" icon="tag" title="Discount codes" sub="Offers for customers" tone="var(--yellow-soft)" />
+        <SellerTile to="/sell/questions" icon="chat" title="Questions" sub="From customers" tone="var(--green-soft)" />
+        <SellerTile to="/sell/customers" icon="users" title="Customers" sub="Your regulars" tone="var(--line)" />
         <SellerTile to="/help" icon="help" title="Help" sub="How selling works" tone="var(--line)" />
       </div>
       <GetFeatured shopId={shop.id} shopLive={shop.status === 'live'} />

@@ -3,6 +3,7 @@ import { goBack, link, navigate } from '../lib/router'
 import { recordView } from '../lib/views'
 import { ShopOffers } from '../lib/discounts'
 import { ReportLink } from '../lib/report'
+import { AskCookTile } from '../lib/askCook'
 import { supabase } from '../lib/supabase'
 import { useOrderCounts } from '../lib/popular'
 import { freeFrom, useAllergenHits, useMyAllergies } from '../lib/allergies'
@@ -183,6 +184,7 @@ export default function PublicShop({ slug }: { slug: string }) {
         </div>
       )}
 
+      {!isPreview && <AskCookTile shopId={shop.id} cookName={shop.name} />}
       {!isPreview && <ReportLink shopId={shop.id} />}
 
       {inBasket > 0 && (

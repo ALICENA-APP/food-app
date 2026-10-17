@@ -4,6 +4,7 @@ import { photoUrl } from '../lib/images'
 import { Icon, VerifiedTick } from '../lib/icons'
 import { lineQty, qtyIn, setQty, useBasket } from '../lib/basket'
 import { ReportLink } from '../lib/report'
+import { AskCookTile } from '../lib/askCook'
 import { useMyAllergies, warningText } from '../lib/allergies'
 import { PopularTag, StockAlertButton, useOrderCounts } from '../lib/popular'
 import { recordView, rememberDish } from '../lib/views'
@@ -189,6 +190,7 @@ export default function Dish({ slug, productId }: { slug: string; productId: str
         </div>
       </div>
 
+      {shop.status === 'live' && <AskCookTile shopId={shop.id} cookName={shop.name} productId={product.id} productName={product.name} />}
       {shop.status === 'live' && <ReportLink shopId={shop.id} productId={product.id} />}
 
       {others.length > 0 && (

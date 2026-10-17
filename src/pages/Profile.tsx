@@ -133,11 +133,12 @@ export default function Profile() {
         <Tile to="/favourites?tab=sellers" icon="store" title="Favourite cooks" sub="Shops you follow" />
         <Tile to="/orders" icon="orders" title="Orders" sub="Track and reorder" tone="var(--green-soft)" />
         <Tile to="/addresses" icon="pin" title="Addresses" sub="For delivery" tone="var(--yellow-soft)" />
+        <Tile to="/messages" icon="chat" title="Messages" sub="Questions to cooks" tone="var(--green-soft)" />
         <Tile to="/alerts" icon="bell" title="Notifications" sub="Order updates" tone="var(--line)" />
         <Tile to="/account/password" icon="lock" title="Password" sub="Set or change it" tone="var(--line)" />
         <Tile to="/help" icon="help" title="Help and support" sub="How BiteBY works" tone="var(--line)" />
         <Tile to="/account" icon="shield" title="Your data" sub="Download or delete" tone="var(--line)" />
-        <Tile to="/my-allergies" icon="leaf" title="My allergies" sub="Hide and flag dishes" tone="var(--green-soft)" wide />
+        <Tile to="/my-allergies" icon="leaf" title="My allergies" sub="Hide and flag dishes" tone="var(--green-soft)" />
         {isAdmin && <Tile to="/admin" icon="shield" title="Admin" sub="BiteBY team tools" tone="var(--yellow)" wide />}
         <Tile icon="logout" title="Sign out" tone="var(--line)" wide onClick={async () => { await supabase!.auth.signOut(); navigate('/') }} />
       </div>
