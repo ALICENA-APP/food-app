@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase'
 import { link, navigate } from '../lib/router'
 import { Icon } from '../lib/icons'
 import { dishQuery, loadFeatured, loadRatings, useCategories, type Dish, type Rating } from '../lib/catalogue'
+import { useOrderCounts } from '../lib/popular'
 import { loadOpenStates, type OpenState } from '../lib/hours'
 import { InstallPrompt } from '../lib/install'
 import { PostcodePicker } from '../lib/PostcodePicker'
@@ -19,6 +20,7 @@ export default function Home() {
   const categories = useCategories()
   const commission = useCommission()
   const [dishes, setDishes] = useState<Dish[] | null>(null)
+  const orderCounts = useOrderCounts((dishes ?? []).map((d) => d.id))
   const [shops, setShops] = useState<ShopCardData[]>([])
   const [ratings, setRatings] = useState<Record<string, Rating>>({})
   const [query, setQuery] = useState('')
@@ -67,7 +69,8 @@ export default function Home() {
   const reach = (shopId: string) => (delivers[shopId] !== undefined || near[shopId]?.delivers ? 1 : 0)
   const away = (shopId: string) => near[shopId]?.miles ?? 99
   const closer = (a: string, b: string) => reach(b) - reach(a) || away(a) - away(b)
-  const popular = [...(dishes ?? [])].sort((a, b) => closer(a.shop_id, b.shop_id) || rated(b.shop_id) - rated(a.shop_id)).slice(0, 10)
+  const ordered = (id: string) => orderCounts[id] ?? 0
+  const popular = [...(dishes ?? [])].sort((a, b) => closer(a.shop_id, b.shop_id) || ordered(b.id) - ordered(a.id) || rated(b.shop_id) - rated(a.shop_id)).slice(0, 10)
   const sweet = (dishes ?? []).filter((d) => d.category_id && desserts.includes(d.category_id)).slice(0, 10)
   const featuredShops = featured.map((id) => shops.find((x) => x.id === id)).filter((x): x is ShopCardData => Boolean(x))
   const topShops = [...shops].sort((a, b) => (point ? closer(a.id, b.id) : 0) || rated(b.id) - rated(a.id) || (ratings[b.id]?.reviews ?? 0) - (ratings[a.id]?.reviews ?? 0)).slice(0, 10)
@@ -133,7 +136,7 @@ export default function Home() {
             <a href="/explore" onClick={link('/explore')}>See all</a>
           </div>
           <div className="hscroll">
-            {popular.map((d) => <DishCard key={d.id} dish={d} rating={ratings[d.shop_id]} />)}
+            {popular.map((d) => <DishCard key={d.id} dish={d} rating={ratings[d.shop_id]} orders={orderCounts[d.id]} />)}
           </div>
         </section>
       )}
@@ -174,7 +177,7 @@ export default function Home() {
             <a href="/explore?c=desserts" onClick={link('/explore?c=desserts')}>See all</a>
           </div>
           <div className="hscroll">
-            {sweet.map((d) => <DishCard key={d.id} dish={d} rating={ratings[d.shop_id]} />)}
+            {sweet.map((d) => <DishCard key={d.id} dish={d} rating={ratings[d.shop_id]} orders={orderCounts[d.id]} />)}
           </div>
         </section>
       )}

@@ -4,6 +4,7 @@ import { photoUrl } from '../lib/images'
 import { Icon, VerifiedTick } from '../lib/icons'
 import { lineQty, qtyIn, setQty, useBasket } from '../lib/basket'
 import { ReportLink } from '../lib/report'
+import { PopularTag, StockAlertButton, useOrderCounts } from '../lib/popular'
 import { recordView, rememberDish } from '../lib/views'
 import { allergenLists, averageRating, loadShop, type ShopData } from '../lib/shopData'
 import { Avatar, BackButton, FoodPhoto, HeartButton, share } from '../lib/ui'
@@ -18,6 +19,7 @@ export default function Dish({ slug, productId }: { slug: string; productId: str
   const [variantId, setVariantId] = useState<string | null>(null)
   const [addonIds, setAddonIds] = useState<string[]>([])
   const basket = useBasket()
+  const counts = useOrderCounts([productId])
 
   useEffect(() => {
     loadShop(slug).then(setData)
@@ -112,6 +114,7 @@ export default function Dish({ slug, productId }: { slug: string; productId: str
         </p>
         <div className="tags">
           <span className="tag">Homemade</span>
+          <PopularTag orders={counts[product.id]} />
           {daysLabel(product.available_days) && <span className="tag">{daysLabel(product.available_days)}</span>}
           {product.min_lead_hours ? <span className="tag">{noticeLabel(product.min_lead_hours)}</span> : null}
           {category && <span className="tag grey">{category}</span>}
@@ -216,7 +219,10 @@ export default function Dish({ slug, productId }: { slug: string; productId: str
           )}
         </div>
       ) : (
-        <p className="status">{shop.status !== 'live' ? 'Preview: customers can order once your shop is live.' : soldOut ? 'Sold out for now. Save it with the heart and check back soon.' : "This dish can't be ordered right now."}</p>
+        <>
+          <p className="status">{shop.status !== 'live' ? 'Preview: customers can order once your shop is live.' : soldOut ? 'Sold out for now.' : "This dish can't be ordered right now."}</p>
+          {shop.status === 'live' && soldOut && <StockAlertButton productId={product.id} />}
+        </>
       )}
     </div>
   )

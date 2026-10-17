@@ -622,3 +622,8 @@ fieldset.options legend { font-weight: 700; padding: 0 4px; display: flex; gap: 
 :root[data-theme='dark'] .intro-logo { content: url('/logo-word-dark.png'); }
 @media (max-width: 360px) { .intro-explore { grid-template-columns: 1fr; } .intro-title { font-size: 1.3rem; } }
 :root[data-theme='dark'] .intro-hero { background: #fdfbf6; border-radius: 20px; width: 100%; margin: 0; }
+
+/* Dishes people order a lot */
+.tag.popular { white-space: nowrap; background: #fff1e6; color: #b4500f; }
+.tag.popular.on-photo { position: absolute; top: 8px; left: 8px; font-size: 0.7rem; padding: 3px 8px; box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12); }
+:root[data-theme='dark'] .tag.popular { background: #3b2414; color: #ffb27a; }

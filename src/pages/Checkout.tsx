@@ -50,6 +50,7 @@ export default function Checkout() {
   const [lead, setLead] = useState(0)
   const [dayLimits, setDayLimits] = useState<{ name: string; days: number[] }[]>([])
   const [away, setAway] = useState<string[]>([])
+  const [full, setFull] = useState<string[]>([])
   const [demo, setDemo] = useState(false)
   const [applied, setApplied] = useState<AppliedCode | null>(null)
   // For cooks who deliver within a distance: where the delivery postcode is,
@@ -98,6 +99,7 @@ export default function Checkout() {
     const today = londonNow().date
     supabase!.from('shop_closures').select('closed_on').eq('shop_id', shopId).gte('closed_on', today).lte('closed_on', addDays(today, 60))
       .then(({ data }) => setAway((data ?? []).map((x) => x.closed_on)))
+    supabase!.rpc('shop_full_days', { p_shop: shopId }).then(({ data }) => setFull(((data ?? []) as string[]).map(String)))
   }, [shopId])
 
   // The most notice any dish in the basket needs.
@@ -154,6 +156,7 @@ export default function Checkout() {
   const sameAddress = (a: SavedAddress) => a.address.trim() === address.trim() && a.postcode.replace(/\s/g, '').toUpperCase() === postcode.replace(/\s/g, '').toUpperCase()
   const wantedDay = when ? londonNow(new Date(when)).date : londonNow().date
   const awayThen = away.includes(wantedDay)
+  const fullThen = !awayThen && full.includes(wantedDay)
   const wantedWeekday = (new Date(wantedDay + 'T12:00:00Z').getUTCDay() + 6) % 7
   const wrongDay = dayLimits.find((d) => !d.days.includes(wantedWeekday))
   const isNewAddress = address.trim().length > 2 && !saved.some(sameAddress)
@@ -168,6 +171,7 @@ export default function Checkout() {
     }
     if (wrongDay) return setMessage(`${wrongDay.name} is made on ${daysLabel(wrongDay.days).replace(' only', '')} only. Choose one of those days.`)
     if (awayThen) return setMessage(`The cook is away on ${shortDate(wantedDay)}. Please choose another day.`)
+    if (fullThen) return setMessage(`The cook is fully booked on ${shortDate(wantedDay)}. Please choose another day.`)
     if (!session) return askToSignIn('/basket')
     setPlacing(true)
     const { data, error } = await supabase!.rpc('place_order', {
@@ -280,6 +284,7 @@ export default function Checkout() {
           <input type="datetime-local" required={lead > 0} min={localInput(lead ? earliest : new Date())} value={when} onChange={(e) => update({ when: e.target.value })} />
         </label>
         {awayThen && <p className="error small">The cook is away on {shortDate(wantedDay)}{away.length > 1 ? ` (days off: ${away.slice(0, 5).map(shortDate).join(', ')}${away.length > 5 ? '…' : ''})` : ''}. Choose another day.</p>}
+        {fullThen && <p className="error small">The cook is fully booked {when ? `on ${shortDate(wantedDay)}` : 'today'}. Choose another day{when ? '' : ' above'}.</p>}
         {wrongDay && <p className="error small">{wrongDay.name} is made on {daysLabel(wrongDay.days).replace(' only', '')} only. Choose one of those days{when ? '' : ' above'}.</p>}
         {lead > 0 && <p className="muted small">Some dishes are made to order: {noticeLabel(lead).toLowerCase()}. The earliest is {niceTime(earliest)}.</p>}
         <label>

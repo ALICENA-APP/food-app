@@ -217,6 +217,7 @@ function ShopForm({ account, shop, settings, priv }: Loaded & { account: SellerA
       {shop && <ShopPhotos shop={shop} />}
       {shop && <ShopNotice shop={shop} />}
       {shop && <OpeningHours shopId={shop.id} />}
+      {shop && <DailyLimit shopId={shop.id} />}
       {shop && delivery && <DeliveryRadius shopId={shop.id} />}
       {shop && delivery && <DeliveryZones shopId={shop.id} />}
 
@@ -280,6 +281,40 @@ function ShopForm({ account, shop, settings, priv }: Loaded & { account: SellerA
       <button type="submit" disabled={saving}>{saving ? 'Saving…' : shop ? 'Save' : 'Create my shop'}</button>
       {message && <p className="muted">{message}</p>}
     </form>
+  )
+}
+
+// The most orders a cook takes for one day. When a day is full, customers
+// are asked to choose another day.
+function DailyLimit({ shopId }: { shopId: string }) {
+  const [max, setMax] = useState('')
+  const [message, setMessage] = useState('')
+
+  useEffect(() => {
+    supabase!.from('shop_settings').select('max_orders_per_day').eq('shop_id', shopId).maybeSingle().then(({ data }) => {
+      setMax(data?.max_orders_per_day ? String(data.max_orders_per_day) : '')
+    })
+  }, [shopId])
+
+  async function save() {
+    setMessage('')
+    const n = max ? Math.round(Number(max)) : null
+    if (n !== null && !(n >= 1 && n <= 500)) return setMessage('Choose between 1 and 500 orders.')
+    const { error } = await supabase!.from('shop_settings').update({ max_orders_per_day: n }).eq('shop_id', shopId)
+    setMessage(error ? error.message : n ? `Saved: up to ${n} ${n === 1 ? 'order' : 'orders'} a day.` : 'Saved: no daily limit.')
+  }
+
+  return (
+    <div className="card">
+      <h2>Orders per day</h2>
+      <p className="muted small">Only cook as much as you can manage. When a day is full, customers are asked to pick another day.</p>
+      <label>
+        Most orders I take in a day
+        <input type="number" inputMode="numeric" min={1} max={500} value={max} onChange={(e) => setMax(e.target.value)} placeholder="No limit" />
+      </label>
+      <button type="button" className="secondary" onClick={save}>Save</button>
+      {message && <p className="muted small">{message}</p>}
+    </div>
   )
 }
 

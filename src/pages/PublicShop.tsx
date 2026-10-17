@@ -3,6 +3,8 @@ import { goBack, link, navigate } from '../lib/router'
 import { recordView } from '../lib/views'
 import { ShopOffers } from '../lib/discounts'
 import { ReportLink } from '../lib/report'
+import { supabase } from '../lib/supabase'
+import { useOrderCounts } from '../lib/popular'
 import { photoUrl } from '../lib/images'
 import { Icon, VerifiedTick } from '../lib/icons'
 import { ReviewItem } from '../lib/reviews'
@@ -19,10 +21,19 @@ export default function PublicShop({ slug }: { slug: string }) {
   const [tab, setTab] = useState<'menu' | 'reviews' | 'about'>('menu')
   const [category, setCategory] = useState('')
   const basket = useBasket()
+  const counts = useOrderCounts(data?.products.map((p) => p.id) ?? [])
+  const [fullToday, setFullToday] = useState(false)
 
   useEffect(() => {
     loadShop(slug).then(setData)
   }, [slug])
+
+  useEffect(() => {
+    if (!data?.shop.id) return
+    supabase!.rpc('shop_full_days', { p_shop: data.shop.id }).then(({ data: days }) => {
+      setFullToday(((days ?? []) as string[]).map(String).includes(londonNow().date))
+    })
+  }, [data?.shop.id])
 
   useEffect(() => {
     if (data) {
@@ -99,6 +110,7 @@ export default function PublicShop({ slug }: { slug: string }) {
         </p>
       ) : state && !state.open && canOrder && <p className="status small">You can still order ahead: choose a time at checkout.</p>}
       {!isPreview && !shop.accepting_orders && <p className="status">This shop isn't taking orders right now.</p>}
+      {canOrder && fullToday && !back && <p className="status small">Fully booked today. You can still order for another day: choose a time at checkout.</p>}
 
       <div className="tabs" role="tablist">
         {(['menu', 'reviews', 'about'] as const).map((t) => (
@@ -124,7 +136,7 @@ export default function PublicShop({ slug }: { slug: string }) {
             const choose = hasOptions(data, p.id)
             const from = Math.min(p.price_pence, ...data.variants.filter((v) => v.product_id === p.id).map((v) => p.price_pence + v.price_delta_pence))
             return (
-              <MenuRow key={p.id} product={p} slug={shop.slug} photo={images[p.id]?.[0] ?? null} price={choose ? `from ${pounds(from)}` : pounds(p.price_pence)}
+              <MenuRow key={p.id} orders={counts[p.id]} product={p} slug={shop.slug} photo={images[p.id]?.[0] ?? null} price={choose ? `from ${pounds(from)}` : pounds(p.price_pence)}
                 qty={choose ? 0 : qtyIn(basket, shop.id, p.id)} canOrder={canOrder && p.status === 'published' && p.stock_qty !== 0}
                 onQty={(n) => (choose ? navigate(`/s/${shop.slug}/i/${p.id}`)
                   : setQty(shop, { productId: p.id, name: p.name, pricePence: p.price_pence, photo: images[p.id]?.[0] ?? null }, n))} />
@@ -170,8 +182,8 @@ export default function PublicShop({ slug }: { slug: string }) {
   )
 }
 
-function MenuRow({ product: p, slug, photo, price, qty, canOrder, onQty }: {
-  product: Product; slug: string; photo: string | null; price: string; qty: number; canOrder: boolean; onQty: (n: number) => void
+function MenuRow({ product: p, orders, slug, photo, price, qty, canOrder, onQty }: {
+  product: Product; orders?: number; slug: string; photo: string | null; price: string; qty: number; canOrder: boolean; onQty: (n: number) => void
 }) {
   const to = `/s/${slug}/i/${p.id}`
   return (
@@ -183,7 +195,7 @@ function MenuRow({ product: p, slug, photo, price, qty, canOrder, onQty }: {
         {p.dietary?.length > 0 && <span className="tags">{p.dietary.map((d) => <span key={d} className="tag green">{dietaryName(d)}</span>)}</span>}
         {p.status !== 'published' && <span className="pill">Draft, not visible to customers</span>}
         <strong>{price}</strong>
-        {p.stock_qty === 0 && <span className="tag red">Sold out</span>}
+        {p.stock_qty === 0 ? <span className="tag red">Sold out</span> : orders ? <span className="tag popular">Popular</span> : null}
         {daysLabel(p.available_days) && <span className="muted tiny">{daysLabel(p.available_days)}</span>}
         {p.min_lead_hours ? <span className="muted tiny">{noticeLabel(p.min_lead_hours)}</span> : null}
         {p.stock_qty !== null && p.stock_qty > 0 && p.stock_qty <= 5 && <span className="muted tiny">Only {p.stock_qty} left</span>}

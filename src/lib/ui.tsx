@@ -129,12 +129,13 @@ export function dishLink(d: Pick<Dish, 'id' | 'shops'>) {
   return `/s/${d.shops.slug}/i/${d.id}`
 }
 
-export function DishCard({ dish, rating }: { dish: Dish; rating?: Rating }) {
+export function DishCard({ dish, rating, orders }: { dish: Dish; rating?: Rating; orders?: number }) {
   const to = dishLink(dish)
   return (
     <a className={`dish-card ${dish.stock_qty === 0 ? 'sold-out' : ''}`} href={to} onClick={link(to)}>
       <span className="ph"><FoodPhoto path={firstPhoto(dish)} alt={dish.name} /></span>
       <HeartButton productId={dish.id} />
+      {orders && dish.stock_qty !== 0 ? <span className="tag popular on-photo">Popular</span> : null}
       <span className="body">
         <span className="name">{dish.name}</span>
         <span className="by">{dish.shops.name}{dish.shops.is_demo && <> <DemoTag /></>}</span>
