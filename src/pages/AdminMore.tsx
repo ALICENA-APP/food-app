@@ -660,8 +660,29 @@ export function AdminShops() {
           </p>
           <p className="small">{s.orders} paid {s.orders === 1 ? 'order' : 'orders'} · {s.reports} {s.reports === 1 ? 'report' : 'reports'} · {s.flags} flagged in total</p>
           <ShopActions shopId={s.id} status={s.status} onChanged={(next) => setShops((list) => list!.map((x) => (x.id === s.id ? { ...x, status: next } : x)))} />
+          {!s.is_demo && <TestShopButton shopId={s.id} name={s.name} />}
         </article>
       ))}
+    </div>
+  )
+}
+
+// Fills a shop with sample dishes, orders and reviews, and lets orders from it
+// be paid in test mode. Removed again with the demo data.
+function TestShopButton({ shopId, name }: { shopId: string; name: string }) {
+  const [sure, setSure] = useState(false)
+  const [message, setMessage] = useState('')
+  async function make() {
+    const { error } = await supabase!.rpc('admin_make_test_shop', { p_shop: shopId })
+    setSure(false)
+    setMessage(error ? error.message : `${name} is now a test shop with sample dishes, orders and reviews.`)
+  }
+  return (
+    <div className="stack" style={{ gap: 4 }}>
+      <button type="button" className="link" style={{ alignSelf: 'flex-start' }} onClick={() => (sure ? make() : setSure(true))}>
+        {sure ? `Tap again to fill ${name} with sample data` : 'Make this a test shop'}
+      </button>
+      {message && <p className="small">{message}</p>}
     </div>
   )
 }
