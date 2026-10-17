@@ -429,28 +429,32 @@ function HelpCard({ help: h, onDone }: { help: AdminHelp; onDone: () => void }) 
 // The made-up demo shops: how many there are, and a button to remove them all.
 function DemoData() {
   const [count, setCount] = useState<number | null>(null)
+  const [testShop, setTestShop] = useState('')
   const [sure, setSure] = useState(false)
   const [message, setMessage] = useState('')
 
   useEffect(() => {
     supabase!.from('shops').select('id', { count: 'exact', head: true }).eq('is_demo', true).then(({ count: n }) => setCount(n ?? 0))
+    supabase!.from('shops').select('name').eq('is_test', true).limit(1).then(({ data }) => setTestShop(data?.[0]?.name ?? ''))
   }, [])
 
-  if (!count && !message) return null
+  if (!count && !testShop && !message) return null
 
   async function remove() {
     const { data, error } = await supabase!.rpc('admin_remove_demo_data')
     if (error) return setMessage(error.message)
     setCount(0)
-    setMessage(`Removed ${data} demo shops, with their dishes, reviews and featured spots.`)
+    setTestShop('')
+    setMessage(`Removed ${data} demo shops, with their dishes, reviews and featured spots, and the test shop's sample data.`)
   }
 
   return (
     <div className="card">
       <h2>Demo shops</h2>
-      {count ? (
+      {count || testShop ? (
         <>
-          <p className="muted small">There are {count} made-up demo shops so you can try every part of the app. They’re labelled “Demo” and can’t take real orders. Remove them before launch.</p>
+          {count ? <p className="muted small">There are {count} made-up demo shops so you can try every part of the app. They’re labelled “Demo” and can’t take real orders. Remove them before launch.</p> : null}
+          {testShop && <p className="muted small">{testShop} is a test shop: it has sample dishes, orders and reviews, and orders from it can be paid in test mode. Removing demo data also removes those samples and puts {testShop} back to draft until payments are set up.</p>}
           <button type="button" className={sure ? 'danger' : 'secondary'} onClick={() => (sure ? remove() : setSure(true))}>
             {sure ? 'Tap again to remove all demo shops' : 'Remove demo shops'}
           </button>

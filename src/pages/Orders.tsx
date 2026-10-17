@@ -34,7 +34,7 @@ export type Order = {
   platform_fee_pence: number
   decline_reason: string | null
   created_at: string
-  shops?: { name: string; slug: string; logo_path?: string | null }
+  shops?: { name: string; slug: string; logo_path?: string | null; is_test?: boolean }
 }
 
 export type OrderItem = { id: string; name: string; qty: number; unit_price_pence: number; line_total_pence: number; contains: string[]; may_contain: string[] }
@@ -202,7 +202,7 @@ export function OrderDetail({ id }: { id: string }) {
     const { data: r } = await db.from('reviews').select('*').eq('order_id', id).maybeSingle()
     setReview(r)
     const [o, i, a] = await Promise.all([
-      db.from('orders').select('*, shops(name, slug)').eq('id', id).maybeSingle(),
+      db.from('orders').select('*, shops(name, slug, is_test)').eq('id', id).maybeSingle(),
       db.from('order_items').select('*').eq('order_id', id),
       db.from('allergens').select('code, name'),
     ])
@@ -221,6 +221,12 @@ export function OrderDetail({ id }: { id: string }) {
 
   async function cancel() {
     const { error } = await supabase!.rpc('cancel_unpaid_order', { p_order: id })
+    if (error) setMessage(error.message)
+    else load()
+  }
+
+  async function testPay() {
+    const { error } = await supabase!.rpc('test_pay_order', { p_order: id })
     if (error) setMessage(error.message)
     else load()
   }
@@ -245,7 +251,17 @@ export function OrderDetail({ id }: { id: string }) {
             Online payment is being switched on. Your order has been saved but hasn't been sent to
             the cook yet, and you haven't been charged.
           </p>
-          <button className="secondary" onClick={cancel}>Cancel this order</button>
+          {order.shops?.is_test ? (
+            <>
+              <p className="small">This is a test shop, so you can pretend to pay. Nothing is charged.</p>
+              <div className="row">
+                <button onClick={testPay}>Pay (test mode)</button>
+                <button className="secondary" onClick={cancel}>Cancel this order</button>
+              </div>
+            </>
+          ) : (
+            <button className="secondary" onClick={cancel}>Cancel this order</button>
+          )}
           {message && <p className="error">{message}</p>}
         </div>
       )}
