@@ -82,6 +82,7 @@ export default function Profile() {
         </div>
         <SellerPromo />
         <div className="menu-tiles">
+          <Tile to="/my-allergies" icon="leaf" title="My allergies" sub="Hide and flag dishes" tone="var(--green-soft)" wide />
           <Tile to="/help" icon="help" title="Help and support" sub="How BiteBY works" tone="var(--line)" wide />
         </div>
         <ThemePicker />
@@ -136,6 +137,7 @@ export default function Profile() {
         <Tile to="/account/password" icon="lock" title="Password" sub="Set or change it" tone="var(--line)" />
         <Tile to="/help" icon="help" title="Help and support" sub="How BiteBY works" tone="var(--line)" />
         <Tile to="/account" icon="shield" title="Your data" sub="Download or delete" tone="var(--line)" />
+        <Tile to="/my-allergies" icon="leaf" title="My allergies" sub="Hide and flag dishes" tone="var(--green-soft)" wide />
         {isAdmin && <Tile to="/admin" icon="shield" title="Admin" sub="BiteBY team tools" tone="var(--yellow)" wide />}
         <Tile icon="logout" title="Sign out" tone="var(--line)" wide onClick={async () => { await supabase!.auth.signOut(); navigate('/') }} />
       </div>

@@ -1,12 +1,14 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
-import { navigate, queryParam } from '../lib/router'
+import { link, navigate, queryParam } from '../lib/router'
 import { Icon } from '../lib/icons'
 import { dishQuery, loadFeatured, loadRatings, loadShopOptions, useCategories, type Dish, type Rating } from '../lib/catalogue'
 import { loadOpenStates, type OpenState } from '../lib/hours'
 import { loadDeliveryTo, loadNear, postcodeDistrict, usePostcode, type Near } from '../lib/postcode'
 import { PostcodePicker } from '../lib/PostcodePicker'
 import { CategoryIcon } from '../lib/categoryIcons'
+import { freeFrom, useAllergenHits, useMyAllergies } from '../lib/allergies'
+import { useOrderCounts } from '../lib/popular'
 import { DishCard, SellerRow, type ShopCardData } from '../lib/ui'
 
 type Filter = 'delivery' | 'collection' | 'rated' | 'under10' | 'vegetarian' | 'vegan' | 'halal' | 'open'
@@ -19,6 +21,15 @@ const FILTERS: { key: Filter; label: string }[] = [
   { key: 'vegan', label: 'Vegan' },
   { key: 'halal', label: 'Halal' },
   { key: 'open', label: 'Open now' },
+]
+
+type Sort = 'new' | 'nearest' | 'rated' | 'popular' | 'price'
+const SORTS: { key: Sort; label: string }[] = [
+  { key: 'new', label: 'Newest' },
+  { key: 'nearest', label: 'Nearest' },
+  { key: 'rated', label: 'Top rated' },
+  { key: 'popular', label: 'Most ordered' },
+  { key: 'price', label: 'Lowest price' },
 ]
 
 type ShopRow = ShopCardData & { accepting_orders: boolean }
@@ -41,6 +52,13 @@ export default function Explore() {
   const [delivers, setDelivers] = useState<Record<string, number>>({})
   const [featured, setFeatured] = useState<string[]>([])
   const [options, setOptions] = useState<Record<string, { collection: boolean; delivery: boolean }>>({})
+  const [sort, setSort] = useState<Sort>('new')
+  const mine = useMyAllergies()
+  const [ignoreAllergies, setIgnoreAllergies] = useState(false)
+  const dishIds = (dishes ?? []).map((d) => d.id)
+  const hits = useAllergenHits(dishIds, mine.codes)
+  const orderCounts = useOrderCounts(dishIds)
+  const allergyFilter = mine.codes.length > 0 && !ignoreAllergies
 
   useEffect(() => {
     ;(async () => {
@@ -97,10 +115,17 @@ export default function Explore() {
     (!has('halal') || d.dietary.includes('halal')) &&
     (!has('delivery') || d.delivery_ok) &&
     (!has('collection') || d.collection_ok) &&
+    (!allergyFilter || freeFrom(hits, d.id, mine.strict)) &&
     shopOk(d.shop_id, d.shops.accepting_orders))
+  const miles = (d: Dish) => near[d.shop_id]?.miles ?? 99
+  const sortedDishes = sort === 'new' ? shownDishes : [...shownDishes].sort((a, b) =>
+    sort === 'nearest' ? miles(a) - miles(b)
+      : sort === 'rated' ? (ratings[b.shop_id]?.average ?? 0) - (ratings[a.shop_id]?.average ?? 0)
+        : sort === 'popular' ? (orderCounts[b.id] ?? 0) - (orderCounts[a.id] ?? 0)
+          : a.price_pence - b.price_pence)
 
   const withDishes = new Set(shownDishes.map((d) => d.shop_id))
-  const dishFilterOn = Boolean(categoryId) || ['under10', 'vegetarian', 'vegan', 'halal'].some((f) => has(f as Filter))
+  const dishFilterOn = Boolean(categoryId) || allergyFilter || ['under10', 'vegetarian', 'vegan', 'halal'].some((f) => has(f as Filter))
   // Up to three featured cooks go first, labelled Sponsored; the rest by distance.
   const pinned = new Set(featured.slice(0, 3))
   const shownShops = [...shops].sort((a, b) => Number(pinned.has(b.id)) - Number(pinned.has(a.id)) || (near[a.id]?.miles ?? 99) - (near[b.id]?.miles ?? 99)).filter((s) =>
@@ -126,6 +151,13 @@ export default function Explore() {
         </div>
       )}
       <div className="chips">
+        {mine.codes.length > 0 ? (
+          <button type="button" className={`chip ${allergyFilter ? 'on' : ''}`} onClick={() => setIgnoreAllergies(!ignoreAllergies)}>
+            <Icon name="leaf" size={16} /> Free from my allergies
+          </button>
+        ) : (
+          <a className="chip" href="/my-allergies" onClick={link('/my-allergies')}><Icon name="leaf" size={16} /> Allergies?</a>
+        )}
         {FILTERS.map((f) => (
           <button key={f.key} type="button" className={`chip ${has(f.key) ? 'on' : ''}`} onClick={() => toggle(f.key)}>
             {['vegetarian', 'vegan', 'halal'].includes(f.key) && <span className="chip-ic"><CategoryIcon slug={f.key} /></span>}
@@ -151,9 +183,17 @@ export default function Explore() {
       </div>
 
       {dishes === null && <p className="muted">Loading…</p>}
+      {dishes && view === 'items' && shownDishes.length > 0 && (
+        <div className="sort-row">
+          <span className="muted small">{allergyFilter && hits === null ? 'Checking allergens…' : allergyFilter ? `Hiding dishes with your allergens${mine.strict ? ' (and may contain)' : ''}` : ''}</span>
+          <select aria-label="Sort dishes" value={sort} onChange={(e) => setSort(e.target.value as Sort)}>
+            {SORTS.filter((s) => s.key !== 'nearest' || point).map((s) => <option key={s.key} value={s.key}>{s.label}</option>)}
+          </select>
+        </div>
+      )}
       {dishes && view === 'items' && (shownDishes.length ? (
         <div className="grid2">
-          {shownDishes.map((d) => <DishCard key={d.id} dish={d} rating={ratings[d.shop_id]} />)}
+          {sortedDishes.map((d) => <DishCard key={d.id} dish={d} rating={ratings[d.shop_id]} orders={orderCounts[d.id]} />)}
         </div>
       ) : <NothingFound empty={dishes.length === 0} />)}
       {dishes && view === 'sellers' && (shownShops.length ? (

@@ -34,6 +34,8 @@ const SellerReviews = lazy(() => import('./pages/SellerInsights').then((m) => ({
 const Admin = lazy(() => import('./pages/Admin'))
 const Poster = lazy(() => import('./pages/Poster'))
 const Discounts = lazy(() => import('./pages/Discounts'))
+const MyAllergies = lazy(() => import('./pages/MyAllergies'))
+const PrepList = lazy(() => import('./pages/PrepList'))
 const Statement = lazy(() => import('./pages/Statements'))
 import { MyRequests } from './lib/help'
 import Intro, { introSeen } from './pages/Intro'
@@ -95,6 +97,8 @@ function App() {
     page = <Terms />
   } else if (path === '/privacy') {
     page = <Privacy />
+  } else if (path === '/my-allergies') {
+    page = <MyAllergies />
   } else if (path === '/allergens') {
     page = <AllergenInfo />
   } else if (path === '/seller-terms') {
@@ -126,6 +130,7 @@ function App() {
     else if (path === '/sell/shop') page = <ShopSetup />
     else if (path === '/sell/poster') page = <Poster />
     else if (path === '/sell/discounts') page = <Discounts />
+    else if (path === '/sell/prep') page = <PrepList />
     else if (path === '/sell/statement') page = <Statement kind="seller" />
     else if (path === '/sell/earnings') page = <SellerEarnings />
     else if (path === '/sell/reviews') page = <SellerReviews />

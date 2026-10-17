@@ -180,6 +180,7 @@ function Dashboard({ shop, account, onChanged }: { shop: Shop; account: SellerAc
 
       <div className="menu-tiles">
         <SellerTile to="/sell/orders" icon="orders" title="Orders" sub="Accept and update" tone="var(--green-soft)" />
+        <SellerTile to="/sell/prep" icon="cutlery" title="Cooking list" sub="What to make each day" tone="var(--yellow-soft)" />
         <SellerTile to="/sell/products" icon="chef" title="Menu" sub="Dishes, photos, sold out" />
         <SellerTile to="/sell/shop" icon="store" title="Shop details" sub="Photos, hours, delivery" tone="var(--line)" />
         <SellerTile to="/sell/earnings" icon="pound" title="Earnings" sub="What you've made" tone="var(--line)" />

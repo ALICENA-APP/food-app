@@ -8,6 +8,7 @@ import { FoodPhoto } from '../lib/ui'
 import { formatPostcode, loadNear, looksLikePostcode, readPostcode, type Point } from '../lib/postcode'
 import { locatePostcode } from '../lib/geo'
 import { loadAddresses, saveAddress, type SavedAddress } from './Addresses'
+import { useAllergenHits, useMyAllergies, warningText } from '../lib/allergies'
 import { daysLabel, noticeLabel, pounds, type ShopSettings } from '../lib/types'
 import { addDays, londonNow, shortDate } from '../lib/hours'
 import { DiscountBox, type AppliedCode } from '../lib/discounts'
@@ -39,6 +40,8 @@ function readDraft(): Draft {
 // and what they typed is kept while they sign in.
 export default function Checkout() {
   const basket = useBasket()
+  const mine = useMyAllergies()
+  const allergyHits = useAllergenHits(basket?.lines.map((l) => l.productId) ?? [], mine.codes)
   const { session } = useSession()
   const [settings, setSettings] = useState<ShopSettings | null>(null)
   const [zones, setZones] = useState<Zone[]>([])
@@ -300,6 +303,18 @@ export default function Checkout() {
           <textarea rows={2} maxLength={500} value={note} onChange={(e) => update({ note: e.target.value })} placeholder="Allergies, timing, anything else" />
         </label>
       </div>
+
+      {basket.lines.some((l) => allergyHits?.[l.productId]) && (
+        <div className="allergy-warn" role="alert">
+          <Icon name="info" size={18} />
+          <span>
+            <strong>Check your allergies:</strong>{' '}
+            {[...new Map(basket.lines.filter((l) => allergyHits?.[l.productId]).map((l) => [l.productId, l])).values()]
+              .map((l) => `${l.name} ${warningText(allergyHits![l.productId])}`).join('. ')}.
+            {' '}Message the cook if you’re unsure.
+          </span>
+        </div>
+      )}
 
       <div className="card">
         <h2>Order summary</h2>

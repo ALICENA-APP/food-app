@@ -4,6 +4,7 @@ import { photoUrl } from '../lib/images'
 import { Icon, VerifiedTick } from '../lib/icons'
 import { lineQty, qtyIn, setQty, useBasket } from '../lib/basket'
 import { ReportLink } from '../lib/report'
+import { useMyAllergies, warningText } from '../lib/allergies'
 import { PopularTag, StockAlertButton, useOrderCounts } from '../lib/popular'
 import { recordView, rememberDish } from '../lib/views'
 import { allergenLists, averageRating, loadShop, type ShopData } from '../lib/shopData'
@@ -20,6 +21,7 @@ export default function Dish({ slug, productId }: { slug: string; productId: str
   const [addonIds, setAddonIds] = useState<string[]>([])
   const basket = useBasket()
   const counts = useOrderCounts([productId])
+  const mine = useMyAllergies()
 
   useEffect(() => {
     loadShop(slug).then(setData)
@@ -70,6 +72,9 @@ export default function Dish({ slug, productId }: { slug: string; productId: str
   const options = [variant?.name, chosenAddons.length ? `+ ${chosenAddons.map((a) => a.name).join(', ')}` : ''].filter(Boolean).join(', ')
   const choice = { productId: product.id, variantId: variant?.id ?? null, addonIds: chosenAddons.map((a) => a.id) }
   const category = categories.find((c) => c.id === product.category_id)?.name
+  const myRows = data.rows.filter((r) => r.product_id === product.id && mine.codes.includes(r.allergen_code))
+  const myContains = [...new Set(myRows.filter((r) => r.presence === 'contains').map((r) => r.allergen_code))]
+  const myMay = [...new Set(myRows.filter((r) => r.presence === 'may_contain').map((r) => r.allergen_code))].filter((c) => !myContains.includes(c))
   const others = data.products.filter((p) => p.id !== product.id && p.status === 'published').slice(0, 8)
 
   function onScroll(e: UIEvent<HTMLDivElement>) {
@@ -112,6 +117,9 @@ export default function Dish({ slug, productId }: { slug: string; productId: str
           {product.portion && <> · {product.portion}</>}
           {product.stock_qty !== null && product.stock_qty > 0 && product.stock_qty <= 5 && <> · Only {product.stock_qty} left</>}
         </p>
+        {(myContains.length > 0 || myMay.length > 0) && (
+          <p className="allergy-warn" role="alert"><Icon name="info" size={18} /><span><strong>Careful:</strong> this dish {warningText({ contains: myContains, may: myMay })}, which you’ve said you avoid.</span></p>
+        )}
         <div className="tags">
           <span className="tag">Homemade</span>
           <PopularTag orders={counts[product.id]} />

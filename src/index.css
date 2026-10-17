@@ -627,3 +627,11 @@ fieldset.options legend { font-weight: 700; padding: 0 4px; display: flex; gap: 
 .tag.popular { white-space: nowrap; background: #fff1e6; color: #b4500f; }
 .tag.popular.on-photo { position: absolute; top: 8px; left: 8px; font-size: 0.7rem; padding: 3px 8px; box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12); }
 :root[data-theme='dark'] .tag.popular { background: #3b2414; color: #ffb27a; }
+
+/* Chips that wrap onto more lines instead of scrolling */
+.chips.wrap { flex-wrap: wrap; overflow: visible; margin: 0; padding: 0; }
+.allergy-warn { display: flex; gap: 10px; align-items: flex-start; padding: 12px 14px; border-radius: var(--radius); background: #fde8e8; color: #a32d2d; font-size: 0.9rem; }
+.allergy-warn svg { flex: none; margin-top: 1px; }
+:root[data-theme='dark'] .allergy-warn { background: #3a1c1c; color: #ff9d9d; }
+.sort-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.sort-row select { width: auto; }
