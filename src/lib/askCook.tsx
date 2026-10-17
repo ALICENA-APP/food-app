@@ -25,16 +25,27 @@ export function AskCookTile({ shopId, cookName, productId, productName }: { shop
   const [text, setText] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
+  const box = useRef<HTMLDivElement>(null)
+
+  // The chat button at the top of the page opens this form.
+  useEffect(() => {
+    const show = () => {
+      setOpen(true)
+      setTimeout(() => box.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 50)
+    }
+    window.addEventListener(OPEN_EVENT, show)
+    return () => window.removeEventListener(OPEN_EVENT, show)
+  }, [])
 
   if (!open) {
     return (
-      <button type="button" className="tile report-tile" onClick={() => (session ? setOpen(true) : askToSignIn(location.pathname))}>
+      <div ref={box}><button type="button" className="tile report-tile" onClick={() => (session ? setOpen(true) : askToSignIn(location.pathname))}>
         <span className="ic ask"><Icon name="chat" /></span>
         <span style={{ minWidth: 0 }}>
           <span className="t" style={{ display: 'block' }}>Ask {cookName}</span>
           <span className="s">Questions about allergies, ingredients or timing? Ask before you order.</span>
         </span>
-      </button>
+      </button></div>
     )
   }
 
@@ -50,7 +61,7 @@ export function AskCookTile({ shopId, cookName, productId, productName }: { shop
   }
 
   return (
-    <form className="card stack" onSubmit={send}>
+    <div ref={box}><form className="card stack" onSubmit={send}>
       <strong>Ask {cookName}</strong>
       <textarea rows={3} maxLength={1000} autoFocus value={text} onChange={(e) => setText(e.target.value)}
         placeholder={productName ? `e.g. Does the ${productName.toLowerCase()} contain nuts?` : 'e.g. Can you do a mild version?'} />
@@ -60,7 +71,20 @@ export function AskCookTile({ shopId, cookName, productId, productName }: { shop
         <button type="submit" disabled={busy || !text.trim()}>{busy ? 'Sending…' : 'Send'}</button>
         <button type="button" className="secondary" onClick={() => setOpen(false)}>Cancel</button>
       </div>
-    </form>
+    </form></div>
+  )
+}
+
+const OPEN_EVENT = 'open-ask-cook'
+
+// A round chat button for the top of shop and dish pages.
+export function AskCookButton() {
+  const { session } = useSession()
+  return (
+    <button type="button" className="icon-btn" aria-label="Ask the cook a question"
+      onClick={() => (session ? window.dispatchEvent(new Event(OPEN_EVENT)) : askToSignIn(location.pathname))}>
+      <Icon name="chat" />
+    </button>
   )
 }
 

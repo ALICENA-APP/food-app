@@ -19,6 +19,21 @@ export function useOrderCounts(ids: string[]) {
   return counts
 }
 
+// How many reviewers said they loved each dish.
+export function useLovedCounts(ids: string[]) {
+  const [counts, setCounts] = useState<Record<string, number>>({})
+  const key = ids.slice(0, 200).sort().join(',')
+  useEffect(() => {
+    if (!key) return
+    supabase!.rpc('dish_loved_counts', { p_products: key.split(',') }).then(({ data }) => {
+      const next: Record<string, number> = {}
+      for (const r of (data ?? []) as { product_id: string; loved: number }[]) next[r.product_id] = r.loved
+      setCounts(next)
+    })
+  }, [key])
+  return counts
+}
+
 // Rounded down, so it reads "Ordered 20+ times" rather than an exact count.
 export function popularLabel(orders: number | undefined) {
   if (!orders) return ''

@@ -4,9 +4,9 @@ import { photoUrl } from '../lib/images'
 import { Icon, VerifiedTick } from '../lib/icons'
 import { lineQty, qtyIn, setQty, useBasket } from '../lib/basket'
 import { ReportLink } from '../lib/report'
-import { AskCookTile } from '../lib/askCook'
+import { AskCookButton, AskCookTile } from '../lib/askCook'
 import { useMyAllergies, warningText } from '../lib/allergies'
-import { PopularTag, StockAlertButton, useOrderCounts } from '../lib/popular'
+import { PopularTag, StockAlertButton, useLovedCounts, useOrderCounts } from '../lib/popular'
 import { recordView, rememberDish } from '../lib/views'
 import { allergenLists, averageRating, loadShop, type ShopData } from '../lib/shopData'
 import { Avatar, BackButton, FoodPhoto, HeartButton, share } from '../lib/ui'
@@ -22,6 +22,7 @@ export default function Dish({ slug, productId }: { slug: string; productId: str
   const [addonIds, setAddonIds] = useState<string[]>([])
   const basket = useBasket()
   const counts = useOrderCounts([productId])
+  const lovedCounts = useLovedCounts([productId])
   const mine = useMyAllergies()
 
   useEffect(() => {
@@ -76,6 +77,7 @@ export default function Dish({ slug, productId }: { slug: string; productId: str
   const myRows = data.rows.filter((r) => r.product_id === product.id && mine.codes.includes(r.allergen_code))
   const myContains = [...new Set(myRows.filter((r) => r.presence === 'contains').map((r) => r.allergen_code))]
   const myMay = [...new Set(myRows.filter((r) => r.presence === 'may_contain').map((r) => r.allergen_code))].filter((c) => !myContains.includes(c))
+  const customerPhotos = reviews.filter((r) => r.photo_path && (r.loved_products ?? []).includes(product.id)).slice(0, 10)
   const others = data.products.filter((p) => p.id !== product.id && p.status === 'published').slice(0, 8)
 
   function onScroll(e: UIEvent<HTMLDivElement>) {
@@ -100,6 +102,7 @@ export default function Dish({ slug, productId }: { slug: string; productId: str
         <div className="actions">
           <BackButton onClick={() => goBack(`/s/${slug}`)} />
           <span className="group">
+            {shop.status === 'live' && <AskCookButton />}
             <button type="button" className="icon-btn" onClick={() => share(product.name)} aria-label="Share this dish"><Icon name="share" /></button>
             <HeartButton productId={product.id} className="icon-btn heart-btn" />
           </span>
@@ -124,6 +127,7 @@ export default function Dish({ slug, productId }: { slug: string; productId: str
         <div className="tags">
           <span className="tag">Homemade</span>
           <PopularTag orders={counts[product.id]} />
+          {lovedCounts[product.id] > 0 && <span className="tag loved-tag"><Icon name="heart" size={13} /> Loved by {lovedCounts[product.id]}</span>}
           {daysLabel(product.available_days) && <span className="tag">{daysLabel(product.available_days)}</span>}
           {product.min_lead_hours ? <span className="tag">{noticeLabel(product.min_lead_hours)}</span> : null}
           {category && <span className="tag grey">{category}</span>}
@@ -189,6 +193,15 @@ export default function Dish({ slug, productId }: { slug: string; productId: str
           </div>
         </div>
       </div>
+
+      {customerPhotos.length > 0 && (
+        <section className="stack" style={{ gap: 8 }}>
+          <h2>Photos from customers</h2>
+          <div className="customer-photos">
+            {customerPhotos.map((r) => <img key={r.id} src={photoUrl(r.photo_path)!} alt={`${product.name}, photo from ${r.reviewer_name}`} loading="lazy" />)}
+          </div>
+        </section>
+      )}
 
       {shop.status === 'live' && <AskCookTile shopId={shop.id} cookName={shop.name} productId={product.id} productName={product.name} />}
       {shop.status === 'live' && <ReportLink shopId={shop.id} productId={product.id} />}

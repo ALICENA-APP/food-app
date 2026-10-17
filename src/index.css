@@ -668,7 +668,16 @@ fieldset.options legend { font-weight: 700; padding: 0 4px; display: flex; gap: 
 :root[data-theme='dark'] .review .loved { color: #ff8fa3; }
 .review-photo-pick { display: flex; align-items: flex-end; gap: 12px; }
 .review-photo-pick img { width: 120px; aspect-ratio: 4 / 3; object-fit: cover; border-radius: 10px; }
-.photo-add { align-self: flex-start; cursor: pointer; }
+.photo-add { align-self: flex-start; cursor: pointer; display: inline-flex; flex-direction: row; align-items: center; gap: 6px; }
 .customer-photos { display: flex; gap: 8px; overflow-x: auto; margin: 0 -16px; padding: 0 16px; scrollbar-width: none; }
 .customer-photos img { width: 150px; aspect-ratio: 4 / 3; object-fit: cover; border-radius: 12px; flex: none; }
 .menu-row .info > .tag { align-self: flex-start; }
+.tag.loved-tag { background: #fde8ee; color: #b4304a; }
+:root[data-theme='dark'] .tag.loved-tag { background: #3a1c24; color: #ff8fa3; }
+
+/* Explore map */
+.shop-map { height: 60vh; min-height: 320px; border-radius: var(--radius); overflow: hidden; border: 1px solid var(--border); z-index: 0; }
+.map-pin { background: none; border: none; }
+.map-pin img, .map-pin span { width: 40px; height: 40px; border-radius: 50%; border: 3px solid var(--yellow); background: #fff; object-fit: cover; display: flex; align-items: center; justify-content: center; font-weight: 800; color: #111; box-shadow: 0 2px 6px rgba(0,0,0,.25); }
+.leaflet-popup-content { font-family: inherit; font-size: 0.9rem; }
+.leaflet-popup-content a { color: #111; font-weight: 700; }

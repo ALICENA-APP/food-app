@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { lazy, Suspense, useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { link, navigate, queryParam } from '../lib/router'
 import { Icon } from '../lib/icons'
@@ -23,6 +23,8 @@ const FILTERS: { key: Filter; label: string }[] = [
   { key: 'open', label: 'Open now' },
 ]
 
+const ShopMap = lazy(() => import('../lib/ShopMap'))
+
 type Sort = 'new' | 'nearest' | 'rated' | 'popular' | 'price'
 const SORTS: { key: Sort; label: string }[] = [
   { key: 'new', label: 'Newest' },
@@ -39,7 +41,7 @@ export default function Explore() {
   const categories = useCategories()
   const [query, setQuery] = useState(queryParam('q'))
   const [category, setCategory] = useState(queryParam('c'))
-  const [view, setView] = useState<'items' | 'sellers'>(queryParam('view') === 'sellers' ? 'sellers' : 'items')
+  const [view, setView] = useState<'items' | 'sellers' | 'map'>(queryParam('view') === 'sellers' ? 'sellers' : queryParam('view') === 'map' ? 'map' : 'items')
   const [filters, setFilters] = useState<Filter[]>(queryParam('diet') ? [queryParam('diet') as Filter] : [])
   const [dishes, setDishes] = useState<Dish[] | null>(null)
   const [shops, setShops] = useState<ShopRow[]>([])
@@ -89,7 +91,7 @@ export default function Explore() {
     const params = new URLSearchParams()
     if (query.trim()) params.set('q', query.trim())
     if (category) params.set('c', category)
-    if (view === 'sellers') params.set('view', 'sellers')
+    if (view !== 'items') params.set('view', view)
     const qs = params.toString()
     navigate(`/explore${qs ? `?${qs}` : ''}`, true)
   }, [query, category, view])
@@ -180,6 +182,10 @@ export default function Explore() {
           <input type="radio" checked={view === 'sellers'} onChange={() => setView('sellers')} />
           Sellers ({shownShops.length})
         </label>
+        <label className={view === 'map' ? 'on' : ''}>
+          <input type="radio" checked={view === 'map'} onChange={() => setView('map')} />
+          Map
+        </label>
       </div>
 
       {dishes === null && <p className="muted">Loading…</p>}
@@ -196,6 +202,11 @@ export default function Explore() {
           {sortedDishes.map((d) => <DishCard key={d.id} dish={d} rating={ratings[d.shop_id]} orders={orderCounts[d.id]} />)}
         </div>
       ) : <NothingFound empty={dishes.length === 0} />)}
+      {dishes && view === 'map' && (
+        <Suspense fallback={<p className="muted">Loading map…</p>}>
+          <ShopMap shops={shownShops} me={point} />
+        </Suspense>
+      )}
       {dishes && view === 'sellers' && (shownShops.length ? (
         <div className="stack" style={{ gap: 10 }}>
           {shownShops.map((s) => <SellerRow key={s.id} shop={s} rating={ratings[s.id]} open={open[s.id]} miles={near[s.id]?.miles} sponsored={pinned.has(s.id)} />)}

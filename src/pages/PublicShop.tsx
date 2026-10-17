@@ -3,7 +3,7 @@ import { goBack, link, navigate } from '../lib/router'
 import { recordView } from '../lib/views'
 import { ShopOffers } from '../lib/discounts'
 import { ReportLink } from '../lib/report'
-import { AskCookTile } from '../lib/askCook'
+import { AskCookButton, AskCookTile } from '../lib/askCook'
 import { CateringTile, HygieneBadge, fsaLink, hygieneWords, useHygiene } from '../lib/hygiene'
 import { supabase } from '../lib/supabase'
 import { useOrderCounts } from '../lib/popular'
@@ -84,6 +84,7 @@ export default function PublicShop({ slug }: { slug: string }) {
         <div className="actions">
           <BackButton onClick={() => goBack('/')} />
           <span className="group">
+            {!isPreview && <AskCookButton />}
             <button type="button" className="icon-btn" onClick={() => share(shop.name)} aria-label="Share this shop"><Icon name="share" /></button>
             <HeartButton shopId={shop.id} className="icon-btn heart-btn" />
           </span>
@@ -167,7 +168,7 @@ export default function PublicShop({ slug }: { slug: string }) {
       {tab === 'reviews' && (
         <div className="card">
           {reviews.length === 0 ? <p className="muted">No reviews yet. Reviews come only from people who ordered.</p>
-            : reviews.map((r) => <ReviewItem key={r.id} review={r} />)}
+            : reviews.map((r) => <ReviewItem key={r.id} review={r} dishNames={Object.fromEntries(products.map((p) => [p.id, p.name]))} />)}
         </div>
       )}
 

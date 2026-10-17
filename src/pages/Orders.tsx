@@ -277,7 +277,7 @@ export function OrderDetail({ id }: { id: string }) {
           <ReviewItem review={review} />
         </div>
       ) : (
-        <ReviewForm orderId={order.id} onDone={load} />
+        <ReviewForm orderId={order.id} items={items as unknown as { product_id: string | null; name: string }[]} onDone={load} />
       ))}
 
       {collection && (
