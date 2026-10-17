@@ -4,6 +4,7 @@ import { link, navigate } from '../lib/router'
 import { Icon } from '../lib/icons'
 import { dishQuery, loadFeatured, loadRatings, useCategories, type Dish, type Rating } from '../lib/catalogue'
 import { useOrderCounts } from '../lib/popular'
+import { freeFrom, useAllergenHits, useMyAllergies } from '../lib/allergies'
 import { loadOpenStates, type OpenState } from '../lib/hours'
 import { InstallPrompt } from '../lib/install'
 import { PostcodePicker } from '../lib/PostcodePicker'
@@ -21,6 +22,10 @@ export default function Home() {
   const commission = useCommission()
   const [dishes, setDishes] = useState<Dish[] | null>(null)
   const orderCounts = useOrderCounts((dishes ?? []).map((d) => d.id))
+  const mine = useMyAllergies()
+  const allergyHits = useAllergenHits((dishes ?? []).map((d) => d.id), mine.codes)
+  // Dishes with the person's allergens are left out of the lists here.
+  const safe = (d: Dish) => freeFrom(allergyHits, d.id, mine.strict)
   const [shops, setShops] = useState<ShopCardData[]>([])
   const [ratings, setRatings] = useState<Record<string, Rating>>({})
   const [query, setQuery] = useState('')
@@ -70,8 +75,8 @@ export default function Home() {
   const away = (shopId: string) => near[shopId]?.miles ?? 99
   const closer = (a: string, b: string) => reach(b) - reach(a) || away(a) - away(b)
   const ordered = (id: string) => orderCounts[id] ?? 0
-  const popular = [...(dishes ?? [])].sort((a, b) => closer(a.shop_id, b.shop_id) || ordered(b.id) - ordered(a.id) || rated(b.shop_id) - rated(a.shop_id)).slice(0, 10)
-  const sweet = (dishes ?? []).filter((d) => d.category_id && desserts.includes(d.category_id)).slice(0, 10)
+  const popular = (dishes ?? []).filter(safe).sort((a, b) => closer(a.shop_id, b.shop_id) || ordered(b.id) - ordered(a.id) || rated(b.shop_id) - rated(a.shop_id)).slice(0, 10)
+  const sweet = (dishes ?? []).filter(safe).filter((d) => d.category_id && desserts.includes(d.category_id)).slice(0, 10)
   const featuredShops = featured.map((id) => shops.find((x) => x.id === id)).filter((x): x is ShopCardData => Boolean(x))
   const topShops = [...shops].sort((a, b) => (point ? closer(a.id, b.id) : 0) || rated(b.id) - rated(a.id) || (ratings[b.id]?.reviews ?? 0) - (ratings[a.id]?.reviews ?? 0)).slice(0, 10)
 

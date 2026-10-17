@@ -5,6 +5,7 @@ import { ShopOffers } from '../lib/discounts'
 import { ReportLink } from '../lib/report'
 import { supabase } from '../lib/supabase'
 import { useOrderCounts } from '../lib/popular'
+import { freeFrom, useAllergenHits, useMyAllergies } from '../lib/allergies'
 import { photoUrl } from '../lib/images'
 import { Icon, VerifiedTick } from '../lib/icons'
 import { ReviewItem } from '../lib/reviews'
@@ -23,6 +24,9 @@ export default function PublicShop({ slug }: { slug: string }) {
   const basket = useBasket()
   const counts = useOrderCounts(data?.products.map((p) => p.id) ?? [])
   const [fullToday, setFullToday] = useState(false)
+  const mine = useMyAllergies()
+  const allergyHits = useAllergenHits(data?.products.map((p) => p.id) ?? [], mine.codes)
+  const [showAll, setShowAll] = useState(false)
 
   useEffect(() => {
     loadShop(slug).then(setData)
@@ -62,7 +66,9 @@ export default function PublicShop({ slug }: { slug: string }) {
   const isPreview = shop.status !== 'live'
   const canOrder = !isPreview && shop.accepting_orders
   const usedCategories = categories.filter((c) => products.some((p) => p.category_id === c.id))
-  const shown = products.filter((p) => !category || p.category_id === category)
+  const inCategory = products.filter((p) => !category || p.category_id === category)
+  const shown = showAll ? inCategory : inCategory.filter((p) => freeFrom(allergyHits, p.id, mine.strict))
+  const hidden = inCategory.length - inCategory.filter((p) => freeFrom(allergyHits, p.id, mine.strict)).length
   const options = [settings?.offers_delivery && 'Delivery', settings?.offers_collection && 'Collection'].filter(Boolean) as string[]
   const inBasket = basket?.shopId === shop.id ? basketCount(basket) : 0
   const state = openState(hours, closedDates)
@@ -130,7 +136,13 @@ export default function PublicShop({ slug }: { slug: string }) {
               ))}
             </div>
           )}
-          {shown.length === 0 && <p className="muted">Nothing on the menu yet.</p>}
+          {hidden > 0 && (
+            <p className="muted small">
+              {showAll ? 'Showing every dish, including ones with your allergens.' : `${hidden} ${hidden === 1 ? 'dish is' : 'dishes are'} hidden because of your allergies.`}{' '}
+              <button type="button" className="link" onClick={() => setShowAll(!showAll)}>{showAll ? 'Hide them' : 'Show anyway'}</button>
+            </p>
+          )}
+          {shown.length === 0 && hidden === 0 && <p className="muted">Nothing on the menu yet.</p>}
           {shown.map((p) => {
             // Dishes with sizes or extras open their page to choose first.
             const choose = hasOptions(data, p.id)
