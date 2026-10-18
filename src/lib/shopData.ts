@@ -18,7 +18,7 @@ export type ShopData = {
   closedDates: string[]
   awayReason: string | null
   reviews: Review[]
-  categories: { id: string; name: string }[]
+  categories: { id: string; name: string; slug: string }[]
 }
 
 // Everything the shop page and dish pages show. Cached briefly so moving
@@ -39,7 +39,7 @@ export async function loadShop(slug: string): Promise<ShopData | null> {
     db.from('shop_hours').select('weekday, opens, closes').eq('shop_id', shop.id),
     db.from('shop_closures').select('closed_on, reason').eq('shop_id', shop.id).gte('closed_on', today).lte('closed_on', addDays(today, 60)).order('closed_on'),
     db.from('reviews').select('*').eq('shop_id', shop.id).eq('hidden', false).order('created_at', { ascending: false }).limit(50),
-    db.from('categories').select('id, name').order('sort'),
+    db.from('categories').select('id, name, slug').order('sort'),
   ])
   const products: Product[] = p.data ?? []
   const ids = products.map((x) => x.id)

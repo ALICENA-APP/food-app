@@ -36,8 +36,9 @@ export function ShopOffers({ shopId }: { shopId: string }) {
           navigator.clipboard?.writeText(o.code).catch(() => {})
           setCopied(o.code)
         }}>
-          <Icon name="tag" size={18} />
-          <span><strong>{offerLabel(o)}</strong><span className="small"> with code <span className="code-chip">{o.code}</span>{copied === o.code ? ' · copied' : ''}</span></span>
+          <Icon name="tag" size={16} />
+          <span className="what"><strong>{offerLabel(o)}</strong></span>
+          <span className="code-chip">{copied === o.code ? 'Copied' : o.code}</span>
         </button>
       ))}
     </div>
