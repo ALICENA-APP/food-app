@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import { supabase } from '../lib/supabase'
+import { FeaturedBar, daysLeftText } from '../lib/featured'
 import { myUserId } from '../lib/session'
 import { link } from '../lib/router'
 import { pounds, TERMS_VERSION, type SellerAccount, type Shop, type Verification } from '../lib/types'
@@ -245,14 +246,17 @@ function GetFeatured({ shopId, shopLive }: { shopId: string; shopLive: boolean }
   const [weekPence, setWeekPence] = useState(500)
   const [weeks, setWeeks] = useState(2)
   const [message, setMessage] = useState('')
+  const [queue, setQueue] = useState<{ position: number; next_start: string | null } | null>(null)
 
   const load = useCallback(async () => {
     const db = supabase!
-    const [p, s] = await Promise.all([
+    const [p, s, q] = await Promise.all([
       db.from('promotions').select('*').eq('shop_id', shopId).order('created_at', { ascending: false }).limit(5),
       db.from('platform_settings').select('promo_week_pence').maybeSingle(),
+      db.rpc('my_promotion_queue'),
     ])
     setPromos(p.data ?? [])
+    setQueue(q.data ?? null)
     if (s.data?.promo_week_pence != null) setWeekPence(s.data.promo_week_pence)
   }, [shopId])
 
@@ -261,8 +265,10 @@ function GetFeatured({ shopId, shopLive }: { shopId: string; shopLive: boolean }
   }, [load])
 
   if (!promos) return null
-  const today = new Date().toISOString().slice(0, 10)
-  const running = promos.find((p) => p.status === 'active' && p.ends_on && p.ends_on >= today)
+  const today = new Date().toLocaleDateString('en-CA')
+  const running = promos.find((p) => p.status === 'active' && p.starts_on && p.starts_on <= today && p.ends_on && p.ends_on >= today)
+  const booked = promos.find((p) => p.status === 'active' && p.starts_on && p.starts_on > today)
+  const longDay = (d: string) => new Date(d + 'T12:00').toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })
   const waiting = promos.find((p) => p.status === 'requested')
   const lastDeclined = promos[0]?.status === 'declined' ? promos[0] : null
 
@@ -278,9 +284,19 @@ function GetFeatured({ shopId, shopLive }: { shopId: string; shopLive: boolean }
       <h2>Get featured</h2>
       <p className="muted small">Featured cooks appear in a “Featured cooks” row near the top of the home page and first in Explore, marked “Sponsored”.</p>
       {running ? (
-        <p className="tick">You’re featured until {new Date(running.ends_on + 'T12:00').toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })}.</p>
+        <div className="stack" style={{ gap: 8 }}>
+          <div className="item"><span className="tick">You’re featured</span><strong className="small">{daysLeftText(running.ends_on!)}</strong></div>
+          <FeaturedBar start={running.starts_on!} end={running.ends_on!} />
+          <p className="muted tiny">Until {longDay(running.ends_on!)}. You can ask again for more weeks once it ends.</p>
+        </div>
+      ) : booked ? (
+        <p className="status small">Your spot is booked: all spots are taken until then, so you’re featured from {longDay(booked.starts_on!)} to {longDay(booked.ends_on!)}.</p>
       ) : waiting ? (
-        <p className="status small">Request sent for {waiting.weeks} {waiting.weeks === 1 ? 'week' : 'weeks'}. The BiteBY team will confirm soon.</p>
+        <p className="status small">
+          Request sent for {waiting.weeks} {waiting.weeks === 1 ? 'week' : 'weeks'}. The BiteBY team will confirm soon.
+          {queue && queue.position > 1 && ` You’re number ${queue.position} in line.`}
+          {queue?.next_start && queue.next_start > today && ` Spots are full right now, so the earliest start is ${longDay(queue.next_start)}.`}
+        </p>
       ) : (
         <>
           {lastDeclined?.note && <p className="muted small">Last request: {lastDeclined.note}</p>}

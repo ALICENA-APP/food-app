@@ -657,6 +657,8 @@ fieldset.options legend { font-weight: 700; padding: 0 4px; display: flex; gap: 
 :root[data-theme='dark'] .hygiene { background: #1d3316; color: #a6dc8c; }
 :root[data-theme='dark'] .hygiene .scale span.on { background: #a6dc8c; color: #10200a; }
 .checklist .bar { height: 8px; border-radius: 999px; background: var(--line); overflow: hidden; }
+.featured-bar { height: 8px; border-radius: 999px; background: var(--line); overflow: hidden; }
+.featured-bar span { display: block; height: 100%; background: var(--yellow); border-radius: 999px; }
 .checklist .bar span { display: block; height: 100%; background: var(--green); border-radius: 999px; }
 .checklist a, .checklist .done { display: flex; align-items: center; gap: 10px; text-decoration: none; color: inherit; padding: 6px 0; font-size: 0.92rem; }
 .checklist .box { width: 22px; height: 22px; border-radius: 50%; border: 2px solid var(--border); flex: none; display: flex; align-items: center; justify-content: center; }

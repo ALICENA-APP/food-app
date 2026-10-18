@@ -6,6 +6,7 @@ import { ReviewItem, type Review } from '../lib/reviews'
 import { TOPIC_LABEL, type Topic } from '../lib/help'
 import { loadPlatform, percent } from '../lib/platform'
 import { ORDER_STATUS, when, type Order, type OrderStatus } from './Orders'
+import { FeaturedBar, daysLeftText } from '../lib/featured'
 
 const FILTERS: { key: string; label: string; statuses: OrderStatus[] | null }[] = [
   { key: 'open', label: 'Open', statuses: ['pending_acceptance', 'accepted', 'ready', 'out_for_delivery'] },
@@ -468,6 +469,7 @@ function DemoData() {
 type AdminPromo = {
   id: string; shop_name: string; slug: string; is_demo: boolean; weeks: number; status: string
   starts_on: string | null; ends_on: string | null; fee_pence: number; note: string | null; created_at: string; running: boolean
+  next_start?: string | null
 }
 
 // Featured (sponsored) spots: requests to approve, and who is featured now.
@@ -496,7 +498,11 @@ export function AdminPromoted() {
   if (error && !data) return <p className="error">{error}</p>
   if (!data) return <p className="muted">Loading…</p>
   const requests = data.list.filter((p) => p.status === 'requested')
-  const running = data.list.filter((p) => p.running)
+  const running = data.list.filter((p) => p.running).sort((a, b) => (a.ends_on ?? '').localeCompare(b.ends_on ?? ''))
+  const today = new Date().toLocaleDateString('en-CA')
+  const booked = data.list.filter((p) => p.status === 'active' && p.starts_on && p.starts_on > today).sort((a, b) => a.starts_on!.localeCompare(b.starts_on!))
+  // Waiting requests in the order they were sent: first come, first served.
+  requests.sort((a, b) => a.created_at.localeCompare(b.created_at))
   const day = (d: string | null) => (d ? new Date(d + 'T12:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : '')
 
   return (
@@ -505,6 +511,7 @@ export function AdminPromoted() {
         <div className="item"><span>Featured spots in use</span><strong>{running.length} of {data.slots}</strong></div>
         <div className="item"><span>Price per week</span><strong>{pounds(data.week_pence)}</strong></div>
         <p className="muted small">Featured cooks show in a “Featured cooks” row on the home page and first in Explore, always marked “Sponsored”. The order changes every day so everyone gets a turn at the front.</p>
+        <p className="muted small">When every spot is taken, approving a request books it for the first day a spot frees up. The cook is told the start date.</p>
       </div>
       {error && <p className="error">{error}</p>}
       <h2>Requests ({requests.length})</h2>
@@ -514,7 +521,9 @@ export function AdminPromoted() {
           <div className="item"><strong><a href={`/s/${p.slug}`} onClick={link(`/s/${p.slug}`)}>{p.shop_name}</a></strong><span>{p.weeks} {p.weeks === 1 ? 'week' : 'weeks'} · {pounds(p.fee_pence)}</span></div>
           <p className="muted tiny">Asked {when(p.created_at)}</p>
           <div className="row">
-            <button type="button" onClick={() => decide(p.id, 'approve')}>Approve, start today</button>
+            <button type="button" onClick={() => decide(p.id, 'approve')}>
+              {!p.next_start || p.next_start === today ? 'Approve, start today' : `Approve, start ${day(p.next_start)}`}
+            </button>
             <button type="button" className="secondary" onClick={() => decide(p.id, 'decline')}>Decline</button>
           </div>
         </article>
@@ -522,12 +531,25 @@ export function AdminPromoted() {
       <h2>Featured now</h2>
       {running.length === 0 && <p className="muted">Nobody is featured right now.</p>}
       {running.map((p) => (
-        <article key={p.id} className="card">
+        <article key={p.id} className="card stack" style={{ gap: 8 }}>
           <div className="item">
             <strong>{p.shop_name} {p.is_demo && <span className="tag demo">Demo</span>}</strong>
-            <span className="muted small">{day(p.starts_on)} to {day(p.ends_on)}</span>
+            <strong className="small">{daysLeftText(p.ends_on!)}</strong>
           </div>
+          <FeaturedBar start={p.starts_on!} end={p.ends_on!} />
+          <p className="muted tiny">{day(p.starts_on)} to {day(p.ends_on)} · {p.weeks} {p.weeks === 1 ? 'week' : 'weeks'}</p>
           <button type="button" className="secondary small-btn" onClick={() => decide(p.id, 'end')}>End early</button>
+        </article>
+      ))}
+      {booked.length > 0 && <h2>Booked next</h2>}
+      {booked.map((p) => (
+        <article key={p.id} className="card stack" style={{ gap: 8 }}>
+          <div className="item">
+            <strong>{p.shop_name} {p.is_demo && <span className="tag demo">Demo</span>}</strong>
+            <strong className="small">Starts {day(p.starts_on)}</strong>
+          </div>
+          <p className="muted tiny">Until {day(p.ends_on)} · {p.weeks} {p.weeks === 1 ? 'week' : 'weeks'}</p>
+          <button type="button" className="secondary small-btn" onClick={() => decide(p.id, 'end')}>Cancel booking</button>
         </article>
       ))}
     </div>
