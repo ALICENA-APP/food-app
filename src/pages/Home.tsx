@@ -38,12 +38,10 @@ export default function Home() {
 
   useEffect(() => {
     ;(async () => {
-      const [d, s, f] = await Promise.all([
+      const [d, s] = await Promise.all([
         dishQuery().order('created_at', { ascending: false }).limit(60),
         supabase!.from('shops').select('id, name, slug, logo_path, area_label, cuisines, is_demo').eq('status', 'live').limit(60),
-        loadFeatured(),
       ])
-      setFeatured(f)
       const list = (d.data ?? []) as unknown as Dish[]
       setDishes(list)
       setShops(s.data ?? [])
@@ -60,6 +58,7 @@ export default function Home() {
   }, [shops, district])
   useEffect(() => {
     loadNear(point).then(setNear)
+    loadFeatured(point).then(setFeatured)
   }, [point])
 
   function search(e: FormEvent) {

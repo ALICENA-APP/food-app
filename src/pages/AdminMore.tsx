@@ -6,7 +6,7 @@ import { ReviewItem, type Review } from '../lib/reviews'
 import { TOPIC_LABEL, type Topic } from '../lib/help'
 import { loadPlatform, percent } from '../lib/platform'
 import { ORDER_STATUS, when, type Order, type OrderStatus } from './Orders'
-import { Countdown, FeaturedBar } from '../lib/featured'
+import { Countdown, FeaturedBar, isBooked, moment } from '../lib/featured'
 
 const FILTERS: { key: string; label: string; statuses: OrderStatus[] | null }[] = [
   { key: 'open', label: 'Open', statuses: ['pending_acceptance', 'accepted', 'ready', 'out_for_delivery'] },
@@ -468,13 +468,13 @@ function DemoData() {
 
 type AdminPromo = {
   id: string; shop_name: string; slug: string; is_demo: boolean; weeks: number; status: string
-  starts_on: string | null; ends_on: string | null; fee_pence: number; note: string | null; created_at: string; running: boolean
-  next_start?: string | null
+  starts_at: string | null; ends_at: string | null; fee_pence: number; note: string | null; created_at: string; running: boolean
+  next_start?: string | null; area_label: string | null; in_use_nearby: number
 }
 
 // Featured (sponsored) spots: requests to approve, and who is featured now.
 export function AdminPromoted() {
-  const [data, setData] = useState<{ slots: number; week_pence: number; list: AdminPromo[] } | null>(null)
+  const [data, setData] = useState<{ slots: number; radius: number; week_pence: number; list: AdminPromo[] } | null>(null)
   const [error, setError] = useState('')
 
   const load = useCallback(async () => {
@@ -498,20 +498,20 @@ export function AdminPromoted() {
   if (error && !data) return <p className="error">{error}</p>
   if (!data) return <p className="muted">Loading…</p>
   const requests = data.list.filter((p) => p.status === 'requested')
-  const running = data.list.filter((p) => p.running).sort((a, b) => (a.ends_on ?? '').localeCompare(b.ends_on ?? ''))
-  const today = new Date().toLocaleDateString('en-CA')
-  const booked = data.list.filter((p) => p.status === 'active' && p.starts_on && p.starts_on > today).sort((a, b) => a.starts_on!.localeCompare(b.starts_on!))
+  const running = data.list.filter((p) => p.running).sort((a, b) => (a.ends_at ?? '').localeCompare(b.ends_at ?? ''))
+  const booked = data.list.filter(isBooked).sort((a, b) => a.starts_at!.localeCompare(b.starts_at!))
+  const startsNow = (iso: string | null | undefined) => !iso || new Date(iso).getTime() <= Date.now() + 60000
   // Waiting requests in the order they were sent: first come, first served.
   requests.sort((a, b) => a.created_at.localeCompare(b.created_at))
-  const day = (d: string | null) => (d ? new Date(d + 'T12:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : '')
 
   return (
     <div className="stack">
       <div className="card">
-        <div className="item"><span>Featured spots in use</span><strong>{running.length} of {data.slots}</strong></div>
+        <div className="item"><span>Spots per area</span><strong>{data.slots} within {data.radius} miles</strong></div>
+        <div className="item"><span>Featured now, UK-wide</span><strong>{running.length}</strong></div>
         <div className="item"><span>Price per week</span><strong>{pounds(data.week_pence)}</strong></div>
-        <p className="muted small">Featured cooks show in a “Featured cooks” row on the home page and first in Explore, always marked “Sponsored”. The order changes every day so everyone gets a turn at the front.</p>
-        <p className="muted small">When every spot is taken, approving a request books it for the first day a spot frees up. The cook is told the start date.</p>
+        <p className="muted small">Spots are local. A cook is only shown to customers within {data.radius} miles of them, and the {data.slots} spots are counted among cooks within {data.radius} miles of each other, so a cook in Manchester never takes a London spot.</p>
+        <p className="muted small">A spot lasts exactly the weeks bought, to the minute. When the spots near a cook are full, approving books the moment one frees up, and the cook is told when they start.</p>
       </div>
       {error && <p className="error">{error}</p>}
       <h2>Requests ({requests.length})</h2>
@@ -519,10 +519,10 @@ export function AdminPromoted() {
       {requests.map((p) => (
         <article key={p.id} className="card">
           <div className="item"><strong><a href={`/s/${p.slug}`} onClick={link(`/s/${p.slug}`)}>{p.shop_name}</a></strong><span>{p.weeks} {p.weeks === 1 ? 'week' : 'weeks'} · {pounds(p.fee_pence)}</span></div>
-          <p className="muted tiny">Asked {when(p.created_at)}</p>
+          <p className="muted tiny">{p.area_label && `${p.area_label} · `}{p.in_use_nearby} of {data.slots} spots in use nearby · asked {when(p.created_at)}</p>
           <div className="row">
             <button type="button" onClick={() => decide(p.id, 'approve')}>
-              {!p.next_start || p.next_start === today ? 'Approve, start today' : `Approve, start ${day(p.next_start)}`}
+              {startsNow(p.next_start) ? 'Approve, start now' : `Approve, start ${moment(p.next_start!)}`}
             </button>
             <button type="button" className="secondary" onClick={() => decide(p.id, 'decline')}>Decline</button>
           </div>
@@ -534,10 +534,10 @@ export function AdminPromoted() {
         <article key={p.id} className="card stack" style={{ gap: 8 }}>
           <div className="item">
             <strong>{p.shop_name} {p.is_demo && <span className="tag demo">Demo</span>}</strong>
-            <strong className="small"><Countdown end={p.ends_on!} /></strong>
+            <strong className="small"><Countdown end={p.ends_at!} /></strong>
           </div>
-          <FeaturedBar start={p.starts_on!} end={p.ends_on!} />
-          <p className="muted tiny">{day(p.starts_on)} to {day(p.ends_on)} · {p.weeks} {p.weeks === 1 ? 'week' : 'weeks'} · ends midnight UK time</p>
+          <FeaturedBar start={p.starts_at!} end={p.ends_at!} />
+          <p className="muted tiny">{p.area_label && `${p.area_label} · `}{p.weeks} {p.weeks === 1 ? 'week' : 'weeks'} · ends {moment(p.ends_at!)}</p>
           <button type="button" className="secondary small-btn" onClick={() => decide(p.id, 'end')}>End early</button>
         </article>
       ))}
@@ -546,9 +546,9 @@ export function AdminPromoted() {
         <article key={p.id} className="card stack" style={{ gap: 8 }}>
           <div className="item">
             <strong>{p.shop_name} {p.is_demo && <span className="tag demo">Demo</span>}</strong>
-            <strong className="small">Starts {day(p.starts_on)}</strong>
+            <strong className="small">Starts {moment(p.starts_at!)}</strong>
           </div>
-          <p className="muted tiny">Until {day(p.ends_on)} · {p.weeks} {p.weeks === 1 ? 'week' : 'weeks'}</p>
+          <p className="muted tiny">{p.area_label && `${p.area_label} · `}until {moment(p.ends_at!)} · {p.weeks} {p.weeks === 1 ? 'week' : 'weeks'}</p>
           <button type="button" className="secondary small-btn" onClick={() => decide(p.id, 'end')}>Cancel booking</button>
         </article>
       ))}
@@ -714,6 +714,7 @@ export function AdminSettings() {
   const [commission, setCommission] = useState('')
   const [price, setPrice] = useState('')
   const [slots, setSlots] = useState('')
+  const [radius, setRadius] = useState('')
   const [saved, setSaved] = useState<string | null>(null)
   const [message, setMessage] = useState('')
   const [sure, setSure] = useState(false)
@@ -723,6 +724,7 @@ export function AdminSettings() {
       setCommission(String(s.commission_bps / 100))
       setPrice((s.promo_week_pence / 100).toFixed(2))
       setSlots(String(s.promo_slots))
+      setRadius(String(s.promo_radius_miles))
       setSaved(percent(s.commission_bps))
     })
   }, [])
@@ -737,6 +739,7 @@ export function AdminSettings() {
       p_commission_bps: bps,
       p_promo_week_pence: Math.round(parseFloat(price || '0') * 100),
       p_promo_slots: parseInt(slots || '0', 10),
+      p_promo_radius_miles: parseFloat(radius || '10'),
     })
     setSure(false)
     if (error) return setMessage(error.message)
@@ -759,9 +762,14 @@ export function AdminSettings() {
         <input type="number" min="0" max="1000" step="0.5" inputMode="decimal" value={price} onChange={(e) => setPrice(e.target.value)} />
       </label>
       <label>
-        Number of featured spots
+        Featured spots per area
         <input type="number" min="0" max="50" step="1" inputMode="numeric" value={slots} onChange={(e) => setSlots(e.target.value)} />
       </label>
+      <label>
+        Featured area (miles)
+        <input type="number" min="1" max="100" step="1" inputMode="decimal" value={radius} onChange={(e) => setRadius(e.target.value)} />
+      </label>
+      <p className="muted small">Featured cooks show to customers within this distance, and the spots above are shared by cooks within this distance of each other.</p>
       {sure && <p className="status small">You’re changing the commission from {saved} to {percent(bps)}. Your seller terms promise sellers 30 days’ notice of fee changes, so tell them first and save it when the notice ends. Tap Save again to confirm.</p>}
       <button type="button" onClick={save}>{sure ? 'Confirm and save' : 'Save settings'}</button>
       {message && <p className="small">{message}</p>}

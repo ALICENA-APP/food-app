@@ -68,7 +68,6 @@ export default function Explore() {
         dishQuery().order('created_at', { ascending: false }).limit(300),
         supabase!.from('shops').select('id, name, slug, logo_path, area_label, cuisines, accepting_orders, is_demo').eq('status', 'live').limit(200),
       ])
-      loadFeatured().then(setFeatured)
       setDishes((d.data ?? []) as unknown as Dish[])
       setShops(s.data ?? [])
       const ids = (s.data ?? []).map((x) => x.id)
@@ -84,6 +83,7 @@ export default function Explore() {
   }, [shops, district])
   useEffect(() => {
     loadNear(point).then(setNear)
+    loadFeatured(point).then(setFeatured)
   }, [point])
 
   // Keep the address bar in step so the back button and shared links work.

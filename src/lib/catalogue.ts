@@ -70,8 +70,9 @@ export async function loadShopOptions(shopIds: string[]) {
   return Object.fromEntries((data ?? []).map((s) => [s.shop_id, { collection: s.offers_collection, delivery: s.offers_delivery }]))
 }
 
-// Shops with a featured (sponsored) spot today.
-export async function loadFeatured(): Promise<string[]> {
-  const { data } = await supabase!.rpc('featured_shops')
+// Featured (sponsored) cooks near a customer. Without a location, none.
+export async function loadFeatured(point: { lat: number; lng: number } | null): Promise<string[]> {
+  if (!point) return []
+  const { data } = await supabase!.rpc('featured_shops', { p_lat: point.lat, p_lng: point.lng })
   return ((data ?? []) as (string | { featured_shops: string })[]).map((x) => (typeof x === 'string' ? x : x.featured_shops))
 }
