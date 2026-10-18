@@ -657,6 +657,7 @@ fieldset.options legend { font-weight: 700; padding: 0 4px; display: flex; gap: 
 :root[data-theme='dark'] .hygiene { background: #1d3316; color: #a6dc8c; }
 :root[data-theme='dark'] .hygiene .scale span.on { background: #a6dc8c; color: #10200a; }
 .checklist .bar { height: 8px; border-radius: 999px; background: var(--line); overflow: hidden; }
+.countdown { font-variant-numeric: tabular-nums; white-space: nowrap; }
 .featured-bar { height: 8px; border-radius: 999px; background: var(--line); overflow: hidden; }
 .featured-bar span { display: block; height: 100%; background: var(--yellow); border-radius: 999px; }
 .checklist .bar span { display: block; height: 100%; background: var(--green); border-radius: 999px; }

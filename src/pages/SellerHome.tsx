@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import { supabase } from '../lib/supabase'
-import { FeaturedBar, daysLeftText } from '../lib/featured'
+import { Countdown, FeaturedBar, endsText } from '../lib/featured'
 import { myUserId } from '../lib/session'
 import { link } from '../lib/router'
 import { pounds, TERMS_VERSION, type SellerAccount, type Shop, type Verification } from '../lib/types'
@@ -285,9 +285,9 @@ function GetFeatured({ shopId, shopLive }: { shopId: string; shopLive: boolean }
       <p className="muted small">Featured cooks appear in a “Featured cooks” row near the top of the home page and first in Explore, marked “Sponsored”.</p>
       {running ? (
         <div className="stack" style={{ gap: 8 }}>
-          <div className="item"><span className="tick">You’re featured</span><strong className="small">{daysLeftText(running.ends_on!)}</strong></div>
+          <div className="item"><span className="tick">You’re featured</span><strong className="small"><Countdown end={running.ends_on!} /></strong></div>
           <FeaturedBar start={running.starts_on!} end={running.ends_on!} />
-          <p className="muted tiny">Until {longDay(running.ends_on!)}. You can ask again for more weeks once it ends.</p>
+          <p className="muted tiny">{endsText(running.ends_on!)} (UK time). You can ask again for more weeks once it ends.</p>
         </div>
       ) : booked ? (
         <p className="status small">Your spot is booked: all spots are taken until then, so you’re featured from {longDay(booked.starts_on!)} to {longDay(booked.ends_on!)}.</p>

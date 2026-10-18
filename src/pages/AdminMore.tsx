@@ -6,7 +6,7 @@ import { ReviewItem, type Review } from '../lib/reviews'
 import { TOPIC_LABEL, type Topic } from '../lib/help'
 import { loadPlatform, percent } from '../lib/platform'
 import { ORDER_STATUS, when, type Order, type OrderStatus } from './Orders'
-import { FeaturedBar, daysLeftText } from '../lib/featured'
+import { Countdown, FeaturedBar } from '../lib/featured'
 
 const FILTERS: { key: string; label: string; statuses: OrderStatus[] | null }[] = [
   { key: 'open', label: 'Open', statuses: ['pending_acceptance', 'accepted', 'ready', 'out_for_delivery'] },
@@ -534,10 +534,10 @@ export function AdminPromoted() {
         <article key={p.id} className="card stack" style={{ gap: 8 }}>
           <div className="item">
             <strong>{p.shop_name} {p.is_demo && <span className="tag demo">Demo</span>}</strong>
-            <strong className="small">{daysLeftText(p.ends_on!)}</strong>
+            <strong className="small"><Countdown end={p.ends_on!} /></strong>
           </div>
           <FeaturedBar start={p.starts_on!} end={p.ends_on!} />
-          <p className="muted tiny">{day(p.starts_on)} to {day(p.ends_on)} · {p.weeks} {p.weeks === 1 ? 'week' : 'weeks'}</p>
+          <p className="muted tiny">{day(p.starts_on)} to {day(p.ends_on)} · {p.weeks} {p.weeks === 1 ? 'week' : 'weeks'} · ends midnight UK time</p>
           <button type="button" className="secondary small-btn" onClick={() => decide(p.id, 'end')}>End early</button>
         </article>
       ))}
