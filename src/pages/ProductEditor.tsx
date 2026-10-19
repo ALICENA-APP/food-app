@@ -165,7 +165,7 @@ function Editor({ shopId, product, allergens, categories, answers: initialAnswer
       </p>
       <h1>{product ? 'Edit item' : 'New item'}</h1>
       {isPublished && (
-        <p className="status">
+        <p className="status small">
           On sale now. Changing the ingredients or allergens takes it off sale until you confirm again.
         </p>
       )}

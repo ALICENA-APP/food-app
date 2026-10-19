@@ -175,7 +175,10 @@ label.upload input { display: none; }
 .tabs button.on { color: var(--black); border-bottom-color: var(--yellow); }
 
 /* Status, pills */
-.status { background: var(--yellow-soft); border-radius: 12px; padding: 12px 14px; }
+.status { background: var(--black); color: #fff; border-radius: 12px; padding: 12px 18px; }
+.status:not(.small) { font-weight: 600; text-align: center; }
+.status a, .status button.link, .status strong { color: inherit; }
+:root[data-theme='dark'] .status { background: #f2f2f2; color: #111; }
 .pill { font-size: 0.78rem; font-weight: 600; padding: 4px 10px; border-radius: 99px; background: var(--line); white-space: nowrap; align-self: flex-start; }
 .pill-published, .pill.green { background: var(--green-soft); color: #13753d; }
 .pill.yellow { background: var(--yellow-soft); }
