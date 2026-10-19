@@ -843,3 +843,12 @@ h2.menu-head { margin: 8px 0 0; font-size: 1.1rem; }
 .invite-code strong { font-size: 24px; letter-spacing: 3px; }
 .invite-list { gap: 6px; }
 .invite-done { margin: 0; }
+details.invite-card[open] { gap: 12px; }
+details.invite-card summary { align-items: center; }
+.invite-sum { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.invite-sum strong { font-weight: 600; }
+details.checklist summary { align-items: center; gap: 12px; }
+details.checklist[open] { gap: 8px; }
+.checklist-sum { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
+.checklist-sum strong { font-weight: 600; }
+.checklist-sum .bar { display: block; }

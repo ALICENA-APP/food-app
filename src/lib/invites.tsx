@@ -105,14 +105,17 @@ export function InviteCard() {
   const earned = data.invited.filter((i) => i.rewarded_at).length
   const left = Math.max(0, data.max_rewards - earned)
   return (
-    <div className="card stack invite-card">
-      <div>
-        <h2>Invite a cook, you both get {months(data.free_days)}</h2>
-        <p className="muted small">
-          When a cook you invite has {data.orders_needed} paid orders, you both get {data.free_days} days with no BiteBY fee. They get it on top of their
-          own first free month. {left > 0 ? `You can earn ${left} more free ${left === 1 ? 'month' : 'months'} this way.` : 'You’ve earned the most free months invites give: thank you! Your invites still help new cooks.'}
-        </p>
-      </div>
+    <details className="card invite-card">
+      <summary>
+        <span className="invite-sum">
+          <strong>Invite a cook, you both get {months(data.free_days)}</strong>
+          <span className="muted small">Code {data.code}{earned > 0 && ` · ${earned} earned`}</span>
+        </span>
+      </summary>
+      <p className="muted small">
+        When a cook you invite has {data.orders_needed} paid orders, you both get {data.free_days} days with no BiteBY fee. They get it on top of their
+        own first free month. {left > 0 ? `You can earn ${left} more free ${left === 1 ? 'month' : 'months'} this way.` : 'You’ve earned the most free months invites give: thank you! Your invites still help new cooks.'}
+      </p>
       <div className="invite-code">
         <span className="muted tiny">Your invite code</span>
         <strong>{data.code}</strong>
@@ -129,6 +132,6 @@ export function InviteCard() {
         </div>
       )}
       <p className="tiny muted"><a href="/fees" onClick={link('/fees')}>How fees work</a></p>
-    </div>
+    </details>
   )
 }

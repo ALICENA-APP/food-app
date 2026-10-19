@@ -36,9 +36,13 @@ export function SetupChecklist({ shop, refresh }: { shop: Shop; refresh: number 
   if (!steps || steps.every((s) => s.done)) return null
   const done = steps.filter((s) => s.done).length
   return (
-    <div className="card checklist stack" style={{ gap: 8 }}>
-      <div className="item"><h2 style={{ margin: 0 }}>Get your shop ready</h2><span className="muted small">{done} of {steps.length} done</span></div>
-      <div className="bar"><span style={{ width: `${(done / steps.length) * 100}%` }} /></div>
+    <details className="card checklist">
+      <summary>
+        <span className="checklist-sum">
+          <span className="item"><strong>Get your shop ready</strong><span className="muted small">{done} of {steps.length} done</span></span>
+          <span className="bar"><span style={{ width: `${(done / steps.length) * 100}%` }} /></span>
+        </span>
+      </summary>
       <div>
         {steps.map((s) => s.done ? (
           <span key={s.label} className="done"><span className="box"><Icon name="check" size={14} /></span>{s.label}</span>
@@ -48,7 +52,7 @@ export function SetupChecklist({ shop, refresh }: { shop: Shop; refresh: number 
           </a>
         ))}
       </div>
-    </div>
+    </details>
   )
 }
 
