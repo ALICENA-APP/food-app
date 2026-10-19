@@ -18,6 +18,7 @@ import Profile, { Help } from './pages/Profile'
 import Favourites from './pages/Favourites'
 import Addresses from './pages/Addresses'
 const Account = lazy(() => import('./pages/Account'))
+const PaymentMethods = lazy(() => import('./pages/PaymentMethods'))
 const Legal = () => import('./pages/Legal')
 const AllergenInfo = lazy(() => Legal().then((m) => ({ default: m.AllergenInfo })))
 const Privacy = lazy(() => Legal().then((m) => ({ default: m.Privacy })))
@@ -130,6 +131,8 @@ function App() {
     page = <Profile />
   } else if (path === '/account/password') {
     page = needsAccount(<SetPassword />, 'Sign in to change your password.')
+  } else if (path === '/account/payment') {
+    page = needsAccount(<PaymentMethods />, 'Sign in to see your payment methods.')
   } else if (path === '/account/statement') {
     page = needsAccount(<Statement kind="customer" />, 'Sign in to see your orders.')
   } else if (path === '/account') {

@@ -10,7 +10,8 @@ import { pounds } from '../lib/types'
 // completed orders (or examples when there are none).
 
 type Row = { subtotal_pence: number; discount_pence: number | null; delivery_fee_pence: number; platform_fee_pence: number; completed_at: string }
-type Payout = { date: Date; orders: number; amount: number; paid: boolean }
+type Payout = { date: Date; orders: number; amount: number; featured: number; paid: boolean }
+type Promo = { fee_pence: number; decided_at: string; weeks: number; takenOn?: Date }
 
 const DAY = 86400000
 // Stripe pays out on a rolling basis a few working days after the money comes
@@ -40,6 +41,7 @@ function examples(): Row[] {
 export default function Payouts() {
   const [rows, setRows] = useState<Row[] | null>(null)
   const [example, setExample] = useState(false)
+  const [promos, setPromos] = useState<Promo[]>([])
 
   useEffect(() => {
     ;(async () => {
@@ -52,8 +54,16 @@ export default function Payouts() {
           .in('shop_id', ids).eq('status', 'completed').gte('completed_at', new Date(Date.now() - 60 * DAY).toISOString())
           .order('completed_at', { ascending: false })
         : { data: [] }
-      if (data && data.length) setRows(data as Row[])
-      else { setRows(examples()); setExample(true) }
+      const { data: p } = ids.length
+        ? await db.from('promotions').select('fee_pence, decided_at, weeks').in('shop_id', ids).eq('status', 'active')
+          .gte('decided_at', new Date(Date.now() - 60 * DAY).toISOString())
+        : { data: [] }
+      if (data && data.length) { setRows(data as Row[]); setPromos(((p ?? []) as Promo[]).filter((x) => x.fee_pence > 0)) }
+      else {
+        setRows(examples())
+        setExample(true)
+        setPromos([{ fee_pence: 1000, weeks: 2, decided_at: new Date(Date.now() - 5 * DAY).toISOString() }])
+      }
     })()
   }, [])
 
@@ -64,12 +74,19 @@ export default function Payouts() {
   for (const r of rows) {
     const date = addWorkingDays(new Date(r.completed_at), 3)
     const key = dayKey(date)
-    const p = byDay.get(key) ?? { date, orders: 0, amount: 0, paid: date.getTime() <= Date.now() }
+    const p = byDay.get(key) ?? { date, orders: 0, amount: 0, featured: 0, paid: date.getTime() <= Date.now() }
     p.orders++
     p.amount += r.subtotal_pence - (r.discount_pence ?? 0) + r.delivery_fee_pence - r.platform_fee_pence
     byDay.set(key, p)
   }
-  const payouts = [...byDay.values()].sort((a, b) => b.date.getTime() - a.date.getTime())
+  // Featured spot fees come off the first payout after the spot is approved.
+  const ordered = [...byDay.values()].sort((a, b) => a.date.getTime() - b.date.getTime())
+  const featured = promos.map((promo) => {
+    const target = ordered.find((p) => p.date.getTime() >= new Date(promo.decided_at).getTime())
+    if (target) { target.featured += promo.fee_pence; target.amount -= promo.fee_pence }
+    return { ...promo, takenOn: target?.date }
+  })
+  const payouts = [...ordered].reverse()
   const coming = payouts.filter((p) => !p.paid)
   const next = [...coming].sort((a, b) => a.date.getTime() - b.date.getTime())[0]
   const onTheWay = coming.reduce((n, p) => n + p.amount, 0)
@@ -105,17 +122,30 @@ export default function Payouts() {
             <li><strong>You accept the order.</strong> Only then is the card charged. If you decline, the customer pays nothing.</li>
             <li><strong>Stripe sends your money to your bank</strong> automatically, usually within a few working days. Your very first payout can take about a week while Stripe checks your account.</li>
           </ol>
+          <p className="muted small">If you book a featured spot, its fee comes off your next payout, so you never need a card.</p>
           <p className="muted small">You get the food price minus BiteBY’s fee, plus all of your delivery fees. Card costs are covered by the customer’s service fee, so they never come off your money. <a href="/fees" onClick={link('/fees')}>How fees work</a></p>
         </div>
       </details>
 
       <h2 className="payout-h">Payout history</h2>
       <div className="card payout-list">
+        {featured.map((f) => (
+          <div key={f.decided_at} className="payout-row">
+            <span className="sum-text">
+              <strong>Paid to be featured</strong>
+              <span className="muted tiny">{f.weeks} {f.weeks === 1 ? 'week' : 'weeks'}, approved {shortDay(new Date(f.decided_at))}{f.takenOn ? ` · taken from your ${shortDay(f.takenOn)} payout` : ' · taken from your next payout'}</span>
+            </span>
+            <span className="payout-right">
+              <strong>−{pounds(f.fee_pence)}</strong>
+              <span className="payout-tag featured">Featured</span>
+            </span>
+          </div>
+        ))}
         {payouts.map((p) => (
           <div key={dayKey(p.date)} className="payout-row">
             <span className="sum-text">
               <strong>{shortDay(p.date)}</strong>
-              <span className="muted tiny">{p.orders} {p.orders === 1 ? 'order' : 'orders'}</span>
+              <span className="muted tiny">{p.orders} {p.orders === 1 ? 'order' : 'orders'}{p.featured > 0 && ` · after featured fee of ${pounds(p.featured)}`}</span>
             </span>
             <span className="payout-right">
               <strong>{pounds(p.amount)}</strong>
@@ -125,8 +155,19 @@ export default function Payouts() {
         ))}
       </div>
 
-      <button type="button" disabled>Connect your bank (coming soon)</button>
-      <p className="muted small" style={{ margin: 0 }}>When payments go live, you’ll tap here to set up payouts with Stripe, the secure payment company BiteBY uses. It takes about 5 minutes: your name, date of birth and bank details. BiteBY never sees your bank details.</p>
+      <details className="card set-sec">
+        <summary>
+          <span className="sum-row">
+            <span className="set-icon"><Icon name="card" size={20} /></span>
+            <span className="sum-text"><strong>Bank details</strong><span className="muted small">Account ending 1234{example ? ' (example)' : ''}</span></span>
+          </span>
+        </summary>
+        <div className="details-body">
+          <p className="muted small">Your bank details are kept by Stripe, the secure payment company BiteBY uses. BiteBY never sees them. To change bank, tap below and Stripe opens its secure page. New payouts go to the new account straight away.</p>
+          <button type="button" disabled>Update bank details (when payments go live)</button>
+          <p className="muted tiny" style={{ margin: 0 }}>New cooks set this up once, in about 5 minutes: name, date of birth and bank details.</p>
+        </div>
+      </details>
     </div>
   )
 }

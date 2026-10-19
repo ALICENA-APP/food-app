@@ -362,7 +362,7 @@ function GetFeatured({ shopId, shopLive }: { shopId: string; shopLive: boolean }
             </div>
             <button type="button" onClick={request} disabled={!shopLive}>Ask to be featured</button>
             {!shopLive && <p className="muted small">You can ask once your shop is live.</p>}
-            <p className="muted tiny">Nothing is charged now. Payment will be taken by card once online payments are switched on, and only if the team approves your spot.</p>
+            <p className="muted tiny">Nothing is charged now. If the team approves your spot, the fee comes off your next payout (you’ll see it on your Payouts page). No card needed.</p>
           </>
         )}
         {message && <p className="error small">{message}</p>}
