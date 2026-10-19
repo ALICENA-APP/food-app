@@ -906,3 +906,24 @@ a.insurance-alert { display: block; color: #fff; text-decoration: none; }
 .stat-bar:has(> :nth-child(6)) { gap: 2px; }
 .stat-bar:has(> :nth-child(6)) strong { font-size: 0.8rem; }
 .stat-bar:has(> :nth-child(6)) small { font-size: 0.62rem; }
+
+/* Shop details page: collapsible grey sections */
+details.set-sec { background: #F3F3F3; border-color: transparent; }
+details.set-sec .set-icon { flex: 0 0 auto; display: inline-flex; color: #111; }
+details.set-sec .sum-text strong { font-weight: 600; }
+details.set-sec .sum-text .small { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+details.set-sec .set-badge { flex: 0 0 auto; background: var(--yellow); color: #111; font-size: 12px; font-weight: 600; border-radius: 999px; padding: 3px 10px; }
+details.set-sec input, details.set-sec textarea, details.set-sec select { background: #fff; }
+details.set-sec .set-sub { margin: 8px 0 0; font-size: 1rem; font-weight: 600; }
+details.set-sec.dark { background: #111; color: #fff; }
+details.set-sec.dark .set-icon, details.set-sec.dark .sum-text strong { color: #fff; }
+details.set-sec.dark .sum-text .small, details.set-sec.dark .muted { color: rgba(255, 255, 255, 0.72); }
+details.set-sec.dark summary::after { color: rgba(255, 255, 255, 0.72); }
+details.set-sec.dark .check { color: #fff; }
+:root[data-theme='dark'] details.set-sec:not(.dark) { background: #262626; }
+:root[data-theme='dark'] details.set-sec:not(.dark) .set-icon { color: #f3f3f3; }
+:root[data-theme='dark'] details.set-sec input, :root[data-theme='dark'] details.set-sec textarea, :root[data-theme='dark'] details.set-sec select { background: var(--card, #161616); }
+
+/* Back button on inner pages; hidden when the page has its own. */
+.app-back { align-self: flex-start; background: none; border: 0; padding: 4px 0; min-height: 0; width: auto; cursor: pointer; font-size: 15px; }
+main:has(.back:not(.app-back)) .app-back { display: none; }

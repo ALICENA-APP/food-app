@@ -6,6 +6,7 @@ import { addDays, shortDate } from '../lib/hours'
 import { link, navigate } from '../lib/router'
 import { deletePhoto, photoUrl, uploadPhoto } from '../lib/images'
 import { ImageCropper } from '../lib/ImageCropper'
+import { Icon, type IconName } from '../lib/icons'
 import { pounds, type SellerAccount, type Shop, type ShopPrivate, type ShopSettings } from '../lib/types'
 
 function toSlug(text: string) {
@@ -15,6 +16,26 @@ function toSlug(text: string) {
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '')
     .slice(0, 40)
+}
+
+// A collapsible section, like the dashboard cards: icon, title and a one-line
+// summary; tap to open.
+function Section({ icon, title, summary, badge, open, dark, children }: { icon: IconName; title: string; summary: string; badge?: string; open?: boolean; dark?: boolean; children: React.ReactNode }) {
+  return (
+    <details className={`card set-sec${dark ? ' dark' : ''}`} open={open || undefined}>
+      <summary>
+        <span className="sum-row">
+          <span className="set-icon"><Icon name={icon} size={20} /></span>
+          <span className="sum-text">
+            <strong>{title}</strong>
+            <span className="muted small">{summary}</span>
+          </span>
+        </span>
+        {badge && <span className="set-badge">{badge}</span>}
+      </summary>
+      <div className="details-body">{children}</div>
+    </details>
+  )
 }
 
 type Loaded = {
@@ -99,6 +120,8 @@ function ShopForm({ account, shop, settings, priv }: Loaded & { account: SellerA
   }
 
   async function saveShop() {
+    if (name.trim().length < 2) return fail('Add your shop name (at least 2 letters).')
+    if (!/^[a-z0-9][a-z0-9-]{1,38}[a-z0-9]$/.test(slug)) return fail('Your shop link needs 3 to 40 lowercase letters, numbers or dashes.')
     if (!collection && !delivery) return fail('Choose collection, delivery or both.')
     setSaving(true)
     setMessage('')
@@ -151,23 +174,59 @@ function ShopForm({ account, shop, settings, priv }: Loaded & { account: SellerA
     else setMessage('Saved ✓ Your changes are live.')
   }
 
+  // Each section has its own Save button; they all save the whole form, and
+  // the message shows under the one that was tapped.
+  const [from, setFrom] = useState('')
+  function saveButton(section: string) {
+    return (
+      <>
+        <button type="submit" disabled={saving} onClick={() => setFrom(section)}>{saving && from === section ? 'Saving…' : 'Save'}</button>
+        {message && from === section && <p className={message.startsWith('Saved') ? 'status small' : 'error'} role="status">{message}</p>}
+      </>
+    )
+  }
+
   function fail(text: string) {
     setSaving(false)
     setMessage(text)
   }
 
   async function setLive(live: boolean) {
+    setFrom('open')
     const { error } = await supabase!.from('shops').update({ status: live ? 'live' : 'paused' }).eq('id', shop!.id)
     if (error) setMessage(error.message)
     else window.location.reload()
   }
 
   return (
-    <form className="stack" onSubmit={onSubmit}>
+    <form className="stack" onSubmit={onSubmit} noValidate>
       <h1>{shop ? 'Your shop' : 'Set up your shop'}</h1>
 
-      <div className="card">
-        <h2>Shop details</h2>
+      {shop && (
+        <Section icon="store" title="Open for orders" dark
+          summary={!canGoLive ? 'Not live yet' : shop.status === 'live' ? (accepting ? 'Live and taking orders' : 'Live, not taking orders') : 'Hidden from customers'}
+          badge={canGoLive && shop.status === 'live' ? 'Live' : undefined}>
+          {canGoLive ? (
+            <>
+              <label className="check">
+                <input type="checkbox" checked={accepting} onChange={(e) => setAccepting(e.target.checked)} />
+                Taking orders right now
+              </label>
+              <button type="button" className="secondary" onClick={() => setLive(shop.status !== 'live')}>
+                {shop.status === 'live' ? 'Hide my shop' : 'Make my shop live'}
+              </button>
+              {saveButton('open')}
+            </>
+          ) : (
+            <p className="muted small">
+              Your shop can go live once your application is approved, your food insurance is uploaded and payments are set up.
+              Until then only you can see it.
+            </p>
+          )}
+        </Section>
+      )}
+
+      <Section icon="edit" title="Shop details" open={!shop} summary={shop ? `${name || 'No name yet'} · ${window.location.host}/s/${slug}` : 'Name, link and story'}>
         <label>
           Shop name
           <input
@@ -218,10 +277,14 @@ function ShopForm({ account, shop, settings, priv }: Loaded & { account: SellerA
           Cuisines (separate with commas)
           <input value={cuisines} onChange={(e) => setCuisines(e.target.value)} placeholder="e.g. Nigerian, Caribbean, Vegan" />
         </label>
-      </div>
+        {shop && saveButton('details')}
+      </Section>
 
-      <div className="card">
-        <h2>How customers get their food</h2>
+      {shop && <ShopPhotos shop={shop} />}
+      {shop && <ShopNotice shop={shop} />}
+
+      <Section icon="truck" title="Collection and delivery" open={!shop}
+        summary={[collection && 'Collection', delivery && 'Delivery', catering && 'Catering'].filter(Boolean).join(' · ') || 'Choose how customers get their food'}>
         <label className="check">
           <input type="checkbox" checked={collection} onChange={(e) => setCollection(e.target.checked)} />
           Collection from me
@@ -239,17 +302,14 @@ function ShopForm({ account, shop, settings, priv }: Loaded & { account: SellerA
           Minimum order (£)
           <input type="number" min="0" max="1000" step="0.5" value={minOrder} onChange={(e) => setMinOrder(e.target.value)} />
         </label>
-      </div>
-
-      {shop && <ShopPhotos shop={shop} />}
-      {shop && <ShopNotice shop={shop} />}
-      {shop && <OpeningHours shopId={shop.id} />}
-      {shop && <DailyLimit shopId={shop.id} />}
+        {shop && saveButton('how')}
+      </Section>
       {shop && delivery && <DeliveryRadius shopId={shop.id} />}
       {shop && delivery && <DeliveryZones shopId={shop.id} />}
+      {shop && <OpeningHours shopId={shop.id} />}
+      {shop && <DailyLimit shopId={shop.id} />}
 
-      <div className="card">
-        <h2>Private details</h2>
+      <Section icon="lock" title="Private details" open={!shop} summary={postcode ? `${postcode.toUpperCase()} · only you can see these` : 'Your address and phone, never shown'}>
         <p className="muted small">
           Never shown on your shop. A customer only sees your collection address after you accept
           their paid order.
@@ -280,33 +340,11 @@ function ShopForm({ account, shop, settings, priv }: Loaded & { account: SellerA
           Phone for order questions
           <input type="tel" maxLength={30} value={phone} onChange={(e) => setPhone(e.target.value)} autoComplete="tel" />
         </label>
-      </div>
+        {shop && saveButton('private')}
+      </Section>
 
-      {shop && (
-        <div className="card">
-          <h2>Open for orders</h2>
-          {canGoLive ? (
-            <>
-              <p className="muted">Your shop is {shop.status === 'live' ? 'live' : 'not live'}.</p>
-              <button type="button" onClick={() => setLive(shop.status !== 'live')}>
-                {shop.status === 'live' ? 'Hide my shop' : 'Make my shop live'}
-              </button>
-              <label className="check">
-                <input type="checkbox" checked={accepting} onChange={(e) => setAccepting(e.target.checked)} />
-                Taking orders right now
-              </label>
-            </>
-          ) : (
-            <p className="muted">
-              Your shop can go live once your application is approved, your food insurance is uploaded and payments are set up.
-              Until then only you can see it.
-            </p>
-          )}
-        </div>
-      )}
-
-      <button type="submit" disabled={saving}>{saving ? 'Saving…' : shop ? 'Save' : 'Create my shop'}</button>
-      {message && <p className={message.startsWith('Saved') ? 'status small' : 'error'} role="status">{message}</p>}
+      {!shop && <button type="submit" disabled={saving}>{saving ? 'Saving…' : 'Create my shop'}</button>}
+      {!shop && message && <p className="error" role="status">{message}</p>}
     </form>
   )
 }
@@ -332,16 +370,15 @@ function DailyLimit({ shopId }: { shopId: string }) {
   }
 
   return (
-    <div className="card">
-      <h2>Orders per day</h2>
+    <Section icon="orders" title="Orders per day" summary={max ? `Up to ${max} a day` : 'No limit'}>
       <p className="muted small">Only cook as much as you can manage. When a day is full, customers are asked to pick another day.</p>
       <label>
         Most orders I take in a day
         <input type="number" inputMode="numeric" min={1} max={500} value={max} onChange={(e) => setMax(e.target.value)} placeholder="No limit" />
       </label>
-      <button type="button" className="secondary" onClick={save}>Save</button>
+      <button type="button" onClick={save}>Save</button>
       {message && <p className="muted small">{message}</p>}
-    </div>
+    </Section>
   )
 }
 
@@ -379,8 +416,7 @@ function DeliveryRadius({ shopId }: { shopId: string }) {
   }
 
   return (
-    <div className="card">
-      <h2>Deliver by distance</h2>
+    <Section icon="map" title="Deliver by distance" summary={miles ? `Within ${miles} ${miles === '1' ? 'mile' : 'miles'}` : 'Off'}>
       <p className="muted small">The simplest option: deliver to anyone within a set distance of your home. Customers only ever see a rough distance, never your address.</p>
       {!located && <p className="status small">Add your postcode in "Collection address" above and save, so we know where you are.</p>}
       <label>
@@ -402,9 +438,9 @@ function DeliveryRadius({ shopId }: { shopId: string }) {
           </label>
         </div>
       )}
-      <button type="button" className="secondary" onClick={save}>Save</button>
+      <button type="button" onClick={save}>Save</button>
       {message && <p className="muted small">{message}</p>}
-    </div>
+    </Section>
   )
 }
 
@@ -450,8 +486,7 @@ function DeliveryZones({ shopId }: { shopId: string }) {
   }
 
   return (
-    <div className="card">
-      <h2>Or deliver to postcode areas</h2>
+    <Section icon="pin" title="Postcode areas" summary={zones.length ? zones.flatMap((z) => z.postcode_districts).join(', ') : 'None added'}>
       <p className="muted small">Use the first part of the postcode, like E3 or E14. You can use this as well as, or instead of, a distance. Customers you don't deliver to can still collect.</p>
       {zones.map((z) => (
         <div key={z.id} className="check-row">
@@ -479,7 +514,7 @@ function DeliveryZones({ shopId }: { shopId: string }) {
       <input value={name} maxLength={60} onChange={(e) => setName(e.target.value)} placeholder="Name for this area (optional)" />
       <button type="button" className="secondary" onClick={add}>Add delivery area</button>
       {message && <p className="error">{message}</p>}
-    </div>
+    </Section>
   )
 }
 
@@ -514,8 +549,7 @@ function ShopPhotos({ shop }: { shop: Shop }) {
   }
 
   return (
-    <div className="card">
-      <h2>Shop photos</h2>
+    <Section icon="star" title="Shop photos" summary={logo && cover ? 'Logo and cover photo added' : 'Add a logo and a cover photo'}>
       <div className="shop-photos">
         <div>
           <p className="small">Logo or your photo</p>
@@ -546,14 +580,15 @@ function ShopPhotos({ shop }: { shop: Shop }) {
           onDone={(blob) => replace(cropping.kind, blob)}
         />
       )}
-    </div>
+    </Section>
   )
 }
 
 // A short message at the top of the shop page, optionally until a date.
 function ShopNotice({ shop }: { shop: Shop }) {
   const [text, setText] = useState(shop.notice ?? '')
-  const [until, setUntil] = useState(shop.notice_until ?? '')
+  // A date that has already passed is cleared, so it doesn't block saving.
+  const [until, setUntil] = useState(shop.notice_until && shop.notice_until >= new Date().toISOString().slice(0, 10) ? shop.notice_until : '')
   const [message, setMessage] = useState('')
 
   async function save(clear = false) {
@@ -567,8 +602,7 @@ function ShopNotice({ shop }: { shop: Shop }) {
   }
 
   return (
-    <div className="card">
-      <h2>Announcement</h2>
+    <Section icon="bell" title="Announcement" summary={shop.notice && text ? text : 'None showing'} badge={shop.notice && text ? 'On' : undefined}>
       <p className="muted small">A short message at the top of your shop page, like a special or a change to your hours.</p>
       <textarea rows={2} maxLength={160} value={text} onChange={(e) => setText(e.target.value)} placeholder="e.g. Jerk chicken this Saturday only. Order by Friday!" aria-label="Announcement" />
       <label>
@@ -580,7 +614,7 @@ function ShopNotice({ shop }: { shop: Shop }) {
         {shop.notice !== undefined && text && <button type="button" className="secondary" onClick={() => save(true)}>Remove</button>}
       </div>
       {message && <p className="muted small">{message}</p>}
-    </div>
+    </Section>
   )
 }
 
@@ -628,6 +662,8 @@ function OpeningHours({ shopId }: { shopId: string }) {
   }, [load])
 
   if (!days) return null
+  const openDays = days.filter((d) => d.open).length
+  const openSummary = `${openDays ? `Open ${openDays} ${openDays === 1 ? 'day' : 'days'} a week` : 'No hours set'}${closures.length ? ` · ${closures.length} ${closures.length === 1 ? 'day' : 'days'} off coming up` : ''}`
 
   function set(i: number, change: Partial<Day>) {
     setDays(days!.map((d, j) => (j === i ? { ...d, ...change } : d)))
@@ -670,8 +706,7 @@ function OpeningHours({ shopId }: { shopId: string }) {
   }
 
   return (
-    <div className="card">
-      <h2>Opening hours</h2>
+    <Section icon="clock" title="Opening hours and days off" summary={openSummary}>
       <p className="muted small">When customers can collect or get deliveries.</p>
       {days.map((d, i) => (
         <div key={i} className="hours-row">
@@ -690,9 +725,9 @@ function OpeningHours({ shopId }: { shopId: string }) {
           )}
         </div>
       ))}
-      <button type="button" className="secondary" onClick={saveHours}>Save hours</button>
+      <button type="button" onClick={saveHours}>Save hours</button>
 
-      <h2>Days off and holidays</h2>
+      <h3 className="set-sub">Days off and holidays</h3>
       <p className="muted small">Customers can’t order for these days, and your shop shows when you’re back.</p>
       {closureRuns(closures).map((run) => (
         <div key={run[0].id} className="check-row">
@@ -707,6 +742,6 @@ function OpeningHours({ shopId }: { shopId: string }) {
       <input value={offReason} maxLength={200} onChange={(e) => setOffReason(e.target.value)} placeholder="Reason, shown to customers (optional), e.g. On holiday" aria-label="Reason" />
       <button type="button" className="secondary" onClick={addClosure} disabled={!offDate}>{offUntil && offUntil > offDate ? 'Add holiday' : 'Add day off'}</button>
       {message && <p className="muted">{message}</p>}
-    </div>
+    </Section>
   )
 }
