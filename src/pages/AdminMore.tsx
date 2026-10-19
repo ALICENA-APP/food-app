@@ -610,7 +610,7 @@ function ShopActions({ shopId, status, onChanged }: { shopId: string; status: Sh
 export function AdminSafety() {
   const [flags, setFlags] = useState<Flag[] | null>(null)
   const [error, setError] = useState('')
-  const [only, setOnly] = useState<'all' | 'report'>('all')
+  const [only, setOnly] = useState<'all' | 'report' | 'drugs'>('all')
 
   useEffect(() => {
     supabase!.rpc('admin_safety_flags').then(({ data, error: e }) => (e ? setError(e.message) : setFlags(data ?? [])))
@@ -618,17 +618,21 @@ export function AdminSafety() {
 
   if (error) return <p className="error">{error}</p>
   if (!flags) return <p className="muted">Loading…</p>
-  const shown = only === 'report' ? flags.filter((f) => f.source === 'report') : flags
+  const isDrug = (f: Flag) => f.source.startsWith('drug watch')
+  const shown = only === 'report' ? flags.filter((f) => f.source === 'report') : only === 'drugs' ? flags.filter(isDrug) : flags
   const setShopStatus = (shopId: string, s: ShopState) => setFlags((list) => list!.map((f) => (f.shop_id === shopId ? { ...f, shop_status: s } : f)))
   return (
     <div className="stack">
       <p className="muted small">
         Customer reports, plus messages with phone numbers, emails, links, bank details or talk of paying outside BiteBY (those messages are stopped automatically and never reach the other person, even when split up or spelt like C a $ h).
         Shop pages and dishes can’t be saved with them at all. A cook who keeps appearing here may be taking customers off the app.
+        Drug warnings are messages, dishes or shop pages that use drug words or slang: they still go through (some slang is everyday language), so have a look.
+        If it looks like real drug dealing, suspend the shop, don’t delete anything, and report it to the police on 101 or to Crimestoppers.
       </p>
       <div className="chips">
         <button type="button" className={`chip ${only === 'all' ? 'on' : ''}`} onClick={() => setOnly('all')}>Everything ({flags.length})</button>
         <button type="button" className={`chip ${only === 'report' ? 'on' : ''}`} onClick={() => setOnly('report')}>Customer reports ({flags.filter((f) => f.source === 'report').length})</button>
+        <button type="button" className={`chip ${only === 'drugs' ? 'on' : ''}`} onClick={() => setOnly('drugs')}>Drug warnings ({flags.filter(isDrug).length})</button>
       </div>
       {shown.length === 0 && <p className="muted">Nothing here. Good.</p>}
       {shown.map((f) => (
