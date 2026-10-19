@@ -28,11 +28,11 @@ export function WelcomeRate({ shopId }: { shopId: string }) {
   if (ends && ends.getTime() < Date.now()) return null
   return (
     <a className="card welcome-rate" href="/fees" onClick={link('/fees')}>
-      <strong>Welcome offer: {percent(r.intro_bps)} BiteBY fee</strong>
+      <strong>Welcome offer: {r.intro_bps === 0 ? 'no BiteBY fee' : `${percent(r.intro_bps)} BiteBY fee`}</strong>
       <span className="muted small">
         {ends
-          ? `Until ${day(ends.toISOString())}, BiteBY keeps only ${percent(r.intro_bps)} of your food sales instead of ${percent(r.standard_bps)}.`
-          : `Your first ${r.intro_days} days of selling start with your first order. During them BiteBY keeps only ${percent(r.intro_bps)} instead of ${percent(r.standard_bps)}.`}
+          ? `Until ${day(ends.toISOString())}, BiteBY keeps ${r.intro_bps === 0 ? 'nothing from' : `only ${percent(r.intro_bps)} of`} your food sales instead of ${percent(r.standard_bps)}.`
+          : `Your first ${r.intro_days} days of selling start with your first order. During them BiteBY keeps ${r.intro_bps === 0 ? 'nothing' : `only ${percent(r.intro_bps)}`} instead of ${percent(r.standard_bps)}.`}
         {' '}See how fees work.
       </span>
     </a>
@@ -74,7 +74,7 @@ export default function Fees() {
 
       <ul className="fee-points">
         <li><strong>No sign-up fee and no monthly fee.</strong> If you don’t sell, you pay nothing.</li>
-        <li><strong>BiteBY fee: {percent(s.commission_bps)} of the food price.</strong> That’s all BiteBY takes.{hasIntro && <> For your first {s.intro_days} days of selling it’s only {percent(intro)}.</>}</li>
+        <li><strong>BiteBY fee: {percent(s.commission_bps)} of the food price.</strong> That’s all BiteBY takes.{hasIntro && <> For your first {s.intro_days} days of selling it’s {intro === 0 ? '0%: BiteBY takes nothing' : `only ${percent(intro)}`}.</>}</li>
         <li><strong>Delivery fees are all yours.</strong> BiteBY takes nothing from them.</li>
         <li><strong>No card fees for you.</strong> Customers pay a small service fee ({pounds(serviceFee(2000, s))} on a £20 order) that covers the cost of card payments, Apple Pay and Google Pay. Nothing else comes off your money.</li>
         <li><strong>Declined orders cost you nothing.</strong> The customer gets all their money back and you pay no fees.</li>

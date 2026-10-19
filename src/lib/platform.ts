@@ -38,5 +38,5 @@ export function useWelcomeOffer() {
   const s = usePlatform()
   const intro = Math.min(s.intro_commission_bps, s.commission_bps)
   if (!s.intro_days || intro >= s.commission_bps) return ''
-  return `only ${percent(intro)} for your first ${s.intro_days} days of selling`
+  return intro === 0 ? `nothing at all for your first ${s.intro_days} days of selling` : `only ${percent(intro)} for your first ${s.intro_days} days of selling`
 }
