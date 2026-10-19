@@ -53,7 +53,6 @@ export function SellerEarnings() {
 
   return (
     <div className="stack">
-      <p><a href="/sell" onClick={link('/sell')}>← Seller account</a></p>
       <h1>Earnings</h1>
       <div className="segmented">
         {PERIODS.map((p) => (
@@ -104,7 +103,6 @@ export function SellerReviews() {
 
   return (
     <div className="stack">
-      <p><a href="/sell" onClick={link('/sell')}>← Seller account</a></p>
       <h1>Reviews</h1>
       {visible.length > 0 && <p><Stars value={average} /> {average.toFixed(1)} from {visible.length} {visible.length === 1 ? 'review' : 'reviews'}</p>}
       {reviews.length === 0 && <p className="muted">No reviews yet. Customers can review an order once it's complete.</p>}

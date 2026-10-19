@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { myUserId } from '../lib/session'
 import { tidyOrders } from '../lib/alerts'
-import { link, queryParam } from '../lib/router'
+import { queryParam } from '../lib/router'
 import { OrderChat } from '../lib/chat'
 import { HelpForm } from '../lib/help'
 import { pounds } from '../lib/types'
@@ -61,7 +61,6 @@ export default function SellerOrders() {
 
   return (
     <div className="stack">
-      <p><a href="/sell" onClick={link('/sell')}>← Seller account</a></p>
       <h1>Orders</h1>
       <div className="segmented">
         <label className={tab === 'open' ? 'on not_present' : ''}>

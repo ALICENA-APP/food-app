@@ -78,7 +78,6 @@ export default function Fees() {
 
   return (
     <div className="stack">
-      <p><a href="/sell" onClick={link('/sell')}>← Sell on BiteBY</a></p>
       {welcome && <OfferBadge text={welcome} />}
       <h1>How fees work</h1>
       <p>Simple and the same for every cook. You only pay when you sell.</p>

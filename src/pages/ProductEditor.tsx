@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import { supabase } from '../lib/supabase'
 import { myUserId } from '../lib/session'
-import { link, navigate } from '../lib/router'
+import { navigate } from '../lib/router'
 import { DIETARY, pounds, type Allergen, type Category, type Presence, type Product, type ProductAddon, type ProductVariant } from '../lib/types'
 import { deletePhoto, photoUrl, uploadPhoto } from '../lib/images'
 import { ImageCropper } from '../lib/ImageCropper'
@@ -160,9 +160,6 @@ function Editor({ shopId, product, allergens, categories, answers: initialAnswer
 
   return (
     <form className="stack" onSubmit={onSubmit}>
-      <p>
-        <a href="/sell/products" onClick={link('/sell/products')}>← Menu</a>
-      </p>
       <h1>{product ? 'Edit item' : 'New item'}</h1>
       {isPublished && (
         <p className="status small">

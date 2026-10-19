@@ -31,6 +31,7 @@ const ShopSetup = lazy(() => import('./pages/ShopSetup'))
 const Products = lazy(() => import('./pages/Products'))
 const ProductEditor = lazy(() => import('./pages/ProductEditor'))
 const SellerOrders = lazy(() => import('./pages/SellerOrders'))
+const Payouts = lazy(() => import('./pages/Payouts'))
 const SellerEarnings = lazy(() => import('./pages/SellerInsights').then((m) => ({ default: m.SellerEarnings })))
 const SellerReviews = lazy(() => import('./pages/SellerInsights').then((m) => ({ default: m.SellerReviews })))
 const Admin = lazy(() => import('./pages/Admin'))
@@ -156,6 +157,7 @@ function App() {
     else if (path === '/sell/customers') page = <SellerCustomers />
     else if (path === '/sell/statement') page = <Statement kind="seller" />
     else if (path === '/sell/earnings') page = <SellerEarnings />
+    else if (path === '/sell/payouts') page = <Payouts />
     else if (path === '/sell/reviews') page = <SellerReviews />
     else if (path === '/sell/orders') page = <SellerOrders />
     else if (path === '/sell/products') page = <Products />

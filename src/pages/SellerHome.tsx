@@ -214,6 +214,14 @@ function Dashboard({ shop, account, onChanged }: { shop: Shop; account: SellerAc
       <InviteCard />
       <SetupChecklist shop={shop} refresh={refresh} />
 
+      <a className="tile payout-tile" href="/sell/payouts" onClick={link('/sell/payouts')}>
+        <span className="ic"><Icon name="pound" /></span>
+        <span className="sum-text" style={{ flex: 1 }}>
+          <span className="t">Payouts</span>
+          <span className="s">When and how your money reaches your bank</span>
+        </span>
+        <Icon name="chevron" size={18} />
+      </a>
       <div className="menu-tiles">
         <SellerTile to="/sell/orders" icon="orders" title="Orders" sub="Accept and update" tone="var(--green-soft)" />
         <SellerTile to="/sell/prep" icon="cutlery" title="Cooking list" sub="What to make each day" tone="var(--yellow-soft)" />
