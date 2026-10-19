@@ -43,12 +43,11 @@ function introOpen(s: PlatformSettings) {
 }
 const firstCooks = (s: PlatformSettings) => (s.intro_spots === null ? '' : `our first ${s.intro_spots} cooks`)
 
-// "63 of 100 spots left", or '' when the offer is for everyone.
-export function useSpotsLeft() {
+// Founding spots taken and in total, or null when the offer is for everyone.
+export function useFoundingSpots() {
   const s = usePlatform()
-  if (s.intro_spots === null || !introOpen(s)) return ''
-  const left = s.intro_spots - s.spots_taken
-  return `${left} of ${s.intro_spots} ${s.intro_spots === 1 ? 'spot' : 'spots'} left`
+  if (s.intro_spots === null || !introOpen(s)) return null
+  return { taken: Math.min(s.spots_taken, s.intro_spots), total: s.intro_spots }
 }
 
 // The welcome offer for new cooks in words, e.g. "only 5% for your first 30 days",
