@@ -812,3 +812,18 @@ h2.menu-head { margin: 8px 0 0; font-size: 1.1rem; }
 .sheet h4 { margin: 14px 0 8px; font-size: 0.82rem; color: var(--muted); font-weight: 600; }
 .sheet .opts { display: flex; flex-wrap: wrap; gap: 8px; }
 .sheet-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 20px; }
+
+/* Automatic application checks in Admin > Sellers. */
+.auto-check { border-radius: 12px; padding: 10px 12px; background: var(--green-soft); }
+.auto-check.amber { background: var(--yellow-soft); }
+.auto-check.red { background: #fde8e8; }
+.auto-check .head { margin: 0 0 4px; font-weight: 700; display: flex; align-items: center; gap: 6px; }
+.auto-check .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--green); }
+.auto-check.amber .dot { background: #e8a33d; }
+.auto-check.red .dot { background: var(--red); }
+.auto-check ul { margin: 0 0 4px; padding-left: 18px; font-size: 0.85rem; }
+.auto-check li.amber { color: #8a5a00; }
+.auto-check li.red { color: #a32d2d; font-weight: 600; }
+:root[data-theme='dark'] .auto-check { background: var(--card); border: 1px solid var(--border); }
+:root[data-theme='dark'] .auto-check li.amber { color: #e8a33d; }
+:root[data-theme='dark'] .auto-check li.red { color: #f08a8a; }

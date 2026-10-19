@@ -12,7 +12,7 @@ import { HygieneCard, SetupChecklist } from './SellerSetup'
 
 const STATUS_TEXT: Record<SellerAccount['status'], string> = {
   draft: 'Not sent yet',
-  submitted: 'Sent. We will check your details and get back to you.',
+  submitted: 'Sent. We check your details automatically, usually within 30 minutes, and let you know.',
   in_review: 'We are checking your details.',
   approved: 'Approved',
   rejected: 'Not approved',

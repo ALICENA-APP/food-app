@@ -4,6 +4,7 @@ import { link, queryParam } from '../lib/router'
 import { AdminHelpInbox, AdminOrders, AdminOverview, AdminPromoted, AdminReviews, AdminSafety, AdminSettings, AdminShops, AdminAnnounce } from './AdminMore'
 import Statement from './Statements'
 import type { SellerAccount, SellerStatus, Shop, Verification } from '../lib/types'
+import { when } from './Orders'
 
 // Admin screen. Needs an admin account and a two-step (authenticator app)
 // sign-in; the database checks both on every action.
@@ -198,7 +199,13 @@ const KIND: Record<Verification['kind'], string> = {
   insurance: 'Insurance',
 }
 
+type Check = { seller_account_id: string; result: 'green' | 'amber' | 'red'; reasons: { level: 'ok' | 'amber' | 'red'; text: string }[]; fsa: { status?: string; fhrs_id?: string } | null; auto_approved: boolean; recheck: boolean; checked_at: string }
+const RESULT: Record<Check['result'], string> = { green: 'All checks passed', amber: 'Needs a look', red: 'Problem found' }
+const LEVEL_RANK = { red: 0, amber: 1, green: 2 }
+
 type Data = {
+  checks: Record<string, Check>
+  autoApprove: boolean
   accounts: SellerAccount[]
   verifications: Verification[]
   shops: Shop[]
@@ -211,15 +218,19 @@ function Sellers() {
 
   const load = useCallback(async () => {
     const db = supabase!
-    const [a, v, s, e] = await Promise.all([
+    const [a, v, s, e, c, p] = await Promise.all([
       db.from('seller_accounts').select('*').order('submitted_at', { ascending: true, nullsFirst: false }),
       db.from('seller_verifications').select('*'),
       db.from('shops').select('*'),
       db.rpc('admin_seller_emails'),
+      db.from('application_checks').select('*'),
+      db.from('platform_settings').select('auto_approve').maybeSingle(),
     ])
     const emails: Record<string, string> = {}
     for (const row of (e.data ?? []) as { seller_account_id: string; email: string }[]) emails[row.seller_account_id] = row.email
-    setData({ accounts: a.data ?? [], verifications: v.data ?? [], shops: s.data ?? [], emails })
+    const checks: Record<string, Check> = {}
+    for (const row of (c.data ?? []) as Check[]) checks[row.seller_account_id] = row
+    setData({ accounts: a.data ?? [], verifications: v.data ?? [], shops: s.data ?? [], emails, checks, autoApprove: Boolean(p.data?.auto_approve) })
   }, [])
 
   useEffect(() => {
@@ -230,10 +241,27 @@ function Sellers() {
 
   const shown = data.accounts
     .filter((a) => filter === 'all' || a.status === 'submitted' || a.status === 'in_review')
-    .sort((x, y) => ORDER.indexOf(x.status) - ORDER.indexOf(y.status))
+    .sort((x, y) => ORDER.indexOf(x.status) - ORDER.indexOf(y.status)
+      || (LEVEL_RANK[data.checks[x.id]?.result ?? 'amber'] - LEVEL_RANK[data.checks[y.id]?.result ?? 'amber']))
+  const autoToday = Object.values(data.checks).filter((c) => c.auto_approved && Date.now() - new Date(c.checked_at).getTime() < 7 * 864e5).length
+
+  async function setAuto(on: boolean) {
+    const { error } = await supabase!.rpc('admin_set_auto_approve', { p_on: on })
+    if (!error) load()
+  }
 
   return (
     <div className="stack">
+      <div className="card stack" style={{ gap: 8 }}>
+        <label className="switch-row" style={{ borderTop: 0, paddingTop: 0 }}>
+          <span>
+            <strong>Approve automatically</strong>
+            <span className="muted small" style={{ display: 'block' }}>Every 15 minutes new applications are looked up on the FSA register and checked. Green ones are approved; you only see amber and red.</span>
+          </span>
+          <input type="checkbox" className="switch" checked={data.autoApprove} onChange={(e) => setAuto(e.target.checked)} aria-label="Approve automatically" />
+        </label>
+        <p className="small" style={{ margin: 0 }}>{autoToday} approved automatically in the last 7 days.</p>
+      </div>
       <div className="segmented">
         <label className={filter === 'todo' ? 'on not_present' : ''}>
           <input type="radio" checked={filter === 'todo'} onChange={() => setFilter('todo')} />
@@ -251,6 +279,7 @@ function Sellers() {
           account={a}
           email={data.emails[a.id]}
           verifications={data.verifications.filter((v) => v.seller_account_id === a.id)}
+          check={data.checks[a.id]}
           shop={data.shops.find((s) => s.seller_account_id === a.id)}
           onChanged={load}
         />
@@ -259,7 +288,8 @@ function Sellers() {
   )
 }
 
-function SellerCard({ account, email, verifications, shop, onChanged }: {
+function SellerCard({ account, email, verifications, shop, check, onChanged }: {
+  check?: Check
   account: SellerAccount
   email?: string
   verifications: Verification[]
@@ -282,6 +312,13 @@ function SellerCard({ account, email, verifications, shop, onChanged }: {
     onChanged()
   }
 
+  async function recheck() {
+    const { error } = await supabase!.rpc('admin_recheck_application', { p_account: account.id })
+    if (error) return setMessage(error.message)
+    setMessage('Will be checked again within 15 minutes.')
+    onChanged()
+  }
+
   async function suspendShop() {
     if (!note.trim()) return setMessage('Add a note saying why.')
     const { error } = await supabase!.rpc('admin_set_shop_status', { p_shop: shop!.id, p_status: 'suspended', p_note: note })
@@ -298,6 +335,19 @@ function SellerCard({ account, email, verifications, shop, onChanged }: {
       <p className="muted small">
         {[account.trading_name, account.business_type?.replace('_', ' '), email].filter(Boolean).join(' · ')}
       </p>
+      {check ? (
+        <div className={`auto-check ${check.result}`}>
+          <p className="head"><span className="dot" />{RESULT[check.result]}{check.auto_approved && ' · approved automatically'}</p>
+          <ul>
+            {check.reasons.map((r, i) => <li key={i} className={r.level}>{r.text}</li>)}
+          </ul>
+          <p className="muted tiny">
+            Checked {when(check.checked_at)}
+            {check.fsa?.fhrs_id && <> · <a href={`https://ratings.food.gov.uk/business/${check.fsa.fhrs_id}`} target="_blank" rel="noopener noreferrer">See on FSA</a></>}
+            {(account.status === 'submitted' || account.status === 'in_review') && (check.recheck ? ' · checking again soon' : <> · <button type="button" className="link" onClick={recheck}>Check again</button></>)}
+          </p>
+        </div>
+      ) : (account.status === 'submitted' || account.status === 'in_review') && <p className="muted small">Automatic checks run within 15 minutes of applying.</p>}
       {shop && (
         <p className="small">
           Shop: <a href={`/s/${shop.slug}`} onClick={link(`/s/${shop.slug}`)}>{shop.name}</a> ({shop.status})
