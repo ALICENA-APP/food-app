@@ -57,6 +57,7 @@ export default function Explore() {
   const [sort, setSort] = useState<Sort>('new')
   const mine = useMyAllergies()
   const [ignoreAllergies, setIgnoreAllergies] = useState(false)
+  const [sheet, setSheet] = useState(false)
   const dishIds = (dishes ?? []).map((d) => d.id)
   const hits = useAllergenHits(dishIds, mine.codes)
   const orderCounts = useOrderCounts(dishIds)
@@ -135,68 +136,100 @@ export default function Explore() {
     (!dishFilterOn || withDishes.has(s.id)) &&
     shopOk(s.id, s.accepting_orders))
 
+  const activeCount = filters.length + (within ? 1 : 0) + (allergyFilter ? 1 : 0)
+  const chip = (f: { key: Filter; label: string }) => (
+    <button key={f.key} type="button" className={`chip ${has(f.key) ? 'on' : ''}`} onClick={() => toggle(f.key)}>
+      {['vegetarian', 'vegan', 'halal'].includes(f.key) && <span className="chip-ic"><CategoryIcon slug={f.key} /></span>}
+      {f.key === 'delivery' && district ? `Delivers to ${district}` : f.label}
+    </button>
+  )
+
   return (
-    <div className="stack">
+    <div className="stack explore">
       <h1>Explore</h1>
-      <form className="search" onSubmit={(e) => e.preventDefault()} role="search">
-        <Icon name="search" />
-        <input type="search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search dishes, cooks or cuisines" aria-label="Search" />
-      </form>
-      <PostcodePicker />
-      {point && (
-        <div className="chips">
-          {[0, 1, 2, 3, 5].map((m) => (
-            <button key={m} type="button" className={`chip ${within === m ? 'on' : ''}`} onClick={() => setWithin(m)}>
-              {m ? `Within ${m} mi` : 'Any distance'}
-            </button>
-          ))}
-        </div>
-      )}
-      <div className="chips">
-        {mine.codes.length > 0 ? (
-          <button type="button" className={`chip ${allergyFilter ? 'on' : ''}`} onClick={() => setIgnoreAllergies(!ignoreAllergies)}>
-            <Icon name="leaf" size={16} /> Free from my allergies
-          </button>
-        ) : (
-          <a className="chip" href="/my-allergies" onClick={link('/my-allergies')}><Icon name="leaf" size={16} /> Allergies?</a>
-        )}
-        {FILTERS.map((f) => (
-          <button key={f.key} type="button" className={`chip ${has(f.key) ? 'on' : ''}`} onClick={() => toggle(f.key)}>
-            {['vegetarian', 'vegan', 'halal'].includes(f.key) && <span className="chip-ic"><CategoryIcon slug={f.key} /></span>}
-            {f.key === 'delivery' && district ? `Delivers to ${district}` : f.label}
-          </button>
-        ))}
+      <div className="search-row">
+        <form className="search" onSubmit={(e) => e.preventDefault()} role="search">
+          <Icon name="search" />
+          <input type="search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search dishes, cooks or cuisines" aria-label="Search" />
+        </form>
+        <button type="button" className="filter-btn" onClick={() => setSheet(true)} aria-label="Filters">
+          <Icon name="sliders" size={20} />
+          {activeCount > 0 && <em>{activeCount}</em>}
+        </button>
       </div>
-      <div className="chips">
-        <button type="button" className={`chip ${!category ? 'on' : ''}`} onClick={() => setCategory('')}>All food</button>
-        {categories.map((c) => (
-          <button key={c.id} type="button" className={`chip ${category === c.slug ? 'on' : ''}`} onClick={() => setCategory(category === c.slug ? '' : c.slug)}><span className="chip-ic"><CategoryIcon slug={c.slug} /></span>{c.name}</button>
-        ))}
-      </div>
-      <div className="segmented">
-        <label className={view === 'items' ? 'on' : ''}>
-          <input type="radio" checked={view === 'items'} onChange={() => setView('items')} />
-          Dishes ({shownDishes.length})
-        </label>
-        <label className={view === 'sellers' ? 'on' : ''}>
-          <input type="radio" checked={view === 'sellers'} onChange={() => setView('sellers')} />
-          Sellers ({shownShops.length})
-        </label>
-        <label className={view === 'map' ? 'on' : ''}>
-          <input type="radio" checked={view === 'map'} onChange={() => setView('map')} />
-          Map
-        </label>
+      <div className="where-row">
+        <PostcodePicker />
+        {point && <button type="button" className="link-plain within" onClick={() => setSheet(true)}>· {within ? `Within ${within} mi` : 'Any distance'} <Icon name="chevron" size={14} /></button>}
       </div>
 
-      {dishes === null && <p className="muted">Loading…</p>}
-      {dishes && view === 'items' && shownDishes.length > 0 && (
-        <div className="sort-row">
-          <span className="muted small">{allergyFilter && hits === null ? 'Checking allergens…' : allergyFilter ? `Hiding dishes with your allergens${mine.strict ? ' (and may contain)' : ''}` : ''}</span>
-          <select aria-label="Sort dishes" value={sort} onChange={(e) => setSort(e.target.value as Sort)}>
-            {SORTS.filter((s) => s.key !== 'nearest' || point).map((s) => <option key={s.key} value={s.key}>{s.label}</option>)}
-          </select>
+      <div className="round-cats">
+        <button type="button" className={!category ? 'on' : ''} onClick={() => setCategory('')}><span><CategoryIcon slug="all" /></span>All</button>
+        {categories.map((c) => (
+          <button key={c.id} type="button" className={category === c.slug ? 'on' : ''} onClick={() => setCategory(category === c.slug ? '' : c.slug)}>
+            <span><CategoryIcon slug={c.slug} /></span>{c.name.replace(' and bakes', '').replace(' and snacks', '')}
+          </button>
+        ))}
+      </div>
+
+      <div className="view-tabs" role="tablist">
+        <button type="button" role="tab" aria-selected={view === 'items'} className={view === 'items' ? 'on' : ''} onClick={() => setView('items')}>Dishes <em>{shownDishes.length}</em></button>
+        <button type="button" role="tab" aria-selected={view === 'sellers'} className={view === 'sellers' ? 'on' : ''} onClick={() => setView('sellers')}>Cooks <em>{shownShops.length}</em></button>
+        <button type="button" role="tab" aria-selected={view === 'map'} className={view === 'map' ? 'on' : ''} onClick={() => setView('map')}><Icon name="map" size={15} /> Map</button>
+        {view === 'items' && (
+          <label className="sort-btn" aria-label="Sort dishes">
+            <Icon name="sort" size={17} />
+            <select value={sort} onChange={(e) => setSort(e.target.value as Sort)}>
+              {SORTS.filter((x) => x.key !== 'nearest' || point).map((x) => <option key={x.key} value={x.key}>{x.label}</option>)}
+            </select>
+          </label>
+        )}
+      </div>
+      {view === 'items' && (allergyFilter || sort !== 'new') && (
+        <p className="muted small filter-note">
+          {allergyFilter && <><Icon name="leaf" size={14} /> {hits === null ? 'Checking allergens…' : `Hiding dishes with your allergens${mine.strict ? ' (and may contain)' : ''}`}</>}
+          {allergyFilter && sort !== 'new' && ' · '}
+          {sort !== 'new' && `Sorted by ${SORTS.find((x) => x.key === sort)!.label.toLowerCase()}`}
+        </p>
+      )}
+
+      {sheet && (
+        <div className="sheet-wrap" onClick={() => setSheet(false)}>
+          <div className="sheet" role="dialog" aria-label="Filters" onClick={(e) => e.stopPropagation()}>
+            <div className="sheet-head"><strong>Filters</strong><button type="button" className="icon-btn" onClick={() => setSheet(false)} aria-label="Close"><Icon name="close" /></button></div>
+            {point && (
+              <>
+                <h4>Distance</h4>
+                <div className="opts">
+                  {[0, 1, 2, 3, 5].map((m) => <button key={m} type="button" className={`chip ${within === m ? 'on' : ''}`} onClick={() => setWithin(m)}>{m ? `${m} mi` : 'Any'}</button>)}
+                </div>
+              </>
+            )}
+            <h4>Getting it</h4>
+            <div className="opts">
+              {FILTERS.filter((f) => f.key === 'delivery' || f.key === 'collection').map(chip)}
+            </div>
+            <h4>Diet and allergies</h4>
+            <div className="opts">
+              {mine.codes.length > 0 ? (
+                <button type="button" className={`chip ${allergyFilter ? 'on' : ''}`} onClick={() => setIgnoreAllergies(!ignoreAllergies)}><Icon name="leaf" size={16} /> Free from my allergies</button>
+              ) : (
+                <a className="chip" href="/my-allergies" onClick={link('/my-allergies')}><Icon name="leaf" size={16} /> Set my allergies</a>
+              )}
+              {FILTERS.filter((f) => ['vegetarian', 'vegan', 'halal'].includes(f.key)).map(chip)}
+            </div>
+            <h4>More</h4>
+            <div className="opts">
+              {FILTERS.filter((f) => ['open', 'rated', 'under10'].includes(f.key)).map(chip)}
+            </div>
+            <div className="sheet-actions">
+              <button type="button" className="secondary" onClick={() => { setFilters([]); setWithin(0); setIgnoreAllergies(false) }}>Clear all</button>
+              <button type="button" onClick={() => setSheet(false)}>Show {view === 'items' ? `${shownDishes.length} dishes` : `${shownShops.length} cooks`}</button>
+            </div>
+          </div>
         </div>
       )}
+
+      {dishes === null && <p className="muted">Loading…</p>}
       {dishes && view === 'items' && (shownDishes.length ? (
         <div className="grid2">
           {sortedDishes.map((d) => <DishCard key={d.id} dish={d} rating={ratings[d.shop_id]} orders={orderCounts[d.id]} />)}

@@ -24,9 +24,11 @@ export default function ShopMap({ shops, me }: { shops: MapShop[]; me: { lat: nu
 
   useEffect(() => {
     if (!el.current || map.current) return
-    map.current = L.map(el.current, { zoomControl: true, attributionControl: true }).setView([54.2, -2.6], 5)
+    map.current = L.map(el.current, { zoomControl: true, attributionControl: true, maxZoom: 13 }).setView([54.2, -2.6], 5)
+    // Keep the map credit OpenStreetMap needs, without Leaflet's flag.
+    map.current.attributionControl.setPrefix(false)
     L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      maxZoom: 15,
+      maxZoom: 13,
       attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
     }).addTo(map.current)
     layer.current = L.layerGroup().addTo(map.current)
@@ -64,6 +66,8 @@ export default function ShopMap({ shops, me }: { shops: MapShop[]; me: { lat: nu
         iconSize: [40, 40],
         iconAnchor: [20, 20],
       })
+      // A soft circle shows the rough area the cook is in.
+      L.circle(at, { radius: 700, stroke: false, fillColor: '#FFC72C', fillOpacity: 0.28, interactive: false }).addTo(layer.current)
       L.marker(at, { icon, title: s.name }).addTo(layer.current)
         .bindPopup(`<strong>${esc(s.name)}</strong><br><span>${esc(s.area_label ?? '')}</span><br><a href="/s/${esc(s.slug)}" data-to="/s/${esc(s.slug)}">See menu</a>`)
     }
