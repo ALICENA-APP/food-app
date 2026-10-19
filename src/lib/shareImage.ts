@@ -306,6 +306,84 @@ function square(canvas: HTMLCanvasElement, input: ShareImageInput, shortUrl: str
   ctx.fillText(fitText(ctx, shortUrl, textW), left, H - pad - 20)
 }
 
+// The printable shop poster as one picture (A4 shape), matching the poster page.
+export async function drawPoster(canvas: HTMLCanvasElement, input: { shopName: string; sub: string; url: string }) {
+  try {
+    await Promise.all([document.fonts.load(`800 60px ${FONT}`), document.fonts.load(`600 40px ${FONT}`)])
+  } catch { /* falls back to the system font */ }
+  const [logo, qr] = await Promise.all([loadImage('/logo-share.png'), qrImage(input.url)])
+  const W = 1240
+  const H = 1754
+  canvas.width = W
+  canvas.height = H
+  const ctx = canvas.getContext('2d')!
+  const cx = W / 2
+  ctx.fillStyle = '#ffffff'
+  ctx.fillRect(0, 0, W, H)
+  ctx.fillStyle = YELLOW
+  ctx.fillRect(0, 0, W, 44)
+  if (logo) {
+    const lh = 110
+    const lw = (logo.naturalWidth / logo.naturalHeight) * lh
+    ctx.drawImage(logo, cx - lw / 2, 130, lw, lh)
+  }
+  ctx.textAlign = 'center'
+  ctx.textBaseline = 'alphabetic'
+  ctx.fillStyle = BLACK
+  ctx.font = `800 110px ${FONT}`
+  const nameLines = wrap(ctx, input.shopName, W - 160, 2)
+  let y = 400
+  for (const line of nameLines) { ctx.fillText(line, cx, y); y += 120 }
+  if (input.sub) {
+    ctx.font = `500 44px ${FONT}`
+    ctx.fillStyle = MUTED
+    ctx.fillText(fitText(ctx, input.sub, W - 160), cx, y - 30)
+    y += 40
+  }
+  const q = 700
+  const qy = Math.max(y, 560)
+  if (qr) ctx.drawImage(qr, cx - q / 2, qy, q, q)
+  ctx.fillStyle = BLACK
+  ctx.font = `700 60px ${FONT}`
+  ctx.fillText('Scan to see the menu and order', cx, qy + q + 110)
+  const shortUrl = input.url.replace(/^https?:\/\//, '').replace(/\?.*$/, '')
+  ctx.font = `600 44px ${FONT}`
+  const uw = Math.min(ctx.measureText(shortUrl).width + 70, W - 120)
+  ctx.fillStyle = YELLOW
+  roundRect(ctx, cx - uw / 2, qy + q + 160, uw, 84, 42)
+  ctx.fill()
+  ctx.fillStyle = BLACK
+  ctx.textBaseline = 'middle'
+  ctx.fillText(fitText(ctx, shortUrl, uw - 60), cx, qy + q + 203)
+  ctx.textBaseline = 'alphabetic'
+  ctx.fillStyle = '#777777'
+  ctx.font = `500 38px ${FONT}`
+  ctx.fillText('Real food. Real people.', cx, H - 90)
+}
+
+// Saves a picture to the phone. Phones get the share sheet (with "Save
+// image"), because downloads often do nothing there, especially from an app
+// added to the home screen. Computers download the file.
+export async function saveImage(blob: Blob, fileName: string) {
+  const file = new File([blob], fileName, { type: blob.type || 'image/png' })
+  const phone = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || (navigator.maxTouchPoints > 1 && /Mac/.test(navigator.userAgent))
+  if (phone && navigator.canShare?.({ files: [file] })) {
+    try {
+      await navigator.share({ files: [file] })
+      return
+    } catch (e) {
+      if ((e as Error).name === 'AbortError') return
+    }
+  }
+  const a = document.createElement('a')
+  a.href = URL.createObjectURL(blob)
+  a.download = fileName
+  document.body.appendChild(a)
+  a.click()
+  a.remove()
+  setTimeout(() => URL.revokeObjectURL(a.href), 4000)
+}
+
 export function canvasBlob(canvas: HTMLCanvasElement) {
   return new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/png'))
 }

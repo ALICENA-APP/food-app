@@ -91,7 +91,15 @@ function ShopForm({ account, shop, settings, priv }: Loaded & { account: SellerA
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault()
-    if (!collection && !delivery) return setMessage('Choose collection, delivery or both.')
+    try {
+      await saveShop()
+    } catch (err) {
+      fail(`Couldn’t save: ${(err as Error).message || 'check your connection and try again'}.`)
+    }
+  }
+
+  async function saveShop() {
+    if (!collection && !delivery) return fail('Choose collection, delivery or both.')
     setSaving(true)
     setMessage('')
     const db = supabase!
@@ -140,7 +148,7 @@ function ShopForm({ account, shop, settings, priv }: Loaded & { account: SellerA
     if (s.error || p.error) return fail((s.error ?? p.error)!.message)
     setSaving(false)
     if (!shop) navigate('/sell/products')
-    else setMessage('Saved')
+    else setMessage('Saved ✓ Your changes are live.')
   }
 
   function fail(text: string) {
@@ -298,7 +306,7 @@ function ShopForm({ account, shop, settings, priv }: Loaded & { account: SellerA
       )}
 
       <button type="submit" disabled={saving}>{saving ? 'Saving…' : shop ? 'Save' : 'Create my shop'}</button>
-      {message && <p className="muted">{message}</p>}
+      {message && <p className={message.startsWith('Saved') ? 'status small' : 'error'} role="status">{message}</p>}
     </form>
   )
 }

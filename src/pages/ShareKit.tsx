@@ -5,7 +5,7 @@ import { link } from '../lib/router'
 import { Icon } from '../lib/icons'
 import { photoUrl } from '../lib/images'
 import { pounds, type Shop } from '../lib/types'
-import { canvasBlob, drawShareImage, type ShareSize } from '../lib/shareImage'
+import { canvasBlob, drawShareImage, saveImage, type ShareSize } from '../lib/shareImage'
 
 type Dish = { id: string; name: string; price_pence: number; portion: string | null; photo: string | null }
 
@@ -79,7 +79,7 @@ export default function ShareKit() {
       const file = new File([blob], fileName, { type: 'image/png' })
       if (navigator.canShare?.({ files: [file] })) {
         await navigator.share({ files: [file], text: caption }).catch(() => undefined)
-      } else download(blob)
+      } else await saveImage(blob, fileName)
     } finally {
       setBusy(false)
     }
@@ -87,14 +87,7 @@ export default function ShareKit() {
   async function save() {
     if (!canvas.current) return
     const blob = await canvasBlob(canvas.current)
-    if (blob) download(blob)
-  }
-  function download(blob: Blob) {
-    const a = document.createElement('a')
-    a.href = URL.createObjectURL(blob)
-    a.download = fileName
-    a.click()
-    setTimeout(() => URL.revokeObjectURL(a.href), 2000)
+    if (blob) await saveImage(blob, fileName)
   }
   async function copyCaption() {
     try {

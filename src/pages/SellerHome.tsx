@@ -200,7 +200,7 @@ function Dashboard({ shop, account, onChanged }: { shop: Shop; account: SellerAc
         {error && <p className="error small">{error}</p>}
         <div className="row">
           <button type="button" className="secondary small-btn" onClick={() => share(shop.name, url)}><Icon name="share" size={16} /> Share shop link</button>
-          <a className="button secondary small-btn" href="/sell/share-kit" onClick={link('/sell/share-kit')}>Share kit</a>
+          <a className="button small-btn" href="/sell/share-kit" onClick={link('/sell/share-kit')}>Share kit</a>
         </div>
       </div>
 

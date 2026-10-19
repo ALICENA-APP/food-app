@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from 'react'
 import { supabase } from './supabase'
 import { link, queryParam } from './router'
 import { share } from './ui'
+import { useWelcomeHeadline } from './platform'
 
 type Invited = { name: string; status: string; paid_orders: number; rewarded_at: string | null }
 type MyInvites = {
@@ -30,6 +31,7 @@ function forgetInviteCode() {
 // "Invited by Ama's Kitchen" banner for someone who arrived from an invite link.
 export function InviteBanner() {
   const [info, setInfo] = useState<{ shop_name: string; free_days: number } | null>(null)
+  const offerOpen = Boolean(useWelcomeHeadline())
   useEffect(() => {
     const code = savedInviteCode()
     if (code) supabase?.rpc('invite_info', { p_code: code }).then(({ data }) => setInfo(data ?? null))
@@ -38,7 +40,7 @@ export function InviteBanner() {
   return (
     <div className="card invite-banner">
       <strong>{info.shop_name} invited you</strong>
-      <span className="small">Join with their invite and you both get {months(info.free_days)} with no BiteBY fee, on top of your first free month, once you’ve had a few orders.</span>
+      <span className="small">Join with their invite and you both get {months(info.free_days)} with no BiteBY fee{offerOpen ? ', on top of your first free month' : ''}, once you’ve had a few orders.</span>
     </div>
   )
 }
@@ -97,6 +99,7 @@ export function UseInviteCode({ onUsed }: { onUsed?: () => void }) {
 // On the cook's dashboard: their invite link and the cooks they've invited.
 export function InviteCard() {
   const [data, setData] = useState<MyInvites | null>(null)
+  const offerOpen = Boolean(useWelcomeHeadline())
   useEffect(() => {
     supabase!.rpc('my_invites').then(({ data: d }) => setData(d ?? null))
   }, [])
@@ -114,8 +117,7 @@ export function InviteCard() {
       </summary>
       <div className="details-body">
         <p className="muted small">
-          When a cook you invite has {data.orders_needed} paid orders, you both get {data.free_days} days with no BiteBY fee. They get it on top of their
-          own first free month. {left > 0 ? `You can earn ${left} more free ${left === 1 ? 'month' : 'months'} this way.` : 'You’ve earned the most free months invites give: thank you! Your invites still help new cooks.'}
+          When a cook you invite has {data.orders_needed} paid orders, you both get {data.free_days} days with no BiteBY fee.{offerOpen ? ' They get it on top of their own first free month.' : ''} {left > 0 ? `You can earn ${left} more free ${left === 1 ? 'month' : 'months'} this way.` : 'You’ve earned the most free months invites give: thank you! Your invites still help new cooks.'}
         </p>
         <div className="invite-code">
           <span className="muted tiny">Your invite code</span>
