@@ -58,6 +58,6 @@ export function useWelcomeDetail() {
   const normal = percent(s.commission_bps)
   if (!s.intro_days || intro >= s.commission_bps) return `No sign-up or monthly fee: BiteBY keeps ${normal} of the food price only when you sell.`
   return intro === 0
-    ? `Keep every penny of your food sales for your first ${s.intro_days} days. After that BiteBY keeps just ${normal}, only when you sell. No sign-up or monthly fee.`
-    : `BiteBY keeps only ${percent(intro)} for your first ${s.intro_days} days, then ${normal}, only when you sell. No sign-up or monthly fee.`
+    ? `Keep every penny for your first ${s.intro_days} days, starting when your shop goes live. Then BiteBY keeps just ${normal}, only when you sell. No sign-up or monthly fee.`
+    : `BiteBY keeps only ${percent(intro)} for your first ${s.intro_days} days, starting when your shop goes live, then ${normal}, only when you sell. No sign-up or monthly fee.`
 }

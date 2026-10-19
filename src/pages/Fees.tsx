@@ -40,7 +40,7 @@ export function WelcomeRate({ shopId }: { shopId: string }) {
       <span className="small">
         {ends
           ? `Until ${day(ends.toISOString())}, BiteBY keeps ${r.intro_bps === 0 ? 'nothing from' : `only ${percent(r.intro_bps)} of`} your food sales instead of ${percent(r.standard_bps)}.`
-          : `Your first ${r.intro_days} days of selling start with your first order. During them BiteBY keeps ${r.intro_bps === 0 ? 'nothing' : `only ${percent(r.intro_bps)}`} instead of ${percent(r.standard_bps)}.`}
+          : `Your ${r.intro_days} days only start once your shop is live and takes its first order, so setting up costs you none of them. During them BiteBY keeps ${r.intro_bps === 0 ? 'nothing' : `only ${percent(r.intro_bps)}`} instead of ${percent(r.standard_bps)}.`}
         {' '}See how fees work.
       </span>
     </a>

@@ -79,6 +79,7 @@ export default function SellerHome() {
           {welcome && <span className="offer-badge">{welcome}</span>}
           <p className="lead">Open your own food shop with a link you can share. {welcomeDetail} Start with a few details about you: it takes about 10 minutes.</p>
           <p className="small"><a href="/fees" onClick={link('/fees')}>How fees work</a></p>
+          <BeforeYouStart />
           <InviteBanner />
         </>
       )}
@@ -113,6 +114,19 @@ export default function SellerHome() {
           {steps}
         </>
       )}
+    </div>
+  )
+}
+
+// What new cooks will need, and why, before they start the application.
+function BeforeYouStart() {
+  return (
+    <div className="card">
+      <h2>What you’ll need</h2>
+      <p className="small" style={{ margin: 0 }}><strong>To sign up:</strong> your council food business registration (free, and the law for anyone selling food from home).</p>
+      <p className="small" style={{ margin: 0 }}><strong>Before your shop goes live:</strong> food liability insurance. If a customer gets ill or has an allergic
+        reaction, your insurer deals with the claim and pays it, so your savings and home are protected. It also earns your shop an “Insured”
+        badge customers trust. Cover for home cooks is often about £5 to £15 a month, and you can usually buy it online in about 15 minutes.</p>
     </div>
   )
 }
