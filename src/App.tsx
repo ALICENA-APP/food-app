@@ -35,6 +35,7 @@ const SellerEarnings = lazy(() => import('./pages/SellerInsights').then((m) => (
 const SellerReviews = lazy(() => import('./pages/SellerInsights').then((m) => ({ default: m.SellerReviews })))
 const Admin = lazy(() => import('./pages/Admin'))
 const Poster = lazy(() => import('./pages/Poster'))
+const ShareKit = lazy(() => import('./pages/ShareKit'))
 const Discounts = lazy(() => import('./pages/Discounts'))
 const MyAllergies = lazy(() => import('./pages/MyAllergies'))
 const PrepList = lazy(() => import('./pages/PrepList'))
@@ -138,6 +139,7 @@ function App() {
     if (!session) page = <div className="stack"><InviteBanner /><SignInPrompt why="Sign in or create an account to open your food shop." /></div>
     else if (path === '/sell/shop') page = <ShopSetup />
     else if (path === '/sell/poster') page = <Poster />
+    else if (path === '/sell/share-kit') page = <ShareKit />
     else if (path === '/sell/discounts') page = <Discounts />
     else if (path === '/sell/prep') page = <PrepList />
     else if (path === '/sell/questions') page = <Messages asSeller />

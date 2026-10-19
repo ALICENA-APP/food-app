@@ -875,3 +875,16 @@ details.invite-card .invite-list { gap: 8px; }
 :root[data-theme='dark'] details.featured-card { border-color: #5a4a1c; }
 :root[data-theme='dark'] details.featured-card .sum-text .small { color: #cfcfcf; }
 :root[data-theme='dark'] .sum-icon path:last-child { stroke: #f2f2f2; }
+
+/* Share kit */
+.kit-preview { display: flex; align-items: center; justify-content: center; background: var(--line); border-radius: 18px; padding: 14px; min-height: 240px; }
+.kit-preview img { display: block; width: 100%; border-radius: 12px; box-shadow: 0 6px 20px rgba(0,0,0,0.12); }
+.kit-preview.story img { max-width: 300px; }
+.kit-preview.square img { max-width: 360px; }
+.kit-dishes { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.kit-dish { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 6px; background: var(--card); color: var(--text); border: 2px solid var(--line); border-radius: 14px; font-weight: 500; text-align: center; }
+.kit-dish.on { border-color: var(--yellow); background: var(--yellow-soft); }
+.kit-dish .tiny { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; width: 100%; }
+.kit-thumb { width: 100%; aspect-ratio: 1; border-radius: 10px; overflow: hidden; display: flex; align-items: center; justify-content: center; background: var(--line); }
+.kit-thumb img { width: 100%; height: 100%; object-fit: cover; }
+.kit-caption { background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; margin: 0; overflow-wrap: anywhere; }
