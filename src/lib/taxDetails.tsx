@@ -120,25 +120,6 @@ function TaxForm({ accountId, businessType, current, onSaved }: { accountId: str
   )
 }
 
-// Application step.
-export function TaxDetailsStep({ accountId, businessType, editable, step, onSaved }: { accountId: string; businessType: string | null; editable: boolean; step: number; onSaved: () => void }) {
-  const { details, load } = useTaxDetails(accountId)
-  const [editing, setEditing] = useState(false)
-  if (details === undefined) return null
-  return (
-    <div className="card">
-      <h2>{step}. Tax details {details && <span className="tick">✓</span>}</h2>
-      <TaxWhy />
-      {details && !editing ? (
-        <div className="item">
-          <span className="small">{masked(details)}</span>
-          {editable && <button type="button" className="link" onClick={() => setEditing(true)}>Change</button>}
-        </div>
-      ) : editable && <TaxForm accountId={accountId} businessType={businessType} current={details} onSaved={() => { setEditing(false); load(); onSaved() }} />}
-    </div>
-  )
-}
-
 // Black notice at the top of the dashboard while they're missing.
 export function TaxAlert({ accountId }: { accountId: string }) {
   const { details, due } = useTaxDetails(accountId)

@@ -290,7 +290,7 @@ function ShopForm({ account, shop, settings, priv }: Loaded & { account: SellerA
             </>
           ) : (
             <p className="muted">
-              Your shop can go live once your application is approved and payments are set up.
+              Your shop can go live once your application is approved, your food insurance is uploaded and payments are set up.
               Until then only you can see it.
             </p>
           )}

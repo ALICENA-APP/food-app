@@ -15,14 +15,19 @@ export function SetupChecklist({ shop, refresh }: { shop: Shop; refresh: number 
   useEffect(() => {
     ;(async () => {
       const db = supabase!
-      const [products, hours, hygiene] = await Promise.all([
+      const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/London' })
+      const [products, hours, hygiene, insurance, settings] = await Promise.all([
         db.from('products').select('id, product_images(path)').eq('shop_id', shop.id).eq('status', 'published'),
         db.from('shop_hours').select('weekday', { count: 'exact', head: true }).eq('shop_id', shop.id),
         db.from('seller_verifications').select('id', { count: 'exact', head: true })
           .eq('seller_account_id', shop.seller_account_id).eq('kind', 'hygiene_rating').neq('status', 'rejected'),
+        db.from('seller_verifications').select('id', { count: 'exact', head: true })
+          .eq('seller_account_id', shop.seller_account_id).eq('kind', 'insurance').neq('status', 'rejected').gte('expires_at', today),
+        db.from('platform_settings').select('insurance_required').maybeSingle(),
       ])
       const dishes = (products.data ?? []) as { id: string; product_images: { path: string }[] }[]
       setSteps([
+        ...(settings.data?.insurance_required === false ? [] : [{ label: 'Upload your food insurance', to: '#insurance', done: (insurance.count ?? 0) > 0 }]),
         { label: 'Add your logo and a cover photo', to: '/sell/shop', done: Boolean(shop.logo_path && shop.cover_path) },
         { label: 'Tell customers your story', to: '/sell/shop', done: Boolean(shop.story && shop.story.trim().length >= 30) },
         { label: 'Put at least 3 dishes on your menu', to: '/sell/products', done: dishes.length >= 3 },

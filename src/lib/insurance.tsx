@@ -119,20 +119,6 @@ export function InsuranceForm({ accountId, onSaved, submitLabel = 'Save' }: { ac
   )
 }
 
-// Application step: upload the certificate before sending the application.
-export function InsuranceStep({ accountId, rows, editable, step, onSaved }: { accountId: string; rows: Verification[]; editable: boolean; step: number; onSaved: () => void }) {
-  const current = currentInsurance(rows)
-  const valid = insuranceValid(current)
-  return (
-    <div className="card">
-      <h2>{step}. Food insurance {valid && <span className="tick">✓</span>}</h2>
-      <InsuranceHelp />
-      {valid && current && <InsuranceSummary v={current} />}
-      {editable && !valid && <InsuranceForm accountId={accountId} onSaved={onSaved} />}
-    </div>
-  )
-}
-
 function InsuranceSummary({ v }: { v: Verification }) {
   return (
     <p className="small" style={{ margin: 0 }}>
@@ -170,7 +156,7 @@ function status(s: InsuranceState) {
   }
   if (!s.required) return { current, tone: 'none' as const, line: 'Not added yet' }
   if (s.due && daysUntil(s.due) >= 0) return { current, tone: 'warn' as const, line: `Needed by ${ukDate(s.due)} to keep your shop open` }
-  return { current, tone: 'bad' as const, line: current ? 'Ran out: your shop is hidden from customers' : 'Needed: your shop is hidden from customers' }
+  return { current, tone: 'bad' as const, line: current ? 'Ran out: your shop is hidden from customers' : 'Needed before customers can see your shop' }
 }
 
 // Black notice at the top of the dashboard when insurance needs doing.

@@ -12,8 +12,8 @@ import { cookGets } from '../lib/fees'
 import { WelcomeRate } from './Fees'
 import { InviteBanner, InviteCard, UseInviteCode } from '../lib/invites'
 import { HygieneCard, SetupChecklist } from './SellerSetup'
-import { TaxAlert, TaxCard, TaxDetailsStep } from '../lib/taxDetails'
-import { currentInsurance, InsuranceAlert, InsuranceCard, InsuranceStep, insuranceValid, useInsuranceRequired } from '../lib/insurance'
+import { TaxAlert, TaxCard } from '../lib/taxDetails'
+import { InsuranceAlert, InsuranceCard } from '../lib/insurance'
 
 const STATUS_TEXT: Record<SellerAccount['status'], string> = {
   draft: 'Not sent yet',
@@ -30,7 +30,6 @@ const STATUS_TEXT: Record<SellerAccount['status'], string> = {
 export default function SellerHome() {
   const [account, setAccount] = useState<SellerAccount | null>(null)
   const [verifications, setVerifications] = useState<Verification[]>([])
-  const [hasTax, setHasTax] = useState(false)
   const [shop, setShop] = useState<Shop | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -41,13 +40,11 @@ export default function SellerHome() {
     if (accErr) return setError(accErr.message)
     setAccount(acc)
     if (acc) {
-      const [{ data: ver }, { data: shops }, { data: tax }] = await Promise.all([
+      const [{ data: ver }, { data: shops }] = await Promise.all([
         db.from('seller_verifications').select('*').eq('seller_account_id', acc.id),
         db.from('shops').select('*').eq('seller_account_id', acc.id).limit(1),
-        db.from('seller_tax_details').select('seller_account_id').eq('seller_account_id', acc.id).maybeSingle(),
       ])
       setVerifications(ver ?? [])
-      setHasTax(Boolean(tax))
       setShop(shops?.[0] ?? null)
     }
     setLoading(false)
@@ -59,7 +56,6 @@ export default function SellerHome() {
 
   const welcome = useWelcomeHeadline()
   const welcomeDetail = useWelcomeDetail()
-  const insuranceRequired = useInsuranceRequired()
   if (loading) return <p className="muted">{error || 'Loading…'}</p>
 
   const editable = !account || account.status === 'draft' || account.status === 'reverification_required'
@@ -68,13 +64,10 @@ export default function SellerHome() {
 
   const steps = account && (
     <>
-      <TaxDetailsStep step={2} accountId={account.id} businessType={account.business_type} editable={editable} onSaved={load} />
       <FoodRegistration accountId={account.id} current={registration} editable={editable} onSaved={load} />
       <AllergenDeclaration accountId={account.id} done={Boolean(declaration)} editable={editable} onSaved={load} />
-      <InsuranceStep step={5} accountId={account.id} rows={verifications} editable={editable} onSaved={load} />
       <Terms account={account} editable={editable} onSaved={load} />
-      {editable && <Submit ready={Boolean(account.legal_name && hasTax && registration && declaration && account.terms_accepted_at
-        && (!insuranceRequired || insuranceValid(currentInsurance(verifications))))} onSaved={load} />}
+      {editable && <Submit ready={Boolean(account.legal_name && registration && declaration && account.terms_accepted_at)} onSaved={load} />}
     </>
   )
 
@@ -175,7 +168,7 @@ function Dashboard({ shop, account, onChanged }: { shop: Shop; account: SellerAc
             <span className="muted small" style={{ display: 'block' }}>
               {live ? 'Live' : shop.status === 'suspended' ? 'Suspended by the BiteBY team. Check your notifications, or contact us under Help.'
                 : shop.status === 'paused' ? 'Offline. Turn your shop on again under Shop details.'
-                : account.status === 'approved' ? 'Ready to go live once payments are set up' : 'Not live yet'}
+                : account.status === 'approved' ? 'Ready to go live once insurance and payments are set up' : 'Not live yet'}
             </span>
           </span>
           <a className="button secondary small-btn" href={`/s/${shop.slug}`} onClick={link(`/s/${shop.slug}`)}>View</a>
@@ -438,7 +431,7 @@ function FoodRegistration({ accountId, current, editable, onSaved }: { accountId
 
   return (
     <form className="card" onSubmit={onSubmit}>
-      <h2>3. Food business registration {current && <span className="tick">✓</span>}</h2>
+      <h2>2. Food business registration {current && <span className="tick">✓</span>}</h2>
       <p className="muted">
         Anyone selling food from home must register with their local council, for free, at least 28
         days before selling. Tell us which council you registered with.
@@ -478,7 +471,7 @@ function AllergenDeclaration({ accountId, done, editable, onSaved }: { accountId
 
   return (
     <form className="card" onSubmit={onSubmit}>
-      <h2>4. Allergen promise {done && <span className="tick">✓</span>}</h2>
+      <h2>3. Allergen promise {done && <span className="tick">✓</span>}</h2>
       <label className="check">
         <input type="checkbox" checked={agreed} disabled={done || !editable} onChange={(e) => setAgreed(e.target.checked)} />
         I will list all 14 allergens accurately for every item I sell, and update them whenever a
@@ -509,7 +502,7 @@ function Terms({ account, editable, onSaved }: { account: SellerAccount; editabl
   const done = Boolean(account.terms_accepted_at)
   return (
     <form className="card" onSubmit={onSubmit}>
-      <h2>6. Seller terms {done && <span className="tick">✓</span>}</h2>
+      <h2>4. Seller terms {done && <span className="tick">✓</span>}</h2>
       <ul className="muted small">
         <li>No sign-up or monthly fee. BiteBY keeps {commission} of the food price of each order{welcome && <> ({welcome})</>}. Delivery fees are all yours.</li>
         <li>Card payment costs are covered by a small service fee the customer pays, so nothing else comes off. <a href="/fees" onClick={link('/fees')}>See exactly what you’ll get</a>.</li>
@@ -541,9 +534,9 @@ function Submit({ ready, onSaved }: { ready: boolean; onSaved: () => void }) {
 
   return (
     <div className="card">
-      <h2>7. Send for checking</h2>
+      <h2>5. Send for checking</h2>
       <p className="muted">
-        {ready ? 'All done. Send your details and we will check them.' : 'Finish steps 1 to 6 first.'}
+        {ready ? 'All done. Send your details and we will check them.' : 'Finish steps 1 to 4 first.'}
       </p>
       <button disabled={!ready} onClick={onClick}>
         Send my application
