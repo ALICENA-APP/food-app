@@ -75,8 +75,8 @@ export default function ShopSetup() {
   if (!loaded.account) {
     return (
       <div className="card">
-        <p>Fill in step 1 of your seller account first.</p>
-        <a className="button" href="/sell" onClick={link('/sell')}>Go to seller account</a>
+        <p>Fill in step 1 of your seller sign-up first.</p>
+        <a className="button" href="/sell" onClick={link('/sell')}>Go to my shop</a>
       </div>
     )
   }

@@ -1,6 +1,6 @@
 import { lazy, Suspense, type ReactNode } from 'react'
 import { isConfigured } from './lib/supabase'
-import { goBack, link, usePath } from './lib/router'
+import { link, navigate, usePath } from './lib/router'
 import { askToSignIn, useSession } from './lib/session'
 import { basketCount, useBasket } from './lib/basket'
 import { useUnreadAlerts } from './lib/alerts'
@@ -57,12 +57,14 @@ const TABS: { to: string; label: string; icon: IconName }[] = [
 
 // Pages that show their own photo header instead of the BiteBY top bar.
 // Pages reached from the bottom tabs; every other page gets a Back button
-// (unless it has its own).
+// (unless it has its own) that goes up one level, never round in a loop.
 const TOP_LEVEL = ['/', '/explore', '/basket', '/orders', '/profile']
 function backTo(path: string) {
+  if (path.startsWith('/sell/products/')) return '/sell/products'
   if (path.startsWith('/sell/')) return '/sell'
   if (path.startsWith('/orders/')) return '/orders'
   if (path.startsWith('/messages/')) return '/messages'
+  if (path === '/help/requests') return '/help'
   return '/profile'
 }
 
@@ -196,7 +198,7 @@ function App() {
           </header>
         )}
         {!FULL_BLEED.test(path) && !intro && !TOP_LEVEL.includes(path) && (
-          <button type="button" className="back app-back" onClick={() => goBack(backTo(path))}><Icon name="back" size={18} /> Back</button>
+          <button type="button" className="back app-back" onClick={() => navigate(backTo(path))}><Icon name="back" size={18} /> Back</button>
         )}
         <Suspense fallback={<p className="muted">Loading…</p>}>{page}</Suspense>
       </main>

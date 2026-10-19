@@ -124,7 +124,7 @@ export default function Profile() {
         <a className="promo small-promo" href="/sell" onClick={link('/sell')}>
           <h2>Your shop</h2>
           <p>Orders, menu, photos, earnings and reviews.</p>
-          <span className="button dark">Open seller tools</span>
+          <span className="button dark">Manage my shop</span>
           <BowlArt />
         </a>
       ) : <SellerPromo />}
@@ -259,7 +259,7 @@ export function Help() {
     ['Reviews', 'Only people who ordered can leave a review, after the order is complete.'],
     ['What can’t be sold on BiteBY?', 'Alcoholic drinks (they need a licence), cannabis or CBD, raw (unpasteurised) milk, and medicines or supplements. Food cooked with a little alcohol, like rum cake, is fine.'],
     ['Why does BiteBY ask cooks for tax details?', 'HMRC asks online marketplaces to report what each seller earns once a year. Cooks add their date of birth, National Insurance number or UTR, and address. They’re only used for that report and are never shown on a shop.'],
-    ['Do cooks need insurance?', 'Yes. Every cook needs public and products liability insurance for the food they sell, and uploads the certificate in their seller account before their shop goes live. Many insurers offer cover for home cooks, often from about £5 to £15 a month. Shops with current insurance show an Insured badge, and a shop is hidden if its insurance runs out.'],
+    ['Do cooks need insurance?', 'Yes. Every cook needs public and products liability insurance for the food they sell, and uploads the certificate in their shop dashboard before their shop goes live. Many insurers offer cover for home cooks, often from about £5 to £15 a month. Shops with current insurance show an Insured badge, and a shop is hidden if its insurance runs out.'],
     ['Selling on BiteBY', `Tap Profile, then Become a seller. There’s no sign-up or monthly fee: BiteBY keeps ${commission} of the food price of each order${welcome ? ` (${welcome})` : ''}, and delivery fees are all yours. Card payment costs are paid by the customer as a small service fee, so nothing else comes off. The full breakdown is on the How fees work page, linked from the Sell your food section on the home page.`],
   ]
   return (
