@@ -78,7 +78,7 @@ export function SellerEarnings() {
           <span className="s">Every order, fee and earning by month, as a PDF or spreadsheet</span>
         </span>
       </a>
-      <p className="muted small">Payouts go straight to your bank account through Stripe once payments are switched on.</p>
+      <p className="muted small">Payouts go straight to your bank account through Stripe once payments are switched on. <a href="/fees" onClick={link('/fees')}>How fees work</a></p>
     </div>
   )
 }

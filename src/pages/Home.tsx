@@ -188,7 +188,7 @@ export default function Home() {
 
       <section className="promo">
         <h2>Cook at home? Sell on BiteBY</h2>
-        <p>Open your own food shop with a link you can share. No monthly fee: we take {commission} of the food price only when you sell.</p>
+        <p>Open your own food shop with a link you can share. No monthly fee: we take {commission} of the food price only when you sell. <a href="/fees" onClick={link('/fees')}>How fees work</a></p>
         <a className="button dark" href="/sell" onClick={link('/sell')}>Become a seller</a>
         <BowlArt />
       </section>

@@ -21,6 +21,7 @@ const Legal = () => import('./pages/Legal')
 const AllergenInfo = lazy(() => Legal().then((m) => ({ default: m.AllergenInfo })))
 const Privacy = lazy(() => Legal().then((m) => ({ default: m.Privacy })))
 const SellerTerms = lazy(() => Legal().then((m) => ({ default: m.SellerTerms })))
+const Fees = lazy(() => import('./pages/Fees'))
 const Terms = lazy(() => Legal().then((m) => ({ default: m.Terms })))
 import SignIn, { SetPassword } from './pages/SignIn'
 import Alerts from './pages/Alerts'
@@ -106,6 +107,8 @@ function App() {
     page = <AllergenInfo />
   } else if (path === '/seller-terms') {
     page = <SellerTerms />
+  } else if (path === '/fees') {
+    page = <Fees />
   } else if (path === '/help/requests') {
     page = needsAccount(<MyRequests />, 'Sign in to see your messages to the BiteBY team.')
   } else if (path === '/help') {
@@ -151,7 +154,7 @@ function App() {
 
   const name = session?.user.user_metadata?.name || session?.user.email || ''
   const activeTab = path === '/' ? '/' : TABS.slice(1).find((t) => path.startsWith(t.to))?.to
-    ?? (path.startsWith('/sell') || path.startsWith('/favourites') || path === '/addresses' || path.startsWith('/account') || ['/help', '/help/requests', '/alerts', '/terms', '/privacy', '/allergens', '/seller-terms'].includes(path) ? '/profile' : null)
+    ?? (path.startsWith('/sell') || path.startsWith('/favourites') || path === '/addresses' || path.startsWith('/account') || ['/help', '/help/requests', '/alerts', '/terms', '/privacy', '/allergens', '/seller-terms', '/fees'].includes(path) ? '/profile' : null)
 
   return (
     <>

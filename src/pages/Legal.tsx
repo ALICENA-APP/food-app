@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 import { link } from '../lib/router'
-import { useCommission } from '../lib/platform'
+import { useCommission, useWelcomeOffer } from '../lib/platform'
 
 // Plain-English policy pages. Drafts until they have been reviewed before launch.
 const OPERATOR = '[BiteBY operator name and address, to be added before launch]'
@@ -25,7 +25,7 @@ export function Terms() {
     <Page title="Terms of use" updated="16 October 2026">
       <section><h2>Who we are</h2><p>BiteBY is run by {OPERATOR}. BiteBY is a marketplace: independent home cooks ("sellers") sell their food to you through the app. The seller is the one selling you the food and is responsible for making it safely and describing it accurately. You can contact us at {CONTACT}.</p></section>
       <section><h2>Your account</h2><p>You need an account to order. Keep your password safe and give accurate details, including a phone number the cook can reach you on if needed. You must be 18 or over to order.</p></section>
-      <section><h2>Ordering and paying</h2><p>Each basket is from one seller. You pay the full price, including any delivery fee, when you order. The cook then accepts or declines. If they decline, or don't answer in time, the order is cancelled and you are refunded in full.</p></section>
+      <section><h2>Ordering and paying</h2><p>Each basket is from one seller. You pay the full price when you order: the food, any delivery fee, and a small service fee that covers secure card payment (it’s shown before you pay and is the same however you pay). If your order is declined, cancelled by the cook or not answered in time, you get everything back, including the service fee. The cook then accepts or declines. If they decline, or don't answer in time, the order is cancelled and you are refunded in full.</p></section>
       <section><h2>Collection and delivery</h2><p>For collection, you get the address once the cook accepts. For delivery, the cook (not BiteBY) brings the food to you. Please be available at the time you chose.</p></section>
       <section><h2>Pay only through BiteBY</h2><p>Always order and pay in the app. If a cook asks you to pay in cash, by bank transfer or any other way outside BiteBY, please don’t, and tell us using “Report a problem” on your order. Orders paid outside BiteBY aren’t covered by our refunds or help. To keep everyone safe, messages can’t include phone numbers, emails, links or bank details, and we may hide them.</p></section>
       <section><h2>Featured cooks</h2><p>Some cooks pay to appear in “Featured cooks” and at the top of search. These spots are always marked “Sponsored”. They don’t affect reviews or ratings.</p></section>
@@ -72,9 +72,10 @@ export function AllergenInfo() {
 
 export function SellerTerms() {
   const commission = useCommission()
+  const welcome = useWelcomeOffer()
   return (
-    <Page title="Seller terms" updated="16 October 2026">
-      <section><h2>Fees</h2><p>No monthly fee. BiteBY keeps {commission} of the food price of each completed order. Delivery fees you charge are all yours. If you offer a discount code, you pay for the discount: it comes off your food price, and our fee is worked out on what the customer pays for the food after the discount. If we change our fee, we’ll tell you at least 30 days before it applies. Payments are made to you through Stripe once online payments are switched on.</p></section>
+    <Page title="Seller terms" updated="19 October 2026">
+      <section><h2>Fees</h2><p>No sign-up or monthly fee. BiteBY keeps {commission} of the food price of each completed order{welcome && <> ({welcome}, counted from your first paid order)</>}. Delivery fees you charge are all yours. Card payments are handled by Stripe. Their cost is covered by a service fee the customer pays on top of the order, so it never comes off your money. Declined and refunded orders carry no BiteBY fee. If you offer a discount code, you pay for the discount: it comes off your food price, and our fee is worked out on what the customer pays for the food after the discount. If we change our fee, we’ll tell you at least 30 days before it applies. Payments are made to you through Stripe once online payments are switched on.</p></section>
       <section><h2>Before you sell</h2><p>You must be registered as a food business with your local council (free, at least 28 days before you start), follow food hygiene law, and be approved by the BiteBY team. You're responsible for any tax on your earnings.</p></section>
       <section><h2>Your menu</h2><p>Describe dishes honestly, use your own photos, and list all 14 allergens accurately for every dish. Update them whenever a recipe or ingredient changes. Mark dishes sold out when you can't make them.</p></section>
       <section><h2>Orders</h2><p>Customers pay up front. Accept or decline each order in time. Once you accept, make the food as described and hand it over at the agreed time. If you decline or don't respond, the customer is refunded in full.</p></section>

@@ -9,7 +9,7 @@ import { setTheme, useTheme } from '../lib/theme'
 import { ImageCropper } from '../lib/ImageCropper'
 import { deletePhoto, uploadPhoto } from '../lib/images'
 import { setMyAvatar, useMyAvatar } from '../lib/myAvatar'
-import { useCommission } from '../lib/platform'
+import { useCommission, useWelcomeOffer } from '../lib/platform'
 
 // Light, dark, or follow the phone.
 function ThemePicker() {
@@ -215,7 +215,7 @@ function SellerPromo() {
   return (
     <section className="promo">
       <h2>Open your food shop on BiteBY</h2>
-      <p>Sell your homemade food to people nearby. No monthly fee.</p>
+      <p>Sell your homemade food to people nearby. No sign-up or monthly fee.</p>
       <a className="button dark" href="/sell" onClick={link('/sell')}>Become a seller</a>
       <BowlArt />
     </section>
@@ -243,14 +243,16 @@ function NameForm({ initial, onDone }: { initial: string; onDone: (name: string)
 
 export function Help() {
   const commission = useCommission()
+  const welcome = useWelcomeOffer()
   const items: [string, string][] = [
     ['How does ordering work?', 'Choose dishes from one cook, then pick delivery or collection. You pay when you order, and the cook accepts and starts cooking. You can follow every step under Orders.'],
-    ['What if the cook can’t take my order?', 'If they decline, or don’t answer in time, the order is cancelled and you get your money back in full.'],
+    ['What if the cook can’t take my order?', 'If they decline, or don’t answer in time, the order is cancelled and you get your money back in full, including the service fee.'],
+    ['What is the service fee?', 'A small fee on each order (1.5% of the order plus about 20p, so 51p on a £20 order) that covers secure card payment and your money-back guarantee. It’s the same however you pay, and you always see it before you pay. The cook gets their full menu price minus BiteBY’s share.'],
     ['Where do I collect from?', 'Cooks’ home addresses are private. You see the collection address only after the cook accepts your order.'],
     ['I have an allergy', 'Every dish lists the 14 main allergens. Food is made in home kitchens, so if your allergy is severe, check with the cook before ordering.'],
     ['Who are the cooks?', 'Local home cooks. Each one registers their food business with their council and is checked by the BiteBY team before their shop can open.'],
     ['Reviews', 'Only people who ordered can leave a review, after the order is complete.'],
-    ['Selling on BiteBY', `Tap Profile, then Become a seller. There’s no monthly fee: BiteBY keeps ${commission} of the food price of each order, and delivery fees are all yours.`],
+    ['Selling on BiteBY', `Tap Profile, then Become a seller. There’s no sign-up or monthly fee: BiteBY keeps ${commission} of the food price of each order${welcome ? ` (${welcome})` : ''}, and delivery fees are all yours. Card payment costs are paid by the customer as a small service fee, so nothing else comes off. The full breakdown is on the How fees work page (food.beastcase.net/fees).`],
   ]
   return (
     <div className="stack">

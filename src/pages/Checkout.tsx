@@ -12,6 +12,9 @@ import { useAllergenHits, useMyAllergies, warningText } from '../lib/allergies'
 import { daysLabel, noticeLabel, pounds, type ShopSettings } from '../lib/types'
 import { addDays, londonNow, shortDate } from '../lib/hours'
 import { DiscountBox, type AppliedCode } from '../lib/discounts'
+import { usePlatform } from '../lib/platform'
+import { serviceFee } from '../lib/fees'
+import { ServiceFeeRow } from '../lib/ServiceFee'
 
 const niceTime = (d: Date) => d.toLocaleString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
 
@@ -40,6 +43,7 @@ function readDraft(): Draft {
 // and what they typed is kept while they sign in.
 export default function Checkout() {
   const basket = useBasket()
+  const platform = usePlatform()
   const mine = useMyAllergies()
   const allergyHits = useAllergenHits(basket?.lines.map((l) => l.productId) ?? [], mine.codes)
   const { session } = useSession()
@@ -164,7 +168,8 @@ export default function Checkout() {
   const wrongDay = dayLimits.find((d) => !d.days.includes(wantedWeekday))
   const isNewAddress = address.trim().length > 2 && !saved.some(sameAddress)
   const off = applied ? Math.min(applied.discount_pence, subtotal) : 0
-  const total = subtotal - off + fee
+  const service = serviceFee(subtotal - off + fee, platform)
+  const total = subtotal - off + fee + service
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault()
@@ -321,6 +326,7 @@ export default function Checkout() {
         <div className="item"><span>Food</span><span>{pounds(subtotal)}</span></div>
         {applied && <div className="item"><span>Discount ({applied.code})</span><span>−{pounds(off)}</span></div>}
         {fulfilment === 'delivery' && <div className="item"><span>Delivery</span><span>{zone ? (fee ? pounds(fee) : 'Free') : '–'}</span></div>}
+        {service > 0 && <ServiceFeeRow pence={service} />}
         <div className="item total"><strong>Total</strong><strong>{pounds(total)}</strong></div>
         <DiscountBox shopId={basket.shopId} subtotal={subtotal} applied={applied} onChange={setApplied} />
         {minOrder > subtotal && <p className="error small">This cook's minimum order is {pounds(minOrder)}.</p>}

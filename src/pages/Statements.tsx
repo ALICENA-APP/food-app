@@ -4,6 +4,7 @@ import { link, navigate, queryParam } from '../lib/router'
 import { myUserId, useSession } from '../lib/session'
 import { Icon } from '../lib/icons'
 import { pounds } from '../lib/types'
+import { cookGets } from '../lib/fees'
 import { downloadCsv, money } from '../lib/csv'
 import { ORDER_STATUS, type OrderStatus } from './Orders'
 
@@ -11,7 +12,7 @@ export type StatementKind = 'customer' | 'seller' | 'admin'
 
 type Row = {
   code: string; created_at: string; completed_at: string | null; status: OrderStatus; fulfilment: string
-  subtotal_pence: number; discount_pence: number; delivery_fee_pence: number; total_pence: number; platform_fee_pence: number
+  subtotal_pence: number; discount_pence: number; delivery_fee_pence: number; total_pence: number; platform_fee_pence: number; service_fee_pence: number
   customer_name: string; shops: { name: string } | null; order_items: { name: string; qty: number }[]
 }
 
@@ -52,7 +53,7 @@ export default function Statement({ kind }: { kind: StatementKind }) {
       const start = new Date(month + '-01T00:00:00')
       const end = new Date(start.getFullYear(), start.getMonth() + 1, 1)
       let q = db.from('orders')
-        .select('code, created_at, completed_at, status, fulfilment, subtotal_pence, discount_pence, delivery_fee_pence, total_pence, platform_fee_pence, customer_name, shops(name), order_items(name, qty)')
+        .select('code, created_at, completed_at, status, fulfilment, subtotal_pence, discount_pence, delivery_fee_pence, total_pence, service_fee_pence, platform_fee_pence, customer_name, shops(name), order_items(name, qty)')
         .gte('created_at', start.toISOString()).lt('created_at', end.toISOString())
         .order('created_at').limit(5000)
       if (kind === 'customer') {
@@ -88,20 +89,21 @@ export default function Statement({ kind }: { kind: StatementKind }) {
   const delivery = sum((r) => r.delivery_fee_pence)
   const fees = sum((r) => r.platform_fee_pence)
   const total = sum((r) => r.total_pence)
+  const service = sum((r) => r.service_fee_pence ?? 0)
 
   function csv() {
     if (!rows) return
     const head = kind === 'customer'
-      ? ['Date', 'Order', 'Cook', 'Items', 'Status', 'Food (£)', 'Discount (£)', 'Delivery (£)', 'Total paid (£)']
+      ? ['Date', 'Order', 'Cook', 'Items', 'Status', 'Food (£)', 'Discount (£)', 'Delivery (£)', 'Service fee (£)', 'Total paid (£)']
       : kind === 'seller'
-        ? ['Date', 'Order', 'Customer', 'Items', 'Status', 'Food (£)', 'Your discount (£)', 'Delivery (£)', 'Customer paid (£)', 'BiteBY fee (£)', 'You earn (£)']
-        : ['Date', 'Order', 'Shop', 'Status', 'Food (£)', 'Discount (£)', 'Delivery (£)', 'Customer paid (£)', 'BiteBY fee (£)', 'Paid to cook (£)']
+        ? ['Date', 'Order', 'Customer', 'Items', 'Status', 'Food (£)', 'Your discount (£)', 'Delivery (£)', 'Order value (£)', 'BiteBY fee (£)', 'You earn (£)']
+        : ['Date', 'Order', 'Shop', 'Status', 'Food (£)', 'Discount (£)', 'Delivery (£)', 'Service fee (£)', 'Customer paid (£)', 'BiteBY fee (£)', 'Paid to cook (£)']
     const body = rows.map((r) => {
       const date = new Date(r.created_at).toISOString().slice(0, 10)
       const status = ORDER_STATUS[r.status] ?? r.status
-      if (kind === 'customer') return [date, r.code, r.shops?.name, items(r), status, money(r.subtotal_pence), money(r.discount_pence), money(r.delivery_fee_pence), money(r.total_pence)]
-      if (kind === 'seller') return [date, r.code, r.customer_name, items(r), status, money(r.subtotal_pence), money(r.discount_pence), money(r.delivery_fee_pence), money(r.total_pence), money(r.platform_fee_pence), money(r.total_pence - r.platform_fee_pence)]
-      return [date, r.code, r.shops?.name, status, money(r.subtotal_pence), money(r.discount_pence), money(r.delivery_fee_pence), money(r.total_pence), money(r.platform_fee_pence), money(r.total_pence - r.platform_fee_pence)]
+      if (kind === 'customer') return [date, r.code, r.shops?.name, items(r), status, money(r.subtotal_pence), money(r.discount_pence), money(r.delivery_fee_pence), money(r.service_fee_pence ?? 0), money(r.total_pence)]
+      if (kind === 'seller') return [date, r.code, r.customer_name, items(r), status, money(r.subtotal_pence), money(r.discount_pence), money(r.delivery_fee_pence), money(r.total_pence - (r.service_fee_pence ?? 0)), money(r.platform_fee_pence), money(cookGets(r))]
+      return [date, r.code, r.shops?.name, status, money(r.subtotal_pence), money(r.discount_pence), money(r.delivery_fee_pence), money(r.service_fee_pence ?? 0), money(r.total_pence), money(r.platform_fee_pence), money(cookGets(r))]
     })
     downloadCsv(`biteby-${kind === 'customer' ? 'orders' : kind === 'seller' ? 'statement' : 'report'}-${month}.csv`, [head, ...body])
   }
@@ -145,8 +147,9 @@ export default function Statement({ kind }: { kind: StatementKind }) {
             {kind !== 'customer' && <div><span>Food sales</span><strong>{pounds(food - discounts)}</strong></div>}
             {kind !== 'customer' && <div><span>Delivery</span><strong>{pounds(delivery)}</strong></div>}
             {kind !== 'customer' && <div><span>BiteBY fees</span><strong>{pounds(fees)}</strong></div>}
-            {kind === 'seller' && <div><span>You earned</span><strong>{pounds(total - fees)}</strong></div>}
+            {kind === 'seller' && <div><span>You earned</span><strong>{pounds(total - service - fees)}</strong></div>}
             {kind === 'admin' && <div><span>Customers paid</span><strong>{pounds(total)}</strong></div>}
+            {kind === 'admin' && <div><span>Service fees (card costs)</span><strong>{pounds(service)}</strong></div>}
           </div>
 
           {rows.length === 0 ? <p className="muted">No orders in {monthName(month)}.</p> : (
@@ -169,16 +172,16 @@ export default function Statement({ kind }: { kind: StatementKind }) {
                       {kind === 'seller' ? r.customer_name : r.shops?.name}
                       {kind !== 'admin' && <span className="tiny statement-items">{items(r)}{r.discount_pence ? ` · code −${pounds(r.discount_pence)}` : ''}</span>}
                     </td>
-                    <td className="num">{pounds(r.total_pence)}</td>
+                    <td className="num">{pounds(kind === 'seller' ? r.total_pence - (r.service_fee_pence ?? 0) : r.total_pence)}</td>
                     {kind !== 'customer' && <td className="num">{pounds(r.platform_fee_pence)}</td>}
-                    {kind === 'seller' && <td className="num">{pounds(r.total_pence - r.platform_fee_pence)}</td>}
+                    {kind === 'seller' && <td className="num">{pounds(cookGets(r))}</td>}
                   </tr>
                 ))}
               </tbody>
             </table>
           )}
           <p className="tiny muted">
-            {kind === 'seller' ? 'Totals count orders that went ahead. Declined, cancelled and refunded orders are shown greyed out and not counted. BiteBY’s fee is taken from the food price after any discount; delivery fees are all yours.'
+            {kind === 'seller' ? 'Totals count orders that went ahead. Declined, cancelled and refunded orders are shown greyed out and not counted. BiteBY’s fee is taken from the food price after any discount; delivery fees are all yours. Card payment costs are paid by the customer as a service fee, so they never come off your money.'
               : 'Totals count orders that went ahead. Declined, cancelled and refunded orders are shown greyed out and not counted.'}
             {' '}Made {new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}.
           </p>

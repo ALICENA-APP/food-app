@@ -5,6 +5,7 @@ import { pounds } from '../lib/types'
 import { ReviewItem, type Review } from '../lib/reviews'
 import { TOPIC_LABEL, type Topic } from '../lib/help'
 import { loadPlatform, percent } from '../lib/platform'
+import { serviceFee } from '../lib/fees'
 import { ORDER_STATUS, when, type Order, type OrderStatus } from './Orders'
 import { Countdown, FeaturedBar, isBooked, moment } from '../lib/featured'
 
@@ -715,6 +716,10 @@ export function AdminSettings() {
   const [price, setPrice] = useState('')
   const [slots, setSlots] = useState('')
   const [radius, setRadius] = useState('')
+  const [intro, setIntro] = useState('')
+  const [introDays, setIntroDays] = useState('')
+  const [svcPct, setSvcPct] = useState('')
+  const [svcFixed, setSvcFixed] = useState('')
   const [saved, setSaved] = useState<string | null>(null)
   const [message, setMessage] = useState('')
   const [sure, setSure] = useState(false)
@@ -725,6 +730,10 @@ export function AdminSettings() {
       setPrice((s.promo_week_pence / 100).toFixed(2))
       setSlots(String(s.promo_slots))
       setRadius(String(s.promo_radius_miles))
+      setIntro(String(s.intro_commission_bps / 100))
+      setIntroDays(String(s.intro_days))
+      setSvcPct(String(s.service_fee_bps / 100))
+      setSvcFixed(String(s.service_fee_fixed_pence))
       setSaved(percent(s.commission_bps))
     })
   }, [])
@@ -743,6 +752,16 @@ export function AdminSettings() {
     })
     setSure(false)
     if (error) return setMessage(error.message)
+    const { error: introError } = await supabase!.rpc('admin_set_intro_offer', {
+      p_bps: Math.round(parseFloat(intro || '0') * 100),
+      p_days: parseInt(introDays || '0', 10),
+    })
+    if (introError) return setMessage(introError.message)
+    const { error: svcError } = await supabase!.rpc('admin_set_service_fee', {
+      p_bps: Math.round(parseFloat(svcPct || '0') * 100),
+      p_fixed: parseInt(svcFixed || '0', 10),
+    })
+    if (svcError) return setMessage(svcError.message)
     await loadPlatform(true)
     setSaved(percent(bps))
     setMessage('Saved. New orders and requests use these settings.')
@@ -757,6 +776,28 @@ export function AdminSettings() {
         <input type="number" min="0" max="30" step="0.5" inputMode="decimal" value={commission} onChange={(e) => { setCommission(e.target.value); setSure(false) }} />
       </label>
       <p className="muted small">Taken from the food price only, never from delivery fees. Orders already placed keep the rate they were placed at. The help text and seller terms update automatically.</p>
+      <div className="row">
+        <label>
+          Welcome fee for new cooks (%)
+          <input type="number" min="0" max="30" step="0.5" inputMode="decimal" value={intro} onChange={(e) => setIntro(e.target.value)} />
+        </label>
+        <label>
+          For how many days
+          <input type="number" min="0" max="365" step="1" inputMode="numeric" value={introDays} onChange={(e) => setIntroDays(e.target.value)} />
+        </label>
+      </div>
+      <div className="row">
+        <label>
+          Customer service fee (%)
+          <input type="number" min="0" max="10" step="0.1" inputMode="decimal" value={svcPct} onChange={(e) => setSvcPct(e.target.value)} />
+        </label>
+        <label>
+          Plus (pence)
+          <input type="number" min="0" max="200" step="1" inputMode="numeric" value={svcFixed} onChange={(e) => setSvcFixed(e.target.value)} />
+        </label>
+      </div>
+      <p className="muted small">Set to Stripe’s UK card fee (1.5% plus 20p) so the service fee covers card costs exactly. It’s worked out on the whole payment: {pounds(serviceFee(2000, { service_fee_bps: Math.round(parseFloat(svcPct || '0') * 100), service_fee_fixed_pence: parseInt(svcFixed || '0', 10) }))} on a £20 order.</p>
+      <p className="muted small">New cooks pay the welcome fee instead of the normal one, counted from their first paid order. Set the days to 0 to switch the offer off. The fees page, help text and seller terms update automatically.</p>
       <label>
         Featured spot price per week (£)
         <input type="number" min="0" max="1000" step="0.5" inputMode="decimal" value={price} onChange={(e) => setPrice(e.target.value)} />

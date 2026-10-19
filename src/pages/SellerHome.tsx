@@ -7,7 +7,9 @@ import { pounds, TERMS_VERSION, type SellerAccount, type Shop, type Verification
 import { Icon, type IconName } from '../lib/icons'
 import { Avatar, share } from '../lib/ui'
 import { loadRatings, type Rating } from '../lib/catalogue'
-import { useCommission } from '../lib/platform'
+import { useCommission, useWelcomeOffer } from '../lib/platform'
+import { cookGets } from '../lib/fees'
+import { WelcomeRate } from './Fees'
 import { HygieneCard, SetupChecklist } from './SellerSetup'
 
 const STATUS_TEXT: Record<SellerAccount['status'], string> = {
@@ -118,13 +120,13 @@ function Dashboard({ shop, account, onChanged }: { shop: Shop; account: SellerAc
       since.setHours(0, 0, 0, 0)
       const [todo, today, ratings] = await Promise.all([
         db.from('orders').select('id', { count: 'exact', head: true }).eq('shop_id', shop.id).in('status', ['pending_acceptance', 'accepted', 'ready', 'out_for_delivery']),
-        db.from('orders').select('total_pence, platform_fee_pence').eq('shop_id', shop.id).gte('created_at', since.toISOString())
+        db.from('orders').select('total_pence, platform_fee_pence, service_fee_pence').eq('shop_id', shop.id).gte('created_at', since.toISOString())
           .not('status', 'in', '(awaiting_payment,declined,cancelled,expired,refunded)'),
         loadRatings([shop.id]),
       ])
       setStats({
         todo: todo.count ?? 0,
-        today: (today.data ?? []).reduce((n, o) => n + o.total_pence - o.platform_fee_pence, 0),
+        today: (today.data ?? []).reduce((n, o) => n + cookGets(o), 0),
         rating: ratings[shop.id],
       })
     })()
@@ -179,6 +181,7 @@ function Dashboard({ shop, account, onChanged }: { shop: Shop; account: SellerAc
         <a href="/sell/reviews" onClick={link('/sell/reviews')}><strong>{stats?.rating ? stats.rating.average.toFixed(1) : '–'}</strong><span className="muted tiny">{stats?.rating ? `${stats.rating.reviews} ${stats.rating.reviews === 1 ? 'review' : 'reviews'}` : 'No reviews yet'}</span></a>
       </div>
 
+      <WelcomeRate shopId={shop.id} />
       <SetupChecklist shop={shop} refresh={refresh} />
       <ViewsCard shopId={shop.id} />
 
@@ -446,6 +449,7 @@ function Terms({ account, editable, onSaved }: { account: SellerAccount; editabl
   const [agreed, setAgreed] = useState(Boolean(account.terms_accepted_at))
   const [message, setMessage] = useState('')
   const commission = useCommission()
+  const welcome = useWelcomeOffer()
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault()
@@ -462,7 +466,8 @@ function Terms({ account, editable, onSaved }: { account: SellerAccount; editabl
     <form className="card" onSubmit={onSubmit}>
       <h2>4. Seller terms {done && <span className="tick">✓</span>}</h2>
       <ul className="muted small">
-        <li>No monthly fee. BiteBY keeps {commission} of the food price of each order. Delivery fees are all yours.</li>
+        <li>No sign-up or monthly fee. BiteBY keeps {commission} of the food price of each order{welcome && <> ({welcome})</>}. Delivery fees are all yours.</li>
+        <li>Card payment costs are covered by a small service fee the customer pays, so nothing else comes off. <a href="/fees" onClick={link('/fees')}>See exactly what you’ll get</a>.</li>
         <li>Customers pay up front. You accept or decline each order.</li>
         <li>Your home address is never shown publicly.</li>
         <li>You are responsible for food safety and accurate allergen information.</li>

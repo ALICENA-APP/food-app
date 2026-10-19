@@ -6,6 +6,7 @@ import { link, queryParam } from '../lib/router'
 import { OrderChat } from '../lib/chat'
 import { HelpForm } from '../lib/help'
 import { pounds } from '../lib/types'
+import { cookGets } from '../lib/fees'
 import { ORDER_STATUS, when, type Order, type OrderItem, type OrderStatus } from './Orders'
 
 const OPEN: OrderStatus[] = ['pending_acceptance', 'accepted', 'ready', 'out_for_delivery']
@@ -90,7 +91,7 @@ function SellerOrderCard({ order, onChanged }: { order: Order & { order_items: O
     onChanged()
   }
 
-  const yourShare = order.total_pence - order.platform_fee_pence
+  const yourShare = cookGets(order)
 
   return (
     <article className="card" id={`order-${order.id}`}>
@@ -109,7 +110,7 @@ function SellerOrderCard({ order, onChanged }: { order: Order & { order_items: O
       {order.customer_note && <p className="small"><strong>Note:</strong> {order.customer_note}</p>}
       {order.customer_phone && <p className="small">Phone: <a href={`tel:${order.customer_phone}`}>{order.customer_phone}</a></p>}
       {(order.discount_pence ?? 0) > 0 && <p className="muted small">Your code {order.discount_code}: −{pounds(order.discount_pence!)}</p>}
-      <p className="muted small">Customer paid {pounds(order.total_pence)} · you get {pounds(yourShare)}</p>
+      <p className="muted small">Order {pounds(order.total_pence - (order.service_fee_pence ?? 0))} · BiteBY fee {pounds(order.platform_fee_pence)} · you get {pounds(yourShare)}</p>
 
       {order.status === 'pending_acceptance' && !declining && (
         <div className="row">

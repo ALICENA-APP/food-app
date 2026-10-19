@@ -8,6 +8,7 @@ import { Avatar } from '../lib/ui'
 import { OrderChat } from '../lib/chat'
 import { HelpForm } from '../lib/help'
 import { pounds } from '../lib/types'
+import { ServiceFeeRow } from '../lib/ServiceFee'
 import { ReviewForm, ReviewItem, type Review } from '../lib/reviews'
 
 export type OrderStatus =
@@ -32,6 +33,7 @@ export type Order = {
   discount_code?: string | null
   discount_pence?: number
   platform_fee_pence: number
+  service_fee_pence: number
   decline_reason: string | null
   created_at: string
   shops?: { name: string; slug: string; logo_path?: string | null; is_test?: boolean }
@@ -281,6 +283,7 @@ export function OrderDetail({ id }: { id: string }) {
         ))}
         {(order.discount_pence ?? 0) > 0 && <div className="item"><span>Discount ({order.discount_code})</span><span>−{pounds(order.discount_pence!)}</span></div>}
         {order.delivery_fee_pence > 0 && <div className="item"><span>Delivery</span><span>{pounds(order.delivery_fee_pence)}</span></div>}
+        {order.service_fee_pence > 0 && <ServiceFeeRow pence={order.service_fee_pence} />}
         <div className="item total"><strong>Total</strong><strong>{pounds(order.total_pence)}</strong></div>
         <p className="muted tiny">Ordered {when(order.created_at)}</p>
       </div>
