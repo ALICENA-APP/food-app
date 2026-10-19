@@ -275,7 +275,7 @@ export default function PublicShop({ slug }: { slug: string }) {
       )}
 
       {!isPreview && (
-        <div className="shop-extras">
+        <div className="shop-extras" style={{ ['--n' as string]: settings?.takes_catering ? 3 : 2 }}>
           {settings?.takes_catering && <CateringTile shopId={shop.id} cookName={shop.name} />}
           <AskCookTile shopId={shop.id} cookName={shop.name} />
           <ReportLink shopId={shop.id} />
