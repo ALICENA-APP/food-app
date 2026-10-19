@@ -10,6 +10,7 @@ import { loadRatings, type Rating } from '../lib/catalogue'
 import { useCommission, useWelcomeDetail, useWelcomeHeadline, useWelcomeOffer } from '../lib/platform'
 import { cookGets } from '../lib/fees'
 import { WelcomeRate } from './Fees'
+import { InviteBanner, InviteCard, UseInviteCode } from '../lib/invites'
 import { HygieneCard, SetupChecklist } from './SellerSetup'
 
 const STATUS_TEXT: Record<SellerAccount['status'], string> = {
@@ -51,6 +52,8 @@ export default function SellerHome() {
     load()
   }, [load])
 
+  const welcome = useWelcomeHeadline()
+  const welcomeDetail = useWelcomeDetail()
   if (loading) return <p className="muted">{error || 'Loading…'}</p>
 
   const editable = !account || account.status === 'draft' || account.status === 'reverification_required'
@@ -66,8 +69,6 @@ export default function SellerHome() {
     </>
   )
 
-  const welcome = useWelcomeHeadline()
-  const welcomeDetail = useWelcomeDetail()
   return (
     <div className="stack">
       <h1>{shop ? 'Your shop' : 'Sell on BiteBY'}</h1>
@@ -76,6 +77,7 @@ export default function SellerHome() {
           {welcome && <span className="offer-badge">{welcome}</span>}
           <p className="lead">Open your own food shop with a link you can share. {welcomeDetail} Start with a few details about you: it takes about 10 minutes.</p>
           <p className="small"><a href="/fees" onClick={link('/fees')}>How fees work</a></p>
+          <InviteBanner />
         </>
       )}
       {account && (
@@ -104,6 +106,7 @@ export default function SellerHome() {
       ) : (
         <>
           {account && <h2>Your application</h2>}
+          {account && <UseInviteCode />}
           <BusinessDetails account={account} editable={editable} onSaved={load} />
           {steps}
         </>
@@ -188,6 +191,7 @@ function Dashboard({ shop, account, onChanged }: { shop: Shop; account: SellerAc
       </div>
 
       <WelcomeRate shopId={shop.id} />
+      <InviteCard />
       <SetupChecklist shop={shop} refresh={refresh} />
       <ViewsCard shopId={shop.id} />
 

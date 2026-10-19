@@ -5,7 +5,7 @@ import { percent, usePlatform, useWelcomeHeadline } from '../lib/platform'
 import { serviceFee } from '../lib/fees'
 import { supabase } from '../lib/supabase'
 
-type MyRate = { rate_bps: number; standard_bps: number; intro_bps: number; intro_days: number; intro_started: boolean; intro_ends_at: string | null }
+type MyRate = { rate_bps: number; standard_bps: number; intro_bps: number; intro_days: number; intro_started: boolean; intro_ends_at: string | null; free_until: string | null }
 
 // The cook's own fee right now, for their screens. Null until loaded or if
 // they have no shop.
@@ -23,6 +23,14 @@ const day = (iso: string) => new Date(iso).toLocaleDateString('en-GB', { day: 'n
 // A short line about the cook's welcome rate, for their dashboard.
 export function WelcomeRate({ shopId }: { shopId: string }) {
   const r = useMyFeeRate(shopId)
+  if (r?.free_until && (!r.intro_ends_at || new Date(r.free_until) > new Date(r.intro_ends_at))) {
+    return (
+      <a className="card welcome-rate" href="/fees" onClick={link('/fees')}>
+        <strong>No BiteBY fee until {day(r.free_until)}</strong>
+        <span className="muted small">Thanks to invites, you keep every penny of your food sales until then. After that it’s {percent(r.standard_bps)}.</span>
+      </a>
+    )
+  }
   if (!r || r.intro_bps >= r.standard_bps || !r.intro_days) return null
   const ends = r.intro_ends_at ? new Date(r.intro_ends_at) : null
   if (ends && ends.getTime() < Date.now()) return null
@@ -82,6 +90,7 @@ export default function Fees() {
         <li><strong>Declined orders cost you nothing.</strong> The customer gets all their money back and you pay no fees.</li>
         <li><strong>Discount codes:</strong> our fee is worked out on what the customer actually pays after your discount.</li>
         <li><strong>Getting paid:</strong> Stripe pays your money straight into your bank account, usually within a few working days. Your very first payout can take about a week.</li>
+        <li><strong>Invite a cook:</strong> when a cook you invite has had a few paid orders, you both get an extra free month (you can earn up to {s.invite_max_rewards} this way).</li>
         <li><strong>No surprises:</strong> if our fee ever changes, we’ll tell you at least 30 days before.</li>
       </ul>
 

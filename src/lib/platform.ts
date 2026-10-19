@@ -1,15 +1,15 @@
 import { useEffect, useState } from 'react'
 import { supabase } from './supabase'
 
-export type PlatformSettings = { commission_bps: number; promo_week_pence: number; promo_slots: number; promo_radius_miles: number; intro_commission_bps: number; intro_days: number; service_fee_bps: number; service_fee_fixed_pence: number }
+export type PlatformSettings = { commission_bps: number; promo_week_pence: number; promo_slots: number; promo_radius_miles: number; intro_commission_bps: number; intro_days: number; service_fee_bps: number; service_fee_fixed_pence: number; invite_free_days: number; invite_orders_needed: number; invite_max_rewards: number }
 
-const DEFAULTS: PlatformSettings = { commission_bps: 1000, promo_week_pence: 500, promo_slots: 8, promo_radius_miles: 10, intro_commission_bps: 0, intro_days: 30, service_fee_bps: 150, service_fee_fixed_pence: 20 }
+const DEFAULTS: PlatformSettings = { commission_bps: 1000, promo_week_pence: 500, promo_slots: 8, promo_radius_miles: 10, intro_commission_bps: 0, intro_days: 30, service_fee_bps: 150, service_fee_fixed_pence: 20, invite_free_days: 30, invite_orders_needed: 5, invite_max_rewards: 3 }
 let cached: Promise<PlatformSettings> | null = null
 
 // BiteBY's commission and featured-spot price, as set in Admin > Settings.
 export function loadPlatform(fresh = false): Promise<PlatformSettings> {
   if (!cached || fresh) {
-    cached = Promise.resolve(supabase!.from('platform_settings').select('commission_bps, promo_week_pence, promo_slots, promo_radius_miles, intro_commission_bps, intro_days, service_fee_bps, service_fee_fixed_pence').maybeSingle())
+    cached = Promise.resolve(supabase!.from('platform_settings').select('commission_bps, promo_week_pence, promo_slots, promo_radius_miles, intro_commission_bps, intro_days, service_fee_bps, service_fee_fixed_pence, invite_free_days, invite_orders_needed, invite_max_rewards').maybeSingle())
       .then(({ data }) => ({ ...DEFAULTS, ...(data ?? {}) }))
       .catch(() => DEFAULTS)
   }

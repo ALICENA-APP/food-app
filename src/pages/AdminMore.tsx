@@ -720,6 +720,9 @@ export function AdminSettings() {
   const [introDays, setIntroDays] = useState('')
   const [svcPct, setSvcPct] = useState('')
   const [svcFixed, setSvcFixed] = useState('')
+  const [invDays, setInvDays] = useState('')
+  const [invOrders, setInvOrders] = useState('')
+  const [invMax, setInvMax] = useState('')
   const [saved, setSaved] = useState<string | null>(null)
   const [message, setMessage] = useState('')
   const [sure, setSure] = useState(false)
@@ -734,6 +737,9 @@ export function AdminSettings() {
       setIntroDays(String(s.intro_days))
       setSvcPct(String(s.service_fee_bps / 100))
       setSvcFixed(String(s.service_fee_fixed_pence))
+      setInvDays(String(s.invite_free_days))
+      setInvOrders(String(s.invite_orders_needed))
+      setInvMax(String(s.invite_max_rewards))
       setSaved(percent(s.commission_bps))
     })
   }, [])
@@ -762,6 +768,12 @@ export function AdminSettings() {
       p_fixed: parseInt(svcFixed || '0', 10),
     })
     if (svcError) return setMessage(svcError.message)
+    const { error: invError } = await supabase!.rpc('admin_set_invites', {
+      p_free_days: parseInt(invDays || '0', 10),
+      p_orders_needed: parseInt(invOrders || '1', 10),
+      p_max_rewards: parseInt(invMax || '0', 10),
+    })
+    if (invError) return setMessage(invError.message)
     await loadPlatform(true)
     setSaved(percent(bps))
     setMessage('Saved. New orders and requests use these settings.')
@@ -798,6 +810,23 @@ export function AdminSettings() {
       </div>
       <p className="muted small">Set to Stripe’s UK card fee (1.5% plus 20p) so the service fee covers card costs exactly. It’s worked out on the whole payment: {pounds(serviceFee(2000, { service_fee_bps: Math.round(parseFloat(svcPct || '0') * 100), service_fee_fixed_pence: parseInt(svcFixed || '0', 10) }))} on a £20 order.</p>
       <p className="muted small">New cooks pay the welcome fee instead of the normal one, counted from their first paid order. Set the days to 0 to switch the offer off. The fees page, help text and seller terms update automatically.</p>
+      <h3>Invite a cook</h3>
+      <div className="row three">
+        <label>
+          Free days each
+          <input type="number" min="0" max="365" step="1" inputMode="numeric" value={invDays} onChange={(e) => setInvDays(e.target.value)} />
+        </label>
+        <label>
+          Paid orders needed
+          <input type="number" min="1" max="100" step="1" inputMode="numeric" value={invOrders} onChange={(e) => setInvOrders(e.target.value)} />
+        </label>
+        <label>
+          Most rewards per cook
+          <input type="number" min="0" max="100" step="1" inputMode="numeric" value={invMax} onChange={(e) => setInvMax(e.target.value)} />
+        </label>
+      </div>
+      <p className="muted small">When an invited cook reaches the paid orders needed, both cooks get these free days. A new cook gets this once; an inviter can earn it up to the most rewards set here. Set free days to 0 to switch invites off.</p>
+      <InviteList />
       <label>
         Featured spot price per week (£)
         <input type="number" min="0" max="1000" step="0.5" inputMode="decimal" value={price} onChange={(e) => setPrice(e.target.value)} />
@@ -815,5 +844,27 @@ export function AdminSettings() {
       <button type="button" onClick={save}>{sure ? 'Confirm and save' : 'Save settings'}</button>
       {message && <p className="small">{message}</p>}
     </div>
+  )
+}
+
+type InviteRow = { cook: string; invited_by: string; status: string; paid_orders: number; rewarded_at: string | null; demo: boolean }
+
+// Who invited whom, newest first.
+function InviteList() {
+  const [rows, setRows] = useState<InviteRow[] | null>(null)
+  useEffect(() => {
+    supabase!.rpc('admin_invites').then(({ data }) => setRows(data ?? []))
+  }, [])
+  if (!rows?.length) return null
+  return (
+    <details>
+      <summary className="small">{rows.length} {rows.length === 1 ? 'cook has' : 'cooks have'} joined with an invite</summary>
+      {rows.map((r, n) => (
+        <div key={n} className="item small">
+          <span>{r.cook}{r.demo && ' (demo)'} <span className="muted">· invited by {r.invited_by}</span></span>
+          <span>{r.rewarded_at ? 'Rewarded ✓' : `${r.paid_orders} orders`}</span>
+        </div>
+      ))}
+    </details>
   )
 }

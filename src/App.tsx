@@ -7,6 +7,7 @@ import { useUnreadAlerts } from './lib/alerts'
 import { Icon, type IconName } from './lib/icons'
 import { Avatar, Wordmark } from './lib/ui'
 import { useMyAvatar } from './lib/myAvatar'
+import { InviteBanner } from './lib/invites'
 import Home from './pages/Home'
 import Explore from './pages/Explore'
 import Dish from './pages/Dish'
@@ -134,7 +135,7 @@ function App() {
   } else if (path.startsWith('/admin')) {
     page = needsAccount(<Admin />, 'Sign in to the BiteBY team tools.')
   } else if (path.startsWith('/sell')) {
-    if (!session) page = <SignInPrompt why="Sign in or create an account to open your food shop." />
+    if (!session) page = <div className="stack"><InviteBanner /><SignInPrompt why="Sign in or create an account to open your food shop." /></div>
     else if (path === '/sell/shop') page = <ShopSetup />
     else if (path === '/sell/poster') page = <Poster />
     else if (path === '/sell/discounts') page = <Discounts />
