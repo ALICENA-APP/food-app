@@ -222,6 +222,7 @@ function ShopForm({ account, shop, settings, priv }: Loaded & { account: SellerA
           <input type="checkbox" checked={delivery} onChange={(e) => setDelivery(e.target.checked)} />
           I deliver myself
         </label>
+        {delivery && <p className="muted tiny" style={{ margin: 0 }}>If you deliver by car, your car insurance needs to cover business use (ask your insurer: it’s often a small add-on).</p>}
         <label className="check">
           <input type="checkbox" checked={catering} onChange={(e) => setCatering(e.target.checked)} />
           I take catering and party orders (customers can ask you for a quote)

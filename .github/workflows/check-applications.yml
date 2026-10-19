@@ -27,7 +27,7 @@ jobs:
         env:
           SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
         run: node scripts/check-applications.mjs
-      - name: Insurance reminders
+      - name: Insurance and tax details reminders
         env:
           SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
-        run: psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 -qAt -c "select food.insurance_reminders()"
+        run: psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 -qAt -c "select food.insurance_reminders(), food.tax_details_reminders()"

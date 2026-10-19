@@ -55,6 +55,7 @@ export function InsuranceHelp() {
       You need <strong>public and products liability insurance</strong> for selling food from home. It pays out if someone
       is made ill or hurt by your food, so you and your customers are protected. Many insurers offer cover for home bakers
       and cooks, often from about £5 to £15 a month. Ask for at least £1 million of cover, then upload the certificate here.
+      If you deliver by car, check your car insurance covers business use too.
     </p>
   )
 }

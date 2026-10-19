@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import { supabase } from '../lib/supabase'
 import { openCertificate, ukDate } from '../lib/insurance'
+import { HmrcReport } from '../lib/taxDetails'
 import { link, queryParam } from '../lib/router'
 import { AdminHelpInbox, AdminOrders, AdminOverview, AdminPromoted, AdminReviews, AdminSafety, AdminSettings, AdminShops, AdminAnnounce } from './AdminMore'
 import Statement from './Statements'
@@ -63,7 +64,7 @@ function AdminTabs() {
       {tab === 'promoted' && <AdminPromoted />}
       {tab === 'safety' && <AdminSafety />}
       {tab === 'announce' && <AdminAnnounce />}
-      {tab === 'report' && <Statement kind="admin" />}
+      {tab === 'report' && <><Statement kind="admin" /><HmrcReport /></>}
       {tab === 'settings' && <AdminSettings />}
     </div>
   )
