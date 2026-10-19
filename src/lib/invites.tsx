@@ -112,26 +112,28 @@ export function InviteCard() {
           <span className="muted small">Code {data.code}{earned > 0 && ` · ${earned} earned`}</span>
         </span>
       </summary>
-      <p className="muted small">
-        When a cook you invite has {data.orders_needed} paid orders, you both get {data.free_days} days with no BiteBY fee. They get it on top of their
-        own first free month. {left > 0 ? `You can earn ${left} more free ${left === 1 ? 'month' : 'months'} this way.` : 'You’ve earned the most free months invites give: thank you! Your invites still help new cooks.'}
-      </p>
-      <div className="invite-code">
-        <span className="muted tiny">Your invite code</span>
-        <strong>{data.code}</strong>
-      </div>
-      <button type="button" onClick={() => share('Sell your food on BiteBY with my invite', url)}>Share your invite link</button>
-      {data.invited.length > 0 && (
-        <div className="stack invite-list">
-          {data.invited.map((i, n) => (
-            <div key={n} className="item">
-              <span>{i.name}</span>
-              <span className="small">{i.rewarded_at ? 'Free month earned ✓' : i.status !== 'approved' ? 'Getting approved' : `${i.paid_orders} of ${data.orders_needed} orders`}</span>
-            </div>
-          ))}
+      <div className="details-body">
+        <p className="muted small">
+          When a cook you invite has {data.orders_needed} paid orders, you both get {data.free_days} days with no BiteBY fee. They get it on top of their
+          own first free month. {left > 0 ? `You can earn ${left} more free ${left === 1 ? 'month' : 'months'} this way.` : 'You’ve earned the most free months invites give: thank you! Your invites still help new cooks.'}
+        </p>
+        <div className="invite-code">
+          <span className="muted tiny">Your invite code</span>
+          <strong>{data.code}</strong>
         </div>
-      )}
-      <p className="tiny muted"><a href="/fees" onClick={link('/fees')}>How fees work</a></p>
+        <button type="button" onClick={() => share('Sell your food on BiteBY with my invite', url)}>Share your invite link</button>
+        {data.invited.length > 0 && (
+          <div className="stack invite-list">
+            {data.invited.map((i, n) => (
+              <div key={n} className="item">
+                <span>{i.name}</span>
+                <span className="small">{i.rewarded_at ? 'Free month earned ✓' : i.status !== 'approved' ? 'Getting approved' : `${i.paid_orders} of ${data.orders_needed} orders`}</span>
+              </div>
+            ))}
+          </div>
+        )}
+        <p className="tiny muted"><a href="/fees" onClick={link('/fees')}>How fees work</a></p>
+      </div>
     </details>
   )
 }

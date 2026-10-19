@@ -43,14 +43,16 @@ export function SetupChecklist({ shop, refresh }: { shop: Shop; refresh: number 
           <span className="bar"><span style={{ width: `${(done / steps.length) * 100}%` }} /></span>
         </span>
       </summary>
-      <div>
-        {steps.map((s) => s.done ? (
-          <span key={s.label} className="done"><span className="box"><Icon name="check" size={14} /></span>{s.label}</span>
-        ) : (
-          <a key={s.label} href={s.to} onClick={s.to.startsWith('#') ? (e) => { e.preventDefault(); document.getElementById(s.to.slice(1))?.scrollIntoView({ behavior: 'smooth' }) } : link(s.to)}>
-            <span className="box" />{s.label}<Icon name="chevron" size={16} />
-          </a>
-        ))}
+      <div className="details-body">
+        <div>
+          {steps.map((s) => s.done ? (
+            <span key={s.label} className="done"><span className="box"><Icon name="check" size={14} /></span>{s.label}</span>
+          ) : (
+            <a key={s.label} href={s.to} onClick={s.to.startsWith('#') ? (e) => { e.preventDefault(); const el = document.getElementById(s.to.slice(1)); if (el instanceof HTMLDetailsElement) el.open = true; el?.scrollIntoView({ behavior: 'smooth' }) } : link(s.to)}>
+              <span className="box" />{s.label}<Icon name="chevron" size={16} />
+            </a>
+          ))}
+        </div>
       </div>
     </details>
   )
@@ -101,41 +103,51 @@ export function HygieneCard({ accountId, onSaved }: { accountId: string; onSaved
   const rejected = !current && !pending ? rows.find((r) => r.status === 'rejected') : undefined
 
   return (
-    <div className="card stack" id="hygiene" style={{ gap: 8 }}>
-      <h2 style={{ margin: 0 }}>Food hygiene rating</h2>
-      <p className="muted small">After your council inspects your kitchen you get a rating from 0 to 5. Showing it builds trust: shops with a rating get a badge on their page.</p>
-      {current && <p className="small"><span className="tag green">Shown on your shop</span> Rating {current.rating}: {hygieneWords(current.rating ?? 0).toLowerCase()}</p>}
-      {pending && (
-        <div className="item">
-          <span className="small"><span className="tag">Being checked</span> Rating {pending.rating}</span>
-          <button type="button" className="link" onClick={() => remove(pending.id)}>Remove</button>
-        </div>
-      )}
-      {rejected && <p className="small error">We couldn’t confirm your last rating. Check the details and add it again.</p>}
-      {!pending && !adding && (
-        <button type="button" className="secondary" style={{ alignSelf: 'flex-start' }} onClick={() => setAdding(true)}>{current ? 'Add a newer rating' : 'Add my rating'}</button>
-      )}
-      {adding && (
-        <form className="stack" onSubmit={save}>
-          <div className="row">
-            <label>Rating
-              <select value={rating} onChange={(e) => setRating(e.target.value)}>
-                {[5, 4, 3, 2, 1, 0].map((n) => <option key={n} value={n}>{n} · {hygieneWords(n)}</option>)}
-              </select>
+    <details className="card hygiene-card" id="hygiene">
+      <summary>
+        <span className="sum-row">
+          <span className={`hyg-dot ${current ? '' : 'none'}`} aria-hidden="true">{current ? current.rating : '?'}</span>
+          <span className="sum-text">
+            <strong>Food hygiene rating</strong>
+            <span className="muted small">{current ? `Rating ${current.rating} shown on your shop` : pending ? 'Being checked' : 'Not added yet'}</span>
+          </span>
+        </span>
+      </summary>
+      <div className="details-body">
+        <p className="muted small">After your council inspects your kitchen you get a rating from 0 to 5. Showing it builds trust: shops with a rating get a badge on their page.</p>
+        {current && <p className="small"><span className="tag green">Shown on your shop</span> Rating {current.rating}: {hygieneWords(current.rating ?? 0).toLowerCase()}</p>}
+        {pending && (
+          <div className="item">
+            <span className="small"><span className="tag">Being checked</span> Rating {pending.rating}</span>
+            <button type="button" className="link" onClick={() => remove(pending.id)}>Remove</button>
+          </div>
+        )}
+        {rejected && <p className="small error">We couldn’t confirm your last rating. Check the details and add it again.</p>}
+        {!pending && !adding && (
+          <button type="button" className="secondary" style={{ alignSelf: 'flex-start' }} onClick={() => setAdding(true)}>{current ? 'Add a newer rating' : 'Add my rating'}</button>
+        )}
+        {adding && (
+          <form className="stack" onSubmit={save}>
+            <div className="row">
+              <label>Rating
+                <select value={rating} onChange={(e) => setRating(e.target.value)}>
+                  {[5, 4, 3, 2, 1, 0].map((n) => <option key={n} value={n}>{n} · {hygieneWords(n)}</option>)}
+                </select>
+              </label>
+              <label>Inspected on<input type="date" max={new Date().toISOString().slice(0, 10)} value={date} onChange={(e) => setDate(e.target.value)} /></label>
+            </div>
+            <label>Link to your rating (optional)
+              <input value={fhrs} onChange={(e) => setFhrs(e.target.value)} placeholder="ratings.food.gov.uk/business/…" />
             </label>
-            <label>Inspected on<input type="date" max={new Date().toISOString().slice(0, 10)} value={date} onChange={(e) => setDate(e.target.value)} /></label>
-          </div>
-          <label>Link to your rating (optional)
-            <input value={fhrs} onChange={(e) => setFhrs(e.target.value)} placeholder="ratings.food.gov.uk/business/…" />
-          </label>
-          <p className="muted tiny">Find yourself on ratings.food.gov.uk and paste the link. It helps us check it quickly.</p>
-          <div className="row">
-            <button type="submit">Send to check</button>
-            <button type="button" className="secondary" onClick={() => setAdding(false)}>Cancel</button>
-          </div>
-        </form>
-      )}
-      {message && <p className="error small">{message}</p>}
-    </div>
+            <p className="muted tiny">Find yourself on ratings.food.gov.uk and paste the link. It helps us check it quickly.</p>
+            <div className="row">
+              <button type="submit">Send to check</button>
+              <button type="button" className="secondary" onClick={() => setAdding(false)}>Cancel</button>
+            </div>
+          </form>
+        )}
+        {message && <p className="error small">{message}</p>}
+      </div>
+    </details>
   )
 }

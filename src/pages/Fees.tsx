@@ -27,7 +27,7 @@ export function WelcomeRate({ shopId }: { shopId: string }) {
     return (
       <a className="card welcome-rate" href="/fees" onClick={link('/fees')}>
         <strong>No BiteBY fee until {day(r.free_until)}</strong>
-        <span className="muted small">Thanks to invites, you keep every penny of your food sales until then. After that it’s {percent(r.standard_bps)}.</span>
+        <span className="small">Thanks to invites, you keep every penny of your food sales until then. After that it’s {percent(r.standard_bps)}.</span>
       </a>
     )
   }
@@ -37,7 +37,7 @@ export function WelcomeRate({ shopId }: { shopId: string }) {
   return (
     <a className="card welcome-rate" href="/fees" onClick={link('/fees')}>
       <strong>Welcome offer: {r.intro_bps === 0 ? 'no BiteBY fee' : `${percent(r.intro_bps)} BiteBY fee`}</strong>
-      <span className="muted small">
+      <span className="small">
         {ends
           ? `Until ${day(ends.toISOString())}, BiteBY keeps ${r.intro_bps === 0 ? 'nothing from' : `only ${percent(r.intro_bps)} of`} your food sales instead of ${percent(r.standard_bps)}.`
           : `Your first ${r.intro_days} days of selling start with your first order. During them BiteBY keeps ${r.intro_bps === 0 ? 'nothing' : `only ${percent(r.intro_bps)}`} instead of ${percent(r.standard_bps)}.`}

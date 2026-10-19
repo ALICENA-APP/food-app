@@ -155,6 +155,7 @@ function Dashboard({ shop, account, onChanged }: { shop: Shop; account: SellerAc
   const live = shop.status === 'live'
   return (
     <>
+      <WelcomeRate shopId={shop.id} />
       <div className="card">
         <div className="row-bar" style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
           <Avatar name={shop.name} path={shop.logo_path} size={56} />
@@ -190,10 +191,9 @@ function Dashboard({ shop, account, onChanged }: { shop: Shop; account: SellerAc
         <a href="/sell/reviews" onClick={link('/sell/reviews')}><strong>{stats?.rating ? stats.rating.average.toFixed(1) : '–'}</strong><span className="muted tiny">{stats?.rating ? `${stats.rating.reviews} ${stats.rating.reviews === 1 ? 'review' : 'reviews'}` : 'No reviews yet'}</span></a>
       </div>
 
-      <WelcomeRate shopId={shop.id} />
+      <ViewsCard shopId={shop.id} />
       <InviteCard />
       <SetupChecklist shop={shop} refresh={refresh} />
-      <ViewsCard shopId={shop.id} />
 
       <div className="menu-tiles">
         <SellerTile to="/sell/orders" icon="orders" title="Orders" sub="Accept and update" tone="var(--green-soft)" />
@@ -292,41 +292,63 @@ function GetFeatured({ shopId, shopLive }: { shopId: string; shopLive: boolean }
     load()
   }
 
+  const daysLeft = running ? Math.max(1, Math.ceil((new Date(running.ends_at!).getTime() - Date.now()) / 86400000)) : 0
+  const summary = running ? `You’re featured · ${daysLeft} ${daysLeft === 1 ? 'day' : 'days'} left`
+    : booked ? `Spot booked from ${moment(booked.starts_at!)}`
+    : waiting ? 'Request sent'
+    : 'Be seen first by customers near you'
   return (
-    <div className="card stack">
-      <h2>Get featured</h2>
-      <p className="muted small">Featured cooks appear in a “Featured cooks” row near the top of the home page and first in Explore, marked “Sponsored”, for customers within {radius} miles of you. Your time starts the moment you’re approved.</p>
-      {running ? (
-        <div className="stack" style={{ gap: 8 }}>
-          <div className="item"><span className="tick">You’re featured</span><strong className="small"><Countdown end={running.ends_at!} /></strong></div>
-          <FeaturedBar start={running.starts_at!} end={running.ends_at!} />
-          <p className="muted tiny">Ends {moment(running.ends_at!)}. You can ask again for more weeks once it ends.</p>
-        </div>
-      ) : booked ? (
-        <p className="status small">Your spot is booked. All spots near you are taken until then, so you’re featured from {moment(booked.starts_at!)} to {moment(booked.ends_at!)}.</p>
-      ) : waiting ? (
-        <p className="status small">
-          Request sent for {waiting.weeks} {waiting.weeks === 1 ? 'week' : 'weeks'}. The BiteBY team will confirm soon.
-          {queue && queue.position > 1 && ` You’re number ${queue.position} in line.`}
-          {queue?.next_start && new Date(queue.next_start).getTime() > Date.now() + 60000 && ` Spots near you are full right now, so the earliest start is ${moment(queue.next_start)}.`}
-        </p>
-      ) : (
-        <>
-          {lastDeclined?.note && <p className="muted small">Last request: {lastDeclined.note}</p>}
-          <div className="chips">
-            {[1, 2, 4].map((w) => (
-              <button key={w} type="button" className={`chip ${weeks === w ? 'on' : ''}`} onClick={() => setWeeks(w)}>
-                {w} {w === 1 ? 'week' : 'weeks'} · {pounds(w * weekPence)}
-              </button>
-            ))}
+    <details className="card featured-card">
+      <summary>
+        <span className="sum-row">
+          <FeaturedIcon />
+          <span className="sum-text"><strong>Get featured</strong><span className="small">{summary}</span></span>
+        </span>
+      </summary>
+      <div className="details-body">
+        <p className="muted small">Featured cooks appear in a “Featured cooks” row near the top of the home page and first in Explore, marked “Sponsored”, for customers within {radius} miles of you. Your time starts the moment you’re approved.</p>
+        {running ? (
+          <div className="stack" style={{ gap: 8 }}>
+            <div className="item"><span className="tick">You’re featured</span><strong className="small"><Countdown end={running.ends_at!} /></strong></div>
+            <FeaturedBar start={running.starts_at!} end={running.ends_at!} />
+            <p className="muted tiny">Ends {moment(running.ends_at!)}. You can ask again for more weeks once it ends.</p>
           </div>
-          <button type="button" onClick={request} disabled={!shopLive}>Ask to be featured</button>
-          {!shopLive && <p className="muted small">You can ask once your shop is live.</p>}
-          <p className="muted tiny">Nothing is charged now. Payment will be taken by card once online payments are switched on, and only if the team approves your spot.</p>
-        </>
-      )}
-      {message && <p className="error small">{message}</p>}
-    </div>
+        ) : booked ? (
+          <p className="status small">Your spot is booked. All spots near you are taken until then, so you’re featured from {moment(booked.starts_at!)} to {moment(booked.ends_at!)}.</p>
+        ) : waiting ? (
+          <p className="status small">
+            Request sent for {waiting.weeks} {waiting.weeks === 1 ? 'week' : 'weeks'}. The BiteBY team will confirm soon.
+            {queue && queue.position > 1 && ` You’re number ${queue.position} in line.`}
+            {queue?.next_start && new Date(queue.next_start).getTime() > Date.now() + 60000 && ` Spots near you are full right now, so the earliest start is ${moment(queue.next_start)}.`}
+          </p>
+        ) : (
+          <>
+            {lastDeclined?.note && <p className="muted small">Last request: {lastDeclined.note}</p>}
+            <div className="chips">
+              {[1, 2, 4].map((w) => (
+                <button key={w} type="button" className={`chip ${weeks === w ? 'on' : ''}`} onClick={() => setWeeks(w)}>
+                  {w} {w === 1 ? 'week' : 'weeks'} · {pounds(w * weekPence)}
+                </button>
+              ))}
+            </div>
+            <button type="button" onClick={request} disabled={!shopLive}>Ask to be featured</button>
+            {!shopLive && <p className="muted small">You can ask once your shop is live.</p>}
+            <p className="muted tiny">Nothing is charged now. Payment will be taken by card once online payments are switched on, and only if the team approves your spot.</p>
+          </>
+        )}
+        {message && <p className="error small">{message}</p>}
+      </div>
+    </details>
+  )
+}
+
+// A filled star with sparkles, in the brand yellow.
+function FeaturedIcon() {
+  return (
+    <svg className="sum-icon" width="30" height="30" viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z" fill="#FFC72C" stroke="#111" strokeWidth="1.4" strokeLinejoin="round" />
+      <path d="M20 2.5v3M18.5 4h3M3.5 17v2.5M2.25 18.25h2.5" stroke="#111" strokeWidth="1.4" strokeLinecap="round" />
+    </svg>
   )
 }
 
