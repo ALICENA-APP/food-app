@@ -66,6 +66,10 @@ function ShopForm({ account, shop, settings, priv }: Loaded & { account: SellerA
   const [name, setName] = useState(shop?.name ?? '')
   const [slug, setSlug] = useState(shop?.slug ?? '')
   const [slugTouched, setSlugTouched] = useState(Boolean(shop))
+  const [linkLockedUntil, setLinkLockedUntil] = useState<string | null>(null)
+  useEffect(() => {
+    if (shop) supabase!.rpc('shop_link_info', { p_shop: shop.id }).then(({ data }) => setLinkLockedUntil(data?.locked_until ?? null))
+  }, [shop])
   const [story, setStory] = useState(shop?.story ?? '')
   const [area, setArea] = useState(shop?.area_label ?? '')
   const [cuisines, setCuisines] = useState((shop?.cuisines ?? []).join(', '))
@@ -101,7 +105,7 @@ function ShopForm({ account, shop, settings, priv }: Loaded & { account: SellerA
     let shopId = shop?.id
     if (shopId) {
       const { error } = await db.from('shops').update({ ...shopValues, accepting_orders: accepting }).eq('id', shopId)
-      if (error) return fail(error.message)
+      if (error) return fail(error.code === '23505' ? 'That link is taken. Try another one.' : error.message)
     } else {
       // The id is chosen here: reading the new row back in the same request
       // would fail, because the ownership check can't see it yet.
@@ -172,18 +176,26 @@ function ShopForm({ account, shop, settings, priv }: Loaded & { account: SellerA
         <label>
           Your shop link
           <div className="prefix">
-            <span>food.beastcase.net/s/</span>
+            <span>{window.location.host}/s/</span>
             <input
               required
               pattern="[a-z0-9][a-z0-9\-]{1,38}[a-z0-9]"
               title="3 to 40 lowercase letters, numbers or dashes"
               value={slug}
+              disabled={Boolean(linkLockedUntil)}
               onChange={(e) => {
                 setSlugTouched(true)
                 setSlug(toSlug(e.target.value))
               }}
             />
           </div>
+          <span className="muted tiny">
+            {linkLockedUntil
+              ? `You changed your link recently. You can change it again from ${new Date(linkLockedUntil).toLocaleDateString('en-GB', { day: 'numeric', month: 'long' })}.`
+              : shop && shop.status !== 'draft'
+                ? 'You can change your link once every 30 days. Old links, QR codes and posts keep working.'
+                : 'This is the link you’ll share. Pick it carefully: once your shop is open you can only change it once every 30 days.'}
+          </span>
         </label>
         <label>
           Your story (optional)

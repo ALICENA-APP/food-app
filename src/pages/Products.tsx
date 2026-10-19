@@ -67,7 +67,7 @@ export default function Products() {
       )}
       {products.map((p) => <MenuItem key={p.id} product={p} photo={photos[p.id] ?? null} onChange={replace} />)}
       <p className="muted small">
-        Preview your shop: <a href={`/s/${shop.slug}`} onClick={link(`/s/${shop.slug}`)}>food.beastcase.net/s/{shop.slug}</a>
+        Preview your shop: <a href={`/s/${shop.slug}`} onClick={link(`/s/${shop.slug}`)}>{window.location.host}/s/{shop.slug}</a>
       </p>
     </div>
   )

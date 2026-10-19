@@ -255,7 +255,7 @@ export function Help() {
     ['I have an allergy', 'Every dish lists the 14 main allergens. Food is made in home kitchens, so if your allergy is severe, check with the cook before ordering.'],
     ['Who are the cooks?', 'Local home cooks. Each one registers their food business with their council and is checked by the BiteBY team before their shop can open.'],
     ['Reviews', 'Only people who ordered can leave a review, after the order is complete.'],
-    ['Selling on BiteBY', `Tap Profile, then Become a seller. There’s no sign-up or monthly fee: BiteBY keeps ${commission} of the food price of each order${welcome ? ` (${welcome})` : ''}, and delivery fees are all yours. Card payment costs are paid by the customer as a small service fee, so nothing else comes off. The full breakdown is on the How fees work page (food.beastcase.net/fees).`],
+    ['Selling on BiteBY', `Tap Profile, then Become a seller. There’s no sign-up or monthly fee: BiteBY keeps ${commission} of the food price of each order${welcome ? ` (${welcome})` : ''}, and delivery fees are all yours. Card payment costs are paid by the customer as a small service fee, so nothing else comes off. The full breakdown is on the How fees work page, linked from the Sell your food section on the home page.`],
   ]
   return (
     <div className="stack">

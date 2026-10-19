@@ -30,7 +30,14 @@ export async function loadShop(slug: string): Promise<ShopData | null> {
   if (hit && Date.now() - hit.at < 60000) return hit.data
   const db = supabase!
   const { data: shop } = await db.from('shops').select('*').eq('slug', slug).maybeSingle()
-  if (!shop) return null
+  if (!shop) {
+    // The cook may have changed their link: old links keep working.
+    const { data: moved } = await db.rpc('shop_moved_to', { p_slug: slug })
+    if (typeof moved !== 'string' || !moved || moved === slug) return null
+    const path = window.location.pathname
+    if (path.startsWith(`/s/${slug}`)) window.history.replaceState(window.history.state, '', `/s/${moved}${path.slice(3 + slug.length)}${window.location.search}`)
+    return loadShop(moved)
+  }
   const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/London' })
   const [s, p, a, h, c, r, cat] = await Promise.all([
     db.from('shop_settings').select('*').eq('shop_id', shop.id).maybeSingle(),
