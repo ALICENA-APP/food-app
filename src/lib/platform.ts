@@ -3,7 +3,7 @@ import { supabase } from './supabase'
 
 export type PlatformSettings = { commission_bps: number; promo_week_pence: number; promo_slots: number; promo_radius_miles: number; intro_commission_bps: number; intro_days: number; service_fee_bps: number; service_fee_fixed_pence: number }
 
-const DEFAULTS: PlatformSettings = { commission_bps: 1000, promo_week_pence: 500, promo_slots: 8, promo_radius_miles: 10, intro_commission_bps: 500, intro_days: 30, service_fee_bps: 150, service_fee_fixed_pence: 20 }
+const DEFAULTS: PlatformSettings = { commission_bps: 1000, promo_week_pence: 500, promo_slots: 8, promo_radius_miles: 10, intro_commission_bps: 0, intro_days: 30, service_fee_bps: 150, service_fee_fixed_pence: 20 }
 let cached: Promise<PlatformSettings> | null = null
 
 // BiteBY's commission and featured-spot price, as set in Admin > Settings.
@@ -39,4 +39,25 @@ export function useWelcomeOffer() {
   const intro = Math.min(s.intro_commission_bps, s.commission_bps)
   if (!s.intro_days || intro >= s.commission_bps) return ''
   return intro === 0 ? `nothing at all for your first ${s.intro_days} days of selling` : `only ${percent(intro)} for your first ${s.intro_days} days of selling`
+}
+
+// A short headline for inviting cooks: "First month free", "5% fee for your
+// first month", or '' when there's no welcome offer.
+export function useWelcomeHeadline() {
+  const s = usePlatform()
+  const intro = Math.min(s.intro_commission_bps, s.commission_bps)
+  if (!s.intro_days || intro >= s.commission_bps) return ''
+  const span = s.intro_days === 30 ? 'month' : `${s.intro_days} days`
+  return intro === 0 ? `First ${span} free` : `${percent(intro)} fee for your first ${span}`
+}
+
+// One sentence for under the headline.
+export function useWelcomeDetail() {
+  const s = usePlatform()
+  const intro = Math.min(s.intro_commission_bps, s.commission_bps)
+  const normal = percent(s.commission_bps)
+  if (!s.intro_days || intro >= s.commission_bps) return `No sign-up or monthly fee: BiteBY keeps ${normal} of the food price only when you sell.`
+  return intro === 0
+    ? `Keep every penny of your food sales for your first ${s.intro_days} days. After that BiteBY keeps just ${normal}, only when you sell. No sign-up or monthly fee.`
+    : `BiteBY keeps only ${percent(intro)} for your first ${s.intro_days} days, then ${normal}, only when you sell. No sign-up or monthly fee.`
 }

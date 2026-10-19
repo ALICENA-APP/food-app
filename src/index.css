@@ -836,3 +836,4 @@ h2.menu-head { margin: 8px 0 0; font-size: 1.1rem; }
 .fee-label { display: inline-flex; align-items: center; gap: 4px; }
 .info-btn { background: none; border: 0; padding: 2px; min-height: 0; color: var(--muted, #5F5F5F); cursor: pointer; display: inline-flex; }
 .fee-info { margin: -4px 0 0; }
+.offer-badge { align-self: flex-start; display: inline-block; background: var(--yellow, #FFC72C); color: #111; font-weight: 600; font-size: 13px; border-radius: 999px; padding: 4px 12px; }

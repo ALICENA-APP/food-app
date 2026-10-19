@@ -14,12 +14,13 @@ import { loadDeliveryTo, loadNear, postcodeDistrict, usePostcode, type Near } fr
 import { BowlArt, DishCard, FoodPhoto, SellerCard, type ShopCardData } from '../lib/ui'
 import { readRecent } from '../lib/views'
 import { pounds } from '../lib/types'
-import { useCommission } from '../lib/platform'
+import { useWelcomeDetail, useWelcomeHeadline } from '../lib/platform'
 
 // The first screen everyone sees, signed in or not.
 export default function Home() {
   const categories = useCategories()
-  const commission = useCommission()
+  const welcome = useWelcomeHeadline()
+  const welcomeDetail = useWelcomeDetail()
   const [dishes, setDishes] = useState<Dish[] | null>(null)
   const orderCounts = useOrderCounts((dishes ?? []).map((d) => d.id))
   const mine = useMyAllergies()
@@ -187,8 +188,9 @@ export default function Home() {
       )}
 
       <section className="promo">
+        {welcome && <span className="offer-badge">{welcome}</span>}
         <h2>Cook at home? Sell on BiteBY</h2>
-        <p>Open your own food shop with a link you can share. No monthly fee: we take {commission} of the food price only when you sell. <a href="/fees" onClick={link('/fees')}>How fees work</a></p>
+        <p>Open your own food shop with a link you can share. {welcomeDetail} <a href="/fees" onClick={link('/fees')}>How fees work</a></p>
         <a className="button dark" href="/sell" onClick={link('/sell')}>Become a seller</a>
         <BowlArt />
       </section>

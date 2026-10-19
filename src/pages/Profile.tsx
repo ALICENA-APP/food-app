@@ -9,7 +9,7 @@ import { setTheme, useTheme } from '../lib/theme'
 import { ImageCropper } from '../lib/ImageCropper'
 import { deletePhoto, uploadPhoto } from '../lib/images'
 import { setMyAvatar, useMyAvatar } from '../lib/myAvatar'
-import { useCommission, useWelcomeOffer } from '../lib/platform'
+import { useCommission, useWelcomeDetail, useWelcomeHeadline, useWelcomeOffer } from '../lib/platform'
 
 // Light, dark, or follow the phone.
 function ThemePicker() {
@@ -212,10 +212,13 @@ function LegalLinks() {
 }
 
 function SellerPromo() {
+  const welcome = useWelcomeHeadline()
+  const detail = useWelcomeDetail()
   return (
     <section className="promo">
+      {welcome && <span className="offer-badge">{welcome}</span>}
       <h2>Open your food shop on BiteBY</h2>
-      <p>Sell your homemade food to people nearby. No sign-up or monthly fee.</p>
+      <p>Sell your homemade food to people nearby. {detail}</p>
       <a className="button dark" href="/sell" onClick={link('/sell')}>Become a seller</a>
       <BowlArt />
     </section>

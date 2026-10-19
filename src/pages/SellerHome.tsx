@@ -7,7 +7,7 @@ import { pounds, TERMS_VERSION, type SellerAccount, type Shop, type Verification
 import { Icon, type IconName } from '../lib/icons'
 import { Avatar, share } from '../lib/ui'
 import { loadRatings, type Rating } from '../lib/catalogue'
-import { useCommission, useWelcomeOffer } from '../lib/platform'
+import { useCommission, useWelcomeDetail, useWelcomeHeadline, useWelcomeOffer } from '../lib/platform'
 import { cookGets } from '../lib/fees'
 import { WelcomeRate } from './Fees'
 import { HygieneCard, SetupChecklist } from './SellerSetup'
@@ -66,11 +66,17 @@ export default function SellerHome() {
     </>
   )
 
+  const welcome = useWelcomeHeadline()
+  const welcomeDetail = useWelcomeDetail()
   return (
     <div className="stack">
       <h1>{shop ? 'Your shop' : 'Sell on BiteBY'}</h1>
       {!account && (
-        <p className="lead">Open your own food shop with a link you can share. Start with a few details about you: it takes about 10 minutes.</p>
+        <>
+          {welcome && <span className="offer-badge">{welcome}</span>}
+          <p className="lead">Open your own food shop with a link you can share. {welcomeDetail} Start with a few details about you: it takes about 10 minutes.</p>
+          <p className="small"><a href="/fees" onClick={link('/fees')}>How fees work</a></p>
+        </>
       )}
       {account && (
         <p className={`status status-${account.status}`}>

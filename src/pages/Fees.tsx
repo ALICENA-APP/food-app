@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { link } from '../lib/router'
 import { pounds } from '../lib/types'
-import { percent, usePlatform } from '../lib/platform'
+import { percent, usePlatform, useWelcomeHeadline } from '../lib/platform'
 import { serviceFee } from '../lib/fees'
 import { supabase } from '../lib/supabase'
 
@@ -59,6 +59,7 @@ function Breakdown({ food, delivery, rateBps, title }: { food: number; delivery:
 // can read it before they sign up.
 export default function Fees() {
   const s = usePlatform()
+  const welcome = useWelcomeHeadline()
   const [food, setFood] = useState('20')
   const [delivery, setDelivery] = useState('0')
   const foodP = Math.max(0, Math.round((parseFloat(food) || 0) * 100))
@@ -69,6 +70,7 @@ export default function Fees() {
   return (
     <div className="stack">
       <p><a href="/sell" onClick={link('/sell')}>← Sell on BiteBY</a></p>
+      {welcome && <span className="offer-badge">{welcome}</span>}
       <h1>How fees work</h1>
       <p>Simple and the same for every cook. You only pay when you sell.</p>
 

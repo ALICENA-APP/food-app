@@ -1,6 +1,7 @@
 import type { MouseEvent } from 'react'
 import { link, navigate } from '../lib/router'
 import { Icon, type IconName } from '../lib/icons'
+import { useWelcomeHeadline } from '../lib/platform'
 
 const SEEN_KEY = 'introSeen'
 
@@ -29,6 +30,7 @@ const FEATURES: { icon: IconName; label: string }[] = [
 
 // The welcome screen first-time visitors see before the home page.
 export default function Intro() {
+  const welcome = useWelcomeHeadline()
   const go = (to: string) => (e: MouseEvent) => {
     e.preventDefault()
     markSeen()
@@ -68,7 +70,7 @@ export default function Intro() {
         </a>
         <a href="/sell" onClick={go('/sell')}>
           <span className="ic"><Icon name="store" /></span>
-          <span><strong>Sell on BiteBY</strong><small>Share your food with the community</small></span>
+          <span><strong>Sell on BiteBY</strong><small>{welcome ? `${welcome} · share your food with the community` : 'Share your food with the community'}</small></span>
           <Icon name="chevron" size={18} />
         </a>
       </div>
