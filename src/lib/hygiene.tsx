@@ -73,6 +73,7 @@ export function CateringTile({ shopId, cookName }: { shopId: string; cookName: s
     const { data, error: err } = await supabase!.rpc('ask_cook', { p_shop: shopId, p_body: body })
     setBusy(false)
     if (err) return setError(err.message.includes('Sign in') ? 'Sign in first, then send your request.' : err.message)
+    if (data.blocked) return setError(data.note)
     navigate(`/messages/${data.chat_id}`)
   }
 

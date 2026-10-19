@@ -57,6 +57,7 @@ export function AskCookTile({ shopId, cookName, productId, productName }: { shop
     const { data, error: err } = await supabase!.rpc('ask_cook', { p_shop: shopId, p_body: text, p_product: productId ?? null })
     setBusy(false)
     if (err) return setError(err.message)
+    if (data.blocked) return setError(data.note)
     navigate(`/messages/${data.chat_id}`)
   }
 
@@ -65,7 +66,7 @@ export function AskCookTile({ shopId, cookName, productId, productName }: { shop
       <strong>Ask {cookName}</strong>
       <textarea rows={3} maxLength={1000} autoFocus value={text} onChange={(e) => setText(e.target.value)}
         placeholder={productName ? `e.g. Does the ${productName.toLowerCase()} contain nuts?` : 'e.g. Can you do a mild version?'} />
-      <p className="muted tiny">Keep it on BiteBY: phone numbers, links and payment outside the app are hidden.</p>
+      <p className="muted tiny">Keep it on BiteBY: messages with phone numbers, links or payment outside the app aren't sent.</p>
       {error && <p className="error small">{error}</p>}
       <div className="row">
         <button type="submit" disabled={busy || !text.trim()}>{busy ? 'Sending…' : 'Send'}</button>

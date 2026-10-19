@@ -622,7 +622,7 @@ export function AdminSafety() {
   return (
     <div className="stack">
       <p className="muted small">
-        Customer reports, plus messages with phone numbers, emails, links, bank details or talk of paying outside BiteBY (those are hidden automatically).
+        Customer reports, plus messages with phone numbers, emails, links, bank details or talk of paying outside BiteBY (those messages are stopped automatically and never reach the other person, even when split up or spelt like C a $ h).
         Shop pages and dishes can’t be saved with them at all. A cook who keeps appearing here may be taking customers off the app.
       </p>
       <div className="chips">
