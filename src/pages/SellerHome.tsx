@@ -14,6 +14,7 @@ import { InviteBanner, InviteCard, UseInviteCode } from '../lib/invites'
 import { HygieneCard, SetupChecklist } from './SellerSetup'
 import { TaxAlert, TaxCard } from '../lib/taxDetails'
 import { InsuranceAlert, InsuranceCard } from '../lib/insurance'
+import { OfferBadge } from '../lib/offer'
 
 const STATUS_TEXT: Record<SellerAccount['status'], string> = {
   draft: 'Not sent yet',
@@ -76,7 +77,7 @@ export default function SellerHome() {
       <h1>{shop ? 'Your shop' : 'Sell on BiteBY'}</h1>
       {!account && (
         <>
-          {welcome && <span className="offer-badge">{welcome}</span>}
+          {welcome && <OfferBadge text={welcome} />}
           <p className="lead">Open your own food shop with a link you can share. {welcomeDetail} Start with a few details about you: it takes about 10 minutes.</p>
           <p className="small"><a href="/fees" onClick={link('/fees')}>How fees work</a></p>
           <BeforeYouStart />

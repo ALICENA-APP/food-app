@@ -15,6 +15,7 @@ import { BowlArt, DishCard, FoodPhoto, SellerCard, type ShopCardData } from '../
 import { readRecent } from '../lib/views'
 import { pounds } from '../lib/types'
 import { useWelcomeDetail, useWelcomeHeadline } from '../lib/platform'
+import { OfferBadge } from '../lib/offer'
 
 // The first screen everyone sees, signed in or not.
 export default function Home() {
@@ -188,7 +189,7 @@ export default function Home() {
       )}
 
       <section className="promo">
-        {welcome && <span className="offer-badge">{welcome}</span>}
+        {welcome && <OfferBadge text={welcome} />}
         <h2>Cook at home? Sell on BiteBY</h2>
         <p>Open your own food shop with a link you can share. {welcomeDetail} <a href="/fees" onClick={link('/fees')}>How fees work</a></p>
         <a className="button dark" href="/sell" onClick={link('/sell')}>Become a seller</a>

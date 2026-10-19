@@ -4,8 +4,9 @@ import { pounds } from '../lib/types'
 import { percent, usePlatform, useWelcomeHeadline } from '../lib/platform'
 import { serviceFee } from '../lib/fees'
 import { supabase } from '../lib/supabase'
+import { OfferBadge } from '../lib/offer'
 
-type MyRate = { rate_bps: number; standard_bps: number; intro_bps: number; intro_days: number; intro_started: boolean; intro_ends_at: string | null; free_until: string | null }
+type MyRate = { rate_bps: number; standard_bps: number; intro_bps: number; intro_days: number; intro_started: boolean; intro_ends_at: string | null; free_until: string | null; founding_number?: number | null }
 
 // The cook's own fee right now, for their screens. Null until loaded or if
 // they have no shop.
@@ -36,7 +37,7 @@ export function WelcomeRate({ shopId }: { shopId: string }) {
   if (ends && ends.getTime() < Date.now()) return null
   return (
     <a className="card welcome-rate" href="/fees" onClick={link('/fees')}>
-      <strong>Welcome offer: {r.intro_bps === 0 ? 'no BiteBY fee' : `${percent(r.intro_bps)} BiteBY fee`}</strong>
+      <strong>{r.founding_number ? `Founding cook #${r.founding_number}: ` : 'Welcome offer: '}{r.intro_bps === 0 ? 'no BiteBY fee' : `${percent(r.intro_bps)} BiteBY fee`}</strong>
       <span className="small">
         {ends
           ? `Until ${day(ends.toISOString())}, BiteBY keeps ${r.intro_bps === 0 ? 'nothing from' : `only ${percent(r.intro_bps)} of`} your food sales instead of ${percent(r.standard_bps)}.`
@@ -78,7 +79,7 @@ export default function Fees() {
   return (
     <div className="stack">
       <p><a href="/sell" onClick={link('/sell')}>← Sell on BiteBY</a></p>
-      {welcome && <span className="offer-badge">{welcome}</span>}
+      {welcome && <OfferBadge text={welcome} />}
       <h1>How fees work</h1>
       <p>Simple and the same for every cook. You only pay when you sell.</p>
 

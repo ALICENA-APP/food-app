@@ -722,6 +722,8 @@ export function AdminSettings() {
   const [radius, setRadius] = useState('')
   const [intro, setIntro] = useState('')
   const [introDays, setIntroDays] = useState('')
+  const [spots, setSpots] = useState('')
+  const [taken, setTaken] = useState(0)
   const [svcPct, setSvcPct] = useState('')
   const [svcFixed, setSvcFixed] = useState('')
   const [invDays, setInvDays] = useState('')
@@ -739,6 +741,8 @@ export function AdminSettings() {
       setRadius(String(s.promo_radius_miles))
       setIntro(String(s.intro_commission_bps / 100))
       setIntroDays(String(s.intro_days))
+      setSpots(s.intro_spots === null ? '' : String(s.intro_spots))
+      setTaken(s.spots_taken)
       setSvcPct(String(s.service_fee_bps / 100))
       setSvcFixed(String(s.service_fee_fixed_pence))
       setInvDays(String(s.invite_free_days))
@@ -767,6 +771,8 @@ export function AdminSettings() {
       p_days: parseInt(introDays || '0', 10),
     })
     if (introError) return setMessage(introError.message)
+    const { error: spotsError } = await supabase!.rpc('admin_set_intro_spots', { p_spots: spots.trim() === '' ? null : parseInt(spots, 10) })
+    if (spotsError) return setMessage(spotsError.message)
     const { error: svcError } = await supabase!.rpc('admin_set_service_fee', {
       p_bps: Math.round(parseFloat(svcPct || '0') * 100),
       p_fixed: parseInt(svcFixed || '0', 10),
@@ -792,19 +798,23 @@ export function AdminSettings() {
         <input type="number" min="0" max="30" step="0.5" inputMode="decimal" value={commission} onChange={(e) => { setCommission(e.target.value); setSure(false) }} />
       </label>
       <p className="muted small">Taken from the food price only, never from delivery fees. Orders already placed keep the rate they were placed at. The help text and seller terms update automatically.</p>
-      <div className="row">
+      <div className="row three">
         <label>
-          Welcome fee for new cooks (%)
+          Welcome (%)
           <input type="number" min="0" max="30" step="0.5" inputMode="decimal" value={intro} onChange={(e) => setIntro(e.target.value)} />
         </label>
         <label>
-          For how many days
+          Days
           <input type="number" min="0" max="365" step="1" inputMode="numeric" value={introDays} onChange={(e) => setIntroDays(e.target.value)} />
+        </label>
+        <label>
+          First cooks
+          <input type="number" min="0" max="100000" step="1" inputMode="numeric" placeholder="Everyone" value={spots} onChange={(e) => setSpots(e.target.value)} />
         </label>
       </div>
       <div className="row">
         <label>
-          Customer service fee (%)
+          Service fee (%)
           <input type="number" min="0" max="10" step="0.1" inputMode="decimal" value={svcPct} onChange={(e) => setSvcPct(e.target.value)} />
         </label>
         <label>
@@ -813,7 +823,7 @@ export function AdminSettings() {
         </label>
       </div>
       <p className="muted small">Set to Stripe’s UK card fee (1.5% plus 20p) so the service fee covers card costs exactly. It’s worked out on the whole payment: {pounds(serviceFee(2000, { service_fee_bps: Math.round(parseFloat(svcPct || '0') * 100), service_fee_fixed_pence: parseInt(svcFixed || '0', 10) }))} on a £20 order.</p>
-      <p className="muted small">New cooks pay the welcome fee instead of the normal one, counted from their first paid order. Set the days to 0 to switch the offer off. The fees page, help text and seller terms update automatically.</p>
+      <p className="muted small">New cooks pay the welcome fee instead of the normal one, counted from their first paid order. Only the first cooks approved get it ({taken} of {spots || 'unlimited'} spots taken so far); leave First cooks blank to give it to everyone. Set the days to 0 to switch the offer off. The fees page, help text and seller terms update automatically.</p>
       <h3>Invite a cook</h3>
       <div className="row three">
         <label>
