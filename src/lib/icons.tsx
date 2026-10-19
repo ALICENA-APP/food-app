@@ -50,10 +50,5 @@ export function Icon({ name, filled, size }: { name: IconName; filled?: boolean;
 
 // Solid badge with a tick, shown next to approved sellers.
 export function VerifiedTick() {
-  return (
-    <svg className="verified" viewBox="0 0 24 24" width="20" height="20" aria-label="Verified seller">
-      <path fill="currentColor" d="M12 2l2.4 1.8 3-.2.9 2.9 2.5 1.7-1 2.8 1 2.8-2.5 1.7-.9 2.9-3-.2L12 22l-2.4-1.8-3 .2-.9-2.9-2.5-1.7 1-2.8-1-2.8 2.5-1.7.9-2.9 3 .2z" />
-      <path d="M8 12.3l2.6 2.6L16 9.5" fill="none" stroke="#111" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  )
+  return <img className="verified" src="/verified.png" width="20" height="20" alt="Verified seller" title="Verified seller" />
 }

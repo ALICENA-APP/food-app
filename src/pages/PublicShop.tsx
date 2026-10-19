@@ -18,6 +18,42 @@ import { awayUntil, londonNow, openState, shortDate } from '../lib/hours'
 import { Avatar, BackButton, FoodPhoto, HeartButton, share } from '../lib/ui'
 import { daysLabel, dietaryName, noticeLabel, pounds, type Product } from '../lib/types'
 
+// Filled icons for the stat bar, in the BiteBY palette.
+const YELLOW = '#ffc72c', GREEN = '#22a55b', GREY = '#c4c4c4'
+function StatIcon({ name }: { name: 'star' | 'truck' | 'bag' | 'clock' | 'pin' }) {
+  return (
+    <svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true" strokeLinejoin="round" strokeLinecap="round">
+      {name === 'star' && <path d="M12 2.5l2.9 5.9 6.5.9-4.7 4.6 1.1 6.5L12 17.3l-5.8 3.1 1.1-6.5-4.7-4.6 6.5-.9z" fill={YELLOW} />}
+      {name === 'truck' && <>
+        <path d="M2.5 5.5h10.5a1.5 1.5 0 0 1 1.5 1.5v2.5h4l3 3.5V17h-1.1a2.9 2.9 0 0 0-5.8 0H8.9a2.9 2.9 0 0 0-5.8 0H1V7a1.5 1.5 0 0 1 1.5-1.5z" fill={GREY} />
+        <circle cx="6" cy="18" r="2.2" fill={GREY} /><circle cx="17.5" cy="18" r="2.2" fill={GREY} />
+      </>}
+      {name === 'bag' && <>
+        <path d="M8.5 8V6.5a3.5 3.5 0 0 1 7 0V8" fill="none" stroke={GREY} strokeWidth="2" />
+        <path d="M4.5 8h15l-1 13h-13z" fill={GREY} />
+      </>}
+      {name === 'clock' && <>
+        <circle cx="12" cy="12" r="10" fill={GREY} />
+        <path d="M12 6.5V12l3.5 2.2" fill="none" stroke="#fff" strokeWidth="2" />
+      </>}
+      {name === 'pin' && <>
+        <path d="M12 22s-7.5-6.5-7.5-12a7.5 7.5 0 0 1 15 0C19.5 15.5 12 22 12 22z" fill={GREEN} />
+        <circle cx="12" cy="10" r="2.8" fill="#fff" />
+      </>}
+    </svg>
+  )
+}
+
+// Splits an opening label into a big time and a small caption for the stat bar:
+// "Open now · until 22:00" -> 22:00 / Open until, "Opens tomorrow 10:00" -> 10:00 / Opens tomorrow.
+function openParts(label: string, open: boolean) {
+  if (open) return { big: label.split('until ')[1] ?? 'Open', small: 'Open until' }
+  const m = label.match(/opens (?:(.+) )?(\d\d:\d\d)$/i)
+  if (m) return { big: m[2], small: m[1] ? `Opens ${m[1]}` : 'Opens' }
+  const d = label.match(/opens (.+)$/i)
+  return d ? { big: d[1], small: 'Opens' } : { big: 'Closed', small: 'Today' }
+}
+
 // The shareable shop page at /s/<slug>. Visitors see live shops only; the
 // owner can also preview their own shop before it goes live.
 export default function PublicShop({ slug }: { slug: string }) {
@@ -83,7 +119,7 @@ export default function PublicShop({ slug }: { slug: string }) {
   const rest = shown.filter((p) => !popularFirst.includes(p))
 
   return (
-    <div className="stack">
+    <div className="stack shop-page">
       <div className="store-hero">
         {shop.cover_path ? <img src={photoUrl(shop.cover_path)!} alt="" /> : <span className="placeholder-food" style={{ fontSize: '4rem' }}>🍲</span>}
         <div className="actions">
@@ -100,24 +136,50 @@ export default function PublicShop({ slug }: { slug: string }) {
         <div className="store-id">
           <Avatar name={shop.name} path={shop.logo_path} />
           <div className="who">
-            <h1>{shop.name} {!isPreview && <VerifiedTick />}</h1>
-            <p className="meta">
-              {reviews.length > 0 && <button type="button" className="link-plain" onClick={() => setTab('reviews')}><span className="star">★</span> <strong>{average.toFixed(1)}</strong> ({reviews.length})</button>}
-              {reviews.length > 0 && shop.area_label && ' · '}
-              {shop.area_label && <span><Icon name="pin" size={14} /> {shop.area_label}</span>}
-            </p>
+            <h1>
+              <span className="nm">{shop.name}</span> {!isPreview && <VerifiedTick />}
+              {shop.area_label && <span className="loc"><StatIcon name="pin" /> {shop.area_label}</span>}
+            </h1>
             {(shop.story || shop.cuisines.length > 0) && <p className="tagline">{shop.story?.split('\n')[0] || shop.cuisines.join(' · ')}</p>}
           </div>
         </div>
 
-        <div className="trust-chips">
-          {state && <span className={state.open ? 'open' : ''}><Icon name="clock" size={16} />{state.label.replace('Open now · until', 'Open until').replace('Closed today · opens', 'Opens')}</span>}
-          {settings?.offers_delivery && <span><Icon name="truck" size={16} />Delivery {settings.radius_fee_pence ? pounds(settings.radius_fee_pence) : 'free'}</span>}
-          {settings?.offers_collection && <span><Icon name="bag" size={16} />Pick-up</span>}
-          {hygiene[shop.id] && <button type="button" onClick={() => setTab('about')}><span className="fhrs">{hygiene[shop.id].rating}</span>Hygiene {hygieneWords(hygiene[shop.id].rating).toLowerCase().replace(' necessary', '')}</button>}
-          {!isPreview && <span><Icon name="shield" size={16} />Checked cook</span>}
-          {(settings?.min_order_pence ?? 0) > 0 && <span><Icon name="pound" size={16} />Min {pounds(settings!.min_order_pence)}</span>}
+        <div className="stat-bar">
+          <button type="button" onClick={() => setTab('reviews')}>
+            <span className="ci"><StatIcon name="star" /></span>
+            <strong>{reviews.length > 0 ? average.toFixed(1) : 'New'}</strong>
+            <small>{reviews.length > 0 ? `${reviews.length} review${reviews.length === 1 ? '' : 's'}` : 'No reviews'}</small>
+          </button>
+          {settings?.offers_delivery && (
+            <div>
+              <span className="ci"><StatIcon name="truck" /></span>
+              <strong>{settings.radius_fee_pence ? pounds(settings.radius_fee_pence) : 'Free'}</strong>
+              <small>Delivery</small>
+            </div>
+          )}
+          {settings?.offers_collection && (
+            <div>
+              <span className="ci"><StatIcon name="bag" /></span>
+              <strong>Free</strong>
+              <small>Collection</small>
+            </div>
+          )}
+          {state && (
+            <div className={state.open ? 'open' : ''}>
+              <span className="ci"><StatIcon name="clock" /></span>
+              <strong>{openParts(state.label, state.open).big}</strong>
+              <small>{openParts(state.label, state.open).small}</small>
+            </div>
+          )}
+          {hygiene[shop.id] && (
+            <button type="button" onClick={() => setTab('about')}>
+              <span className="ci fhrs">{hygiene[shop.id].rating}</span>
+              <strong>{hygiene[shop.id].rating} of 5</strong>
+              <small>Hygiene</small>
+            </button>
+          )}
         </div>
+        {(settings?.min_order_pence ?? 0) > 0 && <p className="min-order small"><Icon name="pound" size={14} /> Minimum order {pounds(settings!.min_order_pence)}</p>}
 
         {!isPreview && <ShopOffers shopId={shop.id} />}
       </div>
