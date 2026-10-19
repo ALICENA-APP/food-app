@@ -1,19 +1,23 @@
 import { useEffect, useRef, useState } from 'react'
-import L from 'leaflet'
-import 'leaflet/dist/leaflet.css'
+import maplibregl from 'maplibre-gl'
+import 'maplibre-gl/dist/maplibre-gl.css'
 import { supabase } from './supabase'
 import { navigate } from './router'
 import { photoUrl } from './images'
+import { biteByMapStyle } from './mapStyle'
 
 export type MapShop = { id: string; name: string; slug: string; logo_path: string | null; area_label: string | null }
 
 const esc = (s: string) => s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!)
+// A 700 m circle in screen pixels at each zoom (around UK latitudes).
+const AREA = ['interpolate', ['exponential', 2], ['zoom'], 5, 0.23, 13, 58.9] as unknown as number
 
 // Cooks on a map. Spots are rounded to about a kilometre, so homes are never shown.
 export default function ShopMap({ shops, me }: { shops: MapShop[]; me: { lat: number; lng: number } | null }) {
   const el = useRef<HTMLDivElement>(null)
-  const map = useRef<L.Map | null>(null)
-  const layer = useRef<L.LayerGroup | null>(null)
+  const map = useRef<maplibregl.Map | null>(null)
+  const markers = useRef<maplibregl.Marker[]>([])
+  const [ready, setReady] = useState(false)
   const [spots, setSpots] = useState<Record<string, [number, number]> | null>(null)
 
   useEffect(() => {
@@ -24,14 +28,16 @@ export default function ShopMap({ shops, me }: { shops: MapShop[]; me: { lat: nu
 
   useEffect(() => {
     if (!el.current || map.current) return
-    map.current = L.map(el.current, { zoomControl: true, attributionControl: true, maxZoom: 13 }).setView([54.2, -2.6], 5)
-    // Keep the map credit OpenStreetMap needs, without Leaflet's flag.
-    map.current.attributionControl.setPrefix(false)
-    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      maxZoom: 13,
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
-    }).addTo(map.current)
-    layer.current = L.layerGroup().addTo(map.current)
+    const dark = document.documentElement.dataset.theme === 'dark'
+    const m = new maplibregl.Map({ container: el.current, style: biteByMapStyle(dark), center: [-2.6, 54.2], zoom: 4.5, maxZoom: 13, attributionControl: { compact: false } })
+    m.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-left')
+    // style.load comes before the tiles, so pins still show if tiles are slow.
+    m.once('style.load', () => {
+      m.addSource('areas', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } })
+      m.addLayer({ id: 'areas', type: 'circle', source: 'areas', paint: { 'circle-radius': AREA, 'circle-color': '#ffc72c', 'circle-opacity': 0.25 } })
+      setReady(true)
+    })
+    map.current = m
     // Popups link inside the app without a full page load.
     el.current.addEventListener('click', (e) => {
       const a = (e.target as HTMLElement).closest('a[data-to]')
@@ -41,15 +47,17 @@ export default function ShopMap({ shops, me }: { shops: MapShop[]; me: { lat: nu
       }
     })
     return () => {
-      map.current?.remove()
+      m.remove()
       map.current = null
     }
   }, [])
 
   useEffect(() => {
-    if (!map.current || !layer.current || !spots) return
-    layer.current.clearLayers()
-    const points: L.LatLngExpression[] = []
+    const m = map.current
+    if (!m || !ready || !spots) return
+    markers.current.forEach((x) => x.remove())
+    markers.current = []
+    const points: [number, number][] = []
     // Shops in the same rounded spot are fanned out a little so all show.
     const seen: Record<string, number> = {}
     for (const s of shops) {
@@ -57,27 +65,29 @@ export default function ShopMap({ shops, me }: { shops: MapShop[]; me: { lat: nu
       if (!spot) continue
       const k = spot.join(',')
       const n = (seen[k] = (seen[k] ?? -1) + 1)
-      const at: [number, number] = [spot[0] + n * 0.0025, spot[1] + n * 0.004]
+      const at: [number, number] = [spot[1] + n * 0.004, spot[0] + n * 0.0025]
       points.push(at)
       const logo = photoUrl(s.logo_path)
-      const icon = L.divIcon({
-        className: 'map-pin',
-        html: logo ? `<img src="${esc(logo)}" alt="">` : `<span>${esc(s.name.slice(0, 1))}</span>`,
-        iconSize: [40, 40],
-        iconAnchor: [20, 20],
-      })
-      // A soft circle shows the rough area the cook is in.
-      L.circle(at, { radius: 700, stroke: false, fillColor: '#FFC72C', fillOpacity: 0.28, interactive: false }).addTo(layer.current)
-      L.marker(at, { icon, title: s.name }).addTo(layer.current)
-        .bindPopup(`<strong>${esc(s.name)}</strong><br><span>${esc(s.area_label ?? '')}</span><br><a href="/s/${esc(s.slug)}" data-to="/s/${esc(s.slug)}">See menu</a>`)
+      const pin = document.createElement('div')
+      pin.className = 'map-pin'
+      pin.innerHTML = logo ? `<img src="${esc(logo)}" alt="">` : `<span>${esc(s.name.slice(0, 1))}</span>`
+      pin.title = s.name
+      const popup = new maplibregl.Popup({ offset: 22, closeButton: false })
+        .setHTML(`<strong>${esc(s.name)}</strong><br><span>${esc(s.area_label ?? '')}</span><br><a href="/s/${esc(s.slug)}" data-to="/s/${esc(s.slug)}">See menu</a>`)
+      markers.current.push(new maplibregl.Marker({ element: pin }).setLngLat(at).setPopup(popup).addTo(m))
     }
+    ;(m.getSource('areas') as maplibregl.GeoJSONSource).setData({ type: 'FeatureCollection', features: points.map((p) => ({ type: 'Feature', properties: {}, geometry: { type: 'Point', coordinates: p } })) })
     if (me) {
-      L.circleMarker([me.lat, me.lng], { radius: 7, color: '#111', fillColor: '#FFC72C', fillOpacity: 1, weight: 2 }).addTo(layer.current).bindPopup('You')
-      map.current.setView([me.lat, me.lng], 12)
+      const dot = document.createElement('div')
+      dot.className = 'map-me'
+      markers.current.push(new maplibregl.Marker({ element: dot }).setLngLat([me.lng, me.lat]).setPopup(new maplibregl.Popup({ offset: 10, closeButton: false }).setText('You')).addTo(m))
+      m.jumpTo({ center: [me.lng, me.lat], zoom: 11.5 })
     } else if (points.length) {
-      map.current.fitBounds(L.latLngBounds(points), { padding: [40, 40], maxZoom: 12 })
+      const b = new maplibregl.LngLatBounds(points[0], points[0])
+      points.forEach((p) => b.extend(p))
+      m.fitBounds(b, { padding: 40, maxZoom: 11.5, duration: 0 })
     }
-  }, [shops, spots, me])
+  }, [shops, spots, me, ready])
 
   return (
     <div className="stack" style={{ gap: 6 }}>

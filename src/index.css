@@ -688,15 +688,13 @@ fieldset.options legend { font-weight: 700; padding: 0 4px; display: flex; gap: 
 
 /* Explore map */
 .shop-map { height: 60vh; min-height: 320px; border-radius: var(--radius); overflow: hidden; border: 1px solid var(--border); z-index: 0; }
-/* Tiles toned to the BiteBY creams and yellows, so the map feels like part of the app. */
-.shop-map { background: #fff4d1; }
-.shop-map .leaflet-tile-pane { filter: grayscale(1) sepia(0.45) saturate(1.5) hue-rotate(-6deg) brightness(1.06) contrast(0.88); }
-:root[data-theme='dark'] .shop-map .leaflet-tile-pane { filter: grayscale(1) invert(0.92) sepia(0.35) hue-rotate(-10deg) brightness(0.9); }
-.shop-map .leaflet-control-attribution { font-size: 10px; background: rgba(255, 253, 247, 0.8); }
-.map-pin { background: none; border: none; }
+.map-pin { cursor: pointer; }
+.map-me { width: 16px; height: 16px; border-radius: 50%; background: #111; border: 3px solid #fff; box-shadow: 0 0 0 2px var(--yellow); }
+.shop-map .maplibregl-ctrl-attrib { font-size: 10px; background: rgba(255, 253, 247, 0.85); }
+.shop-map .maplibregl-ctrl-group { border-radius: 12px; overflow: hidden; }
+.maplibregl-popup-content { font-family: inherit; font-size: 0.9rem; border-radius: 12px; padding: 10px 12px; }
+.maplibregl-popup-content a { color: #111; font-weight: 700; }
 .map-pin img, .map-pin span { width: 40px; height: 40px; border-radius: 50%; border: 3px solid var(--yellow); background: #fff; object-fit: cover; display: flex; align-items: center; justify-content: center; font-weight: 800; color: #111; box-shadow: 0 2px 6px rgba(0,0,0,.25); }
-.leaflet-popup-content { font-family: inherit; font-size: 0.9rem; }
-.leaflet-popup-content a { color: #111; font-weight: 700; }
 
 /* ---------- Compact shop page ---------- */
 .store-hero { aspect-ratio: 3 / 1; min-height: 130px; max-height: 220px; }
