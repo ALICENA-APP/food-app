@@ -25,6 +25,8 @@ export type Verification = {
   rating?: number | null
   rating_date?: string | null
   fhrs_id?: string | null
+  document_path?: string | null
+  expires_at?: string | null
 }
 
 export type Shop = {

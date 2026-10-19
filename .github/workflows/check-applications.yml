@@ -2,6 +2,7 @@ name: Check cook applications
 
 # Every 15 minutes: look new cook applications up on the FSA register, score
 # them green/amber/red and approve the green ones (see scripts/check-applications.mjs).
+# Also sends cooks reminders before their insurance runs out.
 on:
   schedule:
     - cron: '*/15 * * * *'
@@ -26,3 +27,7 @@ jobs:
         env:
           SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
         run: node scripts/check-applications.mjs
+      - name: Insurance reminders
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 -qAt -c "select food.insurance_reminders()"

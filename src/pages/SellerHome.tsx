@@ -12,6 +12,7 @@ import { cookGets } from '../lib/fees'
 import { WelcomeRate } from './Fees'
 import { InviteBanner, InviteCard, UseInviteCode } from '../lib/invites'
 import { HygieneCard, SetupChecklist } from './SellerSetup'
+import { currentInsurance, InsuranceAlert, InsuranceCard, InsuranceStep, insuranceValid, useInsuranceRequired } from '../lib/insurance'
 
 const STATUS_TEXT: Record<SellerAccount['status'], string> = {
   draft: 'Not sent yet',
@@ -54,6 +55,7 @@ export default function SellerHome() {
 
   const welcome = useWelcomeHeadline()
   const welcomeDetail = useWelcomeDetail()
+  const insuranceRequired = useInsuranceRequired()
   if (loading) return <p className="muted">{error || 'Loading…'}</p>
 
   const editable = !account || account.status === 'draft' || account.status === 'reverification_required'
@@ -64,8 +66,10 @@ export default function SellerHome() {
     <>
       <FoodRegistration accountId={account.id} current={registration} editable={editable} onSaved={load} />
       <AllergenDeclaration accountId={account.id} done={Boolean(declaration)} editable={editable} onSaved={load} />
+      <InsuranceStep step={4} accountId={account.id} rows={verifications} editable={editable} onSaved={load} />
       <Terms account={account} editable={editable} onSaved={load} />
-      {editable && <Submit ready={Boolean(account.legal_name && registration && declaration && account.terms_accepted_at)} onSaved={load} />}
+      {editable && <Submit ready={Boolean(account.legal_name && registration && declaration && account.terms_accepted_at
+        && (!insuranceRequired || insuranceValid(currentInsurance(verifications))))} onSaved={load} />}
     </>
   )
 
@@ -155,6 +159,7 @@ function Dashboard({ shop, account, onChanged }: { shop: Shop; account: SellerAc
   const live = shop.status === 'live'
   return (
     <>
+      <InsuranceAlert accountId={account.id} />
       <WelcomeRate shopId={shop.id} />
       <div className="card">
         <div className="row-bar" style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
@@ -209,6 +214,7 @@ function Dashboard({ shop, account, onChanged }: { shop: Shop; account: SellerAc
       </div>
       <GetFeatured shopId={shop.id} shopLive={shop.status === 'live'} />
       <HygieneCard accountId={account.id} onSaved={() => setRefresh((n) => n + 1)} />
+      <InsuranceCard accountId={account.id} />
     </>
   )
 }
@@ -496,13 +502,14 @@ function Terms({ account, editable, onSaved }: { account: SellerAccount; editabl
   const done = Boolean(account.terms_accepted_at)
   return (
     <form className="card" onSubmit={onSubmit}>
-      <h2>4. Seller terms {done && <span className="tick">✓</span>}</h2>
+      <h2>5. Seller terms {done && <span className="tick">✓</span>}</h2>
       <ul className="muted small">
         <li>No sign-up or monthly fee. BiteBY keeps {commission} of the food price of each order{welcome && <> ({welcome})</>}. Delivery fees are all yours.</li>
         <li>Card payment costs are covered by a small service fee the customer pays, so nothing else comes off. <a href="/fees" onClick={link('/fees')}>See exactly what you’ll get</a>.</li>
         <li>Customers pay up front. You accept or decline each order.</li>
         <li>Your home address is never shown publicly.</li>
         <li>You are responsible for food safety and accurate allergen information.</li>
+        <li>You keep food liability insurance in place while you sell. Your shop is hidden if it runs out.</li>
       </ul>
       <label className="check">
         <input type="checkbox" checked={agreed} disabled={done || !editable} onChange={(e) => setAgreed(e.target.checked)} />
@@ -525,9 +532,9 @@ function Submit({ ready, onSaved }: { ready: boolean; onSaved: () => void }) {
 
   return (
     <div className="card">
-      <h2>5. Send for checking</h2>
+      <h2>6. Send for checking</h2>
       <p className="muted">
-        {ready ? 'All done. Send your details and we will check them.' : 'Finish steps 1 to 4 first.'}
+        {ready ? 'All done. Send your details and we will check them.' : 'Finish steps 1 to 5 first.'}
       </p>
       <button disabled={!ready} onClick={onClick}>
         Send my application

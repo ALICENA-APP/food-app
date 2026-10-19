@@ -888,3 +888,13 @@ details.invite-card .invite-list { gap: 8px; }
 .kit-thumb { width: 100%; aspect-ratio: 1; border-radius: 10px; overflow: hidden; display: flex; align-items: center; justify-content: center; background: var(--line); }
 .kit-thumb img { width: 100%; height: 100%; object-fit: cover; }
 .kit-caption { background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; margin: 0; overflow-wrap: anywhere; }
+
+/* Food insurance */
+a.insurance-alert { display: block; color: #fff; text-decoration: none; }
+.ins-dot { flex: 0 0 auto; width: 30px; height: 30px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; background: var(--green); color: var(--green); }
+.ins-dot.warn { background: var(--yellow); color: #b07d00; }
+.ins-dot.bad { background: var(--red); color: var(--red); }
+.ins-dot.none { background: #c4c4c4; color: #c4c4c4; }
+.stat-bar:has(> :nth-child(6)) { gap: 2px; }
+.stat-bar:has(> :nth-child(6)) strong { font-size: 0.8rem; }
+.stat-bar:has(> :nth-child(6)) small { font-size: 0.62rem; }

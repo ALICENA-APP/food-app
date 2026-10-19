@@ -5,6 +5,7 @@ import { ShopOffers } from '../lib/discounts'
 import { ReportLink } from '../lib/report'
 import { AskCookButton, AskCookTile } from '../lib/askCook'
 import { CateringTile, fsaLink, hygieneWords, useHygiene } from '../lib/hygiene'
+import { useInsured } from '../lib/insurance'
 import { supabase } from '../lib/supabase'
 import { useLovedCounts, useOrderCounts } from '../lib/popular'
 import { CategoryIcon } from '../lib/categoryIcons'
@@ -20,7 +21,7 @@ import { daysLabel, dietaryName, noticeLabel, pounds, type Product } from '../li
 
 // Filled icons for the stat bar, in the BiteBY palette.
 const YELLOW = '#ffc72c', GREEN = '#22a55b', GREY = '#c4c4c4'
-function StatIcon({ name }: { name: 'star' | 'truck' | 'bag' | 'clock' | 'pin' }) {
+function StatIcon({ name }: { name: 'star' | 'truck' | 'bag' | 'clock' | 'pin' | 'shield' }) {
   return (
     <svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true" strokeLinejoin="round" strokeLinecap="round">
       {name === 'star' && <path d="M12 2.5l2.9 5.9 6.5.9-4.7 4.6 1.1 6.5L12 17.3l-5.8 3.1 1.1-6.5-4.7-4.6 6.5-.9z" fill={YELLOW} />}
@@ -35,6 +36,10 @@ function StatIcon({ name }: { name: 'star' | 'truck' | 'bag' | 'clock' | 'pin' }
       {name === 'clock' && <>
         <circle cx="12" cy="12" r="10" fill={GREY} />
         <path d="M12 6.5V12l3.5 2.2" fill="none" stroke="#fff" strokeWidth="2" />
+      </>}
+      {name === 'shield' && <>
+        <path d="M12 2l8.5 3.2v6.3c0 5.3-3.6 9.1-8.5 10.5-4.9-1.4-8.5-5.2-8.5-10.5V5.2z" fill={GREEN} />
+        <path d="M8 12.2l2.8 2.8 5.2-5.4" fill="none" stroke="#fff" strokeWidth="2.2" />
       </>}
       {name === 'pin' && <>
         <path d="M12 22s-7.5-6.5-7.5-12a7.5 7.5 0 0 1 15 0C19.5 15.5 12 22 12 22z" fill={GREEN} />
@@ -68,6 +73,7 @@ export default function PublicShop({ slug }: { slug: string }) {
   const allergyHits = useAllergenHits(data?.products.map((p) => p.id) ?? [], mine.codes)
   const [showAll, setShowAll] = useState(false)
   const hygiene = useHygiene(data ? [data.shop.id] : [])
+  const insured = useInsured(data ? [data.shop.id] : [])
 
   useEffect(() => {
     loadShop(slug).then(setData)
@@ -178,6 +184,13 @@ export default function PublicShop({ slug }: { slug: string }) {
               <small>Hygiene</small>
             </button>
           )}
+          {insured.has(shop.id) && (
+            <button type="button" onClick={() => setTab('about')}>
+              <span className="ci"><StatIcon name="shield" /></span>
+              <strong>Insured</strong>
+              <small>Cover</small>
+            </button>
+          )}
         </div>
         {(settings?.min_order_pence ?? 0) > 0 && <p className="min-order small"><Icon name="pound" size={14} /> Minimum order {pounds(settings!.min_order_pence)}</p>}
 
@@ -263,6 +276,9 @@ export default function PublicShop({ slug }: { slug: string }) {
           )}
           {!isPreview && (
             <div className="info-row"><span className="ic"><Icon name="shield" /></span><div><strong>Checked by BiteBY</strong><p className="muted small">This cook has registered with their local council and been approved by our team.</p></div></div>
+          )}
+          {insured.has(shop.id) && (
+            <div className="info-row"><span className="ic"><Icon name="shield" /></span><div><strong>Insured</strong><p className="muted small">This cook has food liability insurance, and BiteBY has their current certificate.</p></div></div>
           )}
           {hygiene[shop.id] && (
             <div className="info-row"><span className="ic"><Icon name="check" /></span><div><strong>Food hygiene rating {hygiene[shop.id].rating}: {hygieneWords(hygiene[shop.id].rating).toLowerCase()}</strong>

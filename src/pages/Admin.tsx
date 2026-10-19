@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import { supabase } from '../lib/supabase'
+import { openCertificate, ukDate } from '../lib/insurance'
 import { link, queryParam } from '../lib/router'
 import { AdminHelpInbox, AdminOrders, AdminOverview, AdminPromoted, AdminReviews, AdminSafety, AdminSettings, AdminShops, AdminAnnounce } from './AdminMore'
 import Statement from './Statements'
@@ -206,6 +207,7 @@ const LEVEL_RANK = { red: 0, amber: 1, green: 2 }
 type Data = {
   checks: Record<string, Check>
   autoApprove: boolean
+  insuranceRequired: boolean
   accounts: SellerAccount[]
   verifications: Verification[]
   shops: Shop[]
@@ -224,13 +226,13 @@ function Sellers() {
       db.from('shops').select('*'),
       db.rpc('admin_seller_emails'),
       db.from('application_checks').select('*'),
-      db.from('platform_settings').select('auto_approve').maybeSingle(),
+      db.from('platform_settings').select('auto_approve, insurance_required').maybeSingle(),
     ])
     const emails: Record<string, string> = {}
     for (const row of (e.data ?? []) as { seller_account_id: string; email: string }[]) emails[row.seller_account_id] = row.email
     const checks: Record<string, Check> = {}
     for (const row of (c.data ?? []) as Check[]) checks[row.seller_account_id] = row
-    setData({ accounts: a.data ?? [], verifications: v.data ?? [], shops: s.data ?? [], emails, checks, autoApprove: Boolean(p.data?.auto_approve) })
+    setData({ accounts: a.data ?? [], verifications: v.data ?? [], shops: s.data ?? [], emails, checks, autoApprove: Boolean(p.data?.auto_approve), insuranceRequired: p.data?.insurance_required ?? true })
   }, [])
 
   useEffect(() => {
@@ -244,6 +246,11 @@ function Sellers() {
     .sort((x, y) => ORDER.indexOf(x.status) - ORDER.indexOf(y.status)
       || (LEVEL_RANK[data.checks[x.id]?.result ?? 'amber'] - LEVEL_RANK[data.checks[y.id]?.result ?? 'amber']))
   const autoToday = Object.values(data.checks).filter((c) => c.auto_approved && Date.now() - new Date(c.checked_at).getTime() < 7 * 864e5).length
+
+  async function setInsurance(on: boolean) {
+    const { error } = await supabase!.rpc('admin_set_insurance_required', { p_on: on })
+    if (!error) load()
+  }
 
   async function setAuto(on: boolean) {
     const { error } = await supabase!.rpc('admin_set_auto_approve', { p_on: on })
@@ -261,6 +268,13 @@ function Sellers() {
           <input type="checkbox" className="switch" checked={data.autoApprove} onChange={(e) => setAuto(e.target.checked)} aria-label="Approve automatically" />
         </label>
         <p className="small" style={{ margin: 0 }}>{autoToday} approved automatically in the last 7 days.</p>
+        <label className="switch-row">
+          <span>
+            <strong>Cooks need food insurance</strong>
+            <span className="muted small" style={{ display: 'block' }}>Cooks upload their certificate when applying. Shops are hidden while their insurance has run out, and cooks get reminders 30 and 7 days before.</span>
+          </span>
+          <input type="checkbox" className="switch" checked={data.insuranceRequired} onChange={(e) => setInsurance(e.target.checked)} aria-label="Cooks need food insurance" />
+        </label>
       </div>
       <div className="segmented">
         <label className={filter === 'todo' ? 'on not_present' : ''}>
@@ -359,6 +373,7 @@ function SellerCard({ account, email, verifications, shop, check, onChanged }: {
           <div className="small">
             <strong>{KIND[v.kind]}</strong> · {v.status}
             {v.authority && <><br />{v.authority}{v.reference && `, ref ${v.reference}`}{v.registered_on && `, registered ${v.registered_on}`}</>}
+            {v.kind === 'insurance' && <>{v.expires_at && <><br />Valid until {ukDate(v.expires_at)}</>}{v.document_path && <> · <button type="button" className="link" onClick={() => openCertificate(v.document_path!)}>View certificate</button></>}</>}
             {v.kind === 'hygiene_rating' && <><br />Rating {v.rating}/5{v.rating_date && `, inspected ${v.rating_date}`}{v.fhrs_id ? <> · <a href={`https://ratings.food.gov.uk/business/${v.fhrs_id}`} target="_blank" rel="noopener noreferrer">check on FSA</a></> : ' · no FSA link: ask the cook for proof'}</>}
           </div>
           {v.status === 'pending' && (
