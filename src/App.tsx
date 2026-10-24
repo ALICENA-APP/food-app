@@ -182,7 +182,21 @@ function App() {
     ?? (path.startsWith('/sell') || path.startsWith('/favourites') || path === '/addresses' || path.startsWith('/account') || ['/help', '/help/requests', '/alerts', '/terms', '/privacy', '/allergens', '/seller-terms', '/fees'].includes(path) ? '/profile' : null)
 
   return (
-    <>
+    <div className={`shell ${intro ? 'shell-intro' : ''}`}>
+      {!intro && <nav className="bottom-nav" aria-label="Main">
+        <div className="inner">
+          <a className="nav-brand" href="/" onClick={link('/')} aria-label="BiteBY home"><Wordmark /></a>
+          {TABS.map((t) => (
+            <a key={t.to} href={t.to} onClick={link(t.to)} className={activeTab === t.to ? 'on' : ''} aria-current={activeTab === t.to ? 'page' : undefined}>
+              <span className="icon">
+                <Icon name={t.icon} filled={activeTab === t.to} />
+                {t.to === '/basket' && count > 0 && <span className="badge">{count > 9 ? '9+' : count}</span>}
+              </span>
+              {t.label}
+            </a>
+          ))}
+        </div>
+      </nav>}
       <main className={`app ${intro ? 'app-intro' : ''}`}>
         {!FULL_BLEED.test(path) && !intro && (
           <header className="topbar">
@@ -207,20 +221,7 @@ function App() {
         )}
         <Suspense fallback={<p className="muted">Loading…</p>}>{page}</Suspense>
       </main>
-      {!intro && <nav className="bottom-nav" aria-label="Main">
-        <div className="inner">
-          {TABS.map((t) => (
-            <a key={t.to} href={t.to} onClick={link(t.to)} className={activeTab === t.to ? 'on' : ''} aria-current={activeTab === t.to ? 'page' : undefined}>
-              <span className="icon">
-                <Icon name={t.icon} filled={activeTab === t.to} />
-                {t.to === '/basket' && count > 0 && <span className="badge">{count > 9 ? '9+' : count}</span>}
-              </span>
-              {t.label}
-            </a>
-          ))}
-        </div>
-      </nav>}
-    </>
+    </div>
   )
 }
 

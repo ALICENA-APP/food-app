@@ -989,3 +989,57 @@ details.bug summary .sum-text strong { overflow-wrap: anywhere; }
 .stat-list .item { padding: 2px 0; }
 .crash { max-width: 520px; margin: 15vh auto 0; padding: 0 16px; display: flex; flex-direction: column; gap: 12px; }
 .issue-thread .review-photo { max-height: 200px; width: auto; max-width: 100%; object-fit: cover; border-radius: 12px; align-self: flex-start; }
+
+/* ---------- Laptop / desktop layout (phones unchanged below 900px) ---------- */
+/* On phones the wrapper does nothing: the nav stays fixed at the bottom. */
+.shell { display: contents; }
+.bottom-nav .nav-brand { display: none; }
+
+@media (min-width: 900px) {
+  body { background: var(--bg); }
+  .shell { display: flex; align-items: flex-start; justify-content: center; gap: 0; max-width: 1180px; margin: 0 auto; }
+  .shell-intro { display: block; }
+
+  /* Bottom bar becomes a left sidebar. */
+  .bottom-nav {
+    position: sticky; top: 0; left: auto; right: auto; bottom: auto;
+    width: 232px; height: 100vh; flex: 0 0 232px;
+    border-top: 0; border-right: 1px solid var(--border);
+    padding: 20px 14px; padding-bottom: 20px;
+    justify-content: flex-start;
+  }
+  .bottom-nav .inner { flex-direction: column; width: 100%; max-width: none; height: auto; gap: 4px; }
+  .bottom-nav .nav-brand { display: flex; padding: 6px 12px 18px; font-size: 1.6rem; }
+  .bottom-nav a {
+    flex: 0 0 auto; flex-direction: row; justify-content: flex-start; gap: 14px;
+    padding: 11px 14px; border-radius: 12px; font-size: 0.98rem; font-weight: 600;
+  }
+  .bottom-nav a:hover { background: var(--line); }
+  .bottom-nav a.on { background: var(--yellow-soft); color: var(--black); }
+  .bottom-nav a.on svg { stroke: var(--black); }
+  .bottom-nav .icon { flex: 0 0 auto; }
+
+  /* Content column: roomy but still easy to read. */
+  .app { flex: 1 1 auto; min-width: 0; max-width: 860px; margin: 0; padding: 22px 28px 56px; }
+  .topbar .wordmark { display: none; }
+  .topbar { justify-content: flex-end; margin-bottom: 10px; }
+  .app-back { margin-bottom: 4px; }
+
+  /* Use the extra width: more cards per row. */
+  .grid2 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .menu-tiles { grid-template-columns: repeat(3, 1fr); }
+  .payout-stats { grid-template-columns: repeat(4, 1fr); }
+  .dish-card { width: 230px; }
+  .seller-card { width: 200px; }
+
+  /* Floating action bars sit above content, not the (gone) bottom nav. */
+  .basket-bar, .action-bar { bottom: 20px; }
+
+  /* Shop and dish pages read better capped, centred in the content column. */
+  .shop-page, .dish-page { max-width: 680px; margin: 0 auto; }
+}
+
+/* Comfortable reading width for long single-column pages on big screens. */
+@media (min-width: 900px) {
+  .stack > h1:first-child { scroll-margin-top: 20px; }
+}

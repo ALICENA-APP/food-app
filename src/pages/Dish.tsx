@@ -92,7 +92,7 @@ export default function Dish({ slug, productId }: { slug: string; productId: str
   }
 
   return (
-    <div className="stack">
+    <div className="stack dish-page">
       <div className="dish-hero">
         {photos.length ? (
           <div className="slides" onScroll={onScroll}>

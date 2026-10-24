@@ -67,7 +67,7 @@ export default function TownPage({ slug }: { slug: string }) {
   }, [town])
 
   if (!shops) return <p className="muted">Loading…</p>
-  const name = town?.town ?? slug.replace(/-/g, ' ')
+  const name = town?.town ?? slug.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
   return (
     <div className="stack">
       <div>
