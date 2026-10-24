@@ -22,8 +22,11 @@ function chime() {
   }
 }
 
-function popUp(a: Alert) {
+async function popUp(a: Alert) {
   if (!('Notification' in window) || Notification.permission !== 'granted') return
+  // Phone notifications already show it.
+  const reg = await navigator.serviceWorker?.getRegistration().catch(() => undefined)
+  if (await reg?.pushManager?.getSubscription().catch(() => null)) return
   try {
     const n = new Notification(a.title, { body: a.body ?? undefined, icon: '/icon-192.png', tag: String(a.id) })
     n.onclick = () => {
@@ -76,7 +79,9 @@ export async function markAllRead() {
   window.dispatchEvent(new Event('alerts-read'))
 }
 
-// Expires old unpaid/unanswered orders. Safe to call often.
+// Runs the timed jobs (order reminders, cancelling orders the cook didn't
+// answer, tidy-up). The database runs them every minute itself; this makes
+// sure they've run when someone looks. Safe to call often.
 export function tidyOrders() {
-  supabase?.rpc('expire_stale_orders').then(() => {}, () => {})
+  supabase?.rpc('run_jobs', { p_source: 'app' }).then(() => {}, () => {})
 }

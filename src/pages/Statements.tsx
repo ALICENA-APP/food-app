@@ -53,7 +53,7 @@ export default function Statement({ kind }: { kind: StatementKind }) {
       const start = new Date(month + '-01T00:00:00')
       const end = new Date(start.getFullYear(), start.getMonth() + 1, 1)
       let q = db.from('orders')
-        .select('code, created_at, completed_at, status, fulfilment, subtotal_pence, discount_pence, delivery_fee_pence, total_pence, service_fee_pence, platform_fee_pence, customer_name, shops(name), order_items(name, qty)')
+        .select('code, created_at, completed_at, status, fulfilment, subtotal_pence, discount_pence, delivery_fee_pence, total_pence, service_fee_pence, platform_fee_pence, refunded_pence, customer_name, shops(name), order_items(name, qty)')
         .gte('created_at', start.toISOString()).lt('created_at', end.toISOString())
         .order('created_at').limit(5000)
       if (kind === 'customer') {

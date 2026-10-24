@@ -4,10 +4,13 @@ import { VitePWA } from 'vite-plugin-pwa'
 
 // https://vite.dev/config/
 export default defineConfig({
+  define: { __BUILD_TIME__: JSON.stringify(new Date().toISOString().slice(0, 16)) },
   plugins: [
     react(),
     VitePWA({
       registerType: 'autoUpdate',
+      // Phone notifications (public/push-sw.js).
+      workbox: { importScripts: ['/push-sw.js'], navigateFallbackDenylist: [/^\/sitemap\.xml$/, /^\/robots\.txt$/] },
       manifest: {
         name: 'BiteBY',
         short_name: 'BiteBY',

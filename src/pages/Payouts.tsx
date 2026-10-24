@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
+import { cookGets } from '../lib/fees'
 import { myUserId } from '../lib/session'
 import { link } from '../lib/router'
 import { Icon } from '../lib/icons'
@@ -9,7 +10,7 @@ import { pounds } from '../lib/types'
 // switched on yet, so this is a preview worked out from the cook's real
 // completed orders (or examples when there are none).
 
-type Row = { subtotal_pence: number; discount_pence: number | null; delivery_fee_pence: number; platform_fee_pence: number; completed_at: string }
+type Row = { subtotal_pence: number; discount_pence: number | null; delivery_fee_pence: number; platform_fee_pence: number; refunded_pence?: number; completed_at: string }
 type Payout = { date: Date; orders: number; amount: number; featured: number; paid: boolean }
 type Promo = { fee_pence: number; decided_at: string; weeks: number; takenOn?: Date }
 
@@ -50,7 +51,7 @@ export default function Payouts() {
       const { data: shops } = account ? await db.from('shops').select('id').eq('seller_account_id', account.id) : { data: [] }
       const ids = (shops ?? []).map((s) => s.id as string)
       const { data } = ids.length
-        ? await db.from('orders').select('subtotal_pence, discount_pence, delivery_fee_pence, platform_fee_pence, completed_at')
+        ? await db.from('orders').select('subtotal_pence, discount_pence, delivery_fee_pence, platform_fee_pence, refunded_pence, completed_at')
           .in('shop_id', ids).eq('status', 'completed').gte('completed_at', new Date(Date.now() - 60 * DAY).toISOString())
           .order('completed_at', { ascending: false })
         : { data: [] }
@@ -76,7 +77,8 @@ export default function Payouts() {
     const key = dayKey(date)
     const p = byDay.get(key) ?? { date, orders: 0, amount: 0, featured: 0, paid: date.getTime() <= Date.now() }
     p.orders++
-    p.amount += r.subtotal_pence - (r.discount_pence ?? 0) + r.delivery_fee_pence - r.platform_fee_pence
+    const order = r.subtotal_pence - (r.discount_pence ?? 0) + r.delivery_fee_pence
+    p.amount += cookGets({ total_pence: order, platform_fee_pence: r.platform_fee_pence, refunded_pence: r.refunded_pence })
     byDay.set(key, p)
   }
   // Featured spot fees come off the first payout after the spot is approved.

@@ -1,0 +1,12 @@
+User-agent: *
+Allow: /
+Disallow: /sell/
+Disallow: /admin
+Disallow: /account
+Disallow: /orders
+Disallow: /basket
+Disallow: /messages
+Disallow: /alerts
+Disallow: /signin
+
+Sitemap: https://food.beastcase.net/sitemap.xml

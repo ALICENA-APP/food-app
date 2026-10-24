@@ -3,7 +3,7 @@ name: Database migrations
 on:
   push:
     branches: [main]
-    paths: ['supabase/migrations/**', 'scripts/migrate.sh']
+    paths: ['supabase/migrations/**', 'scripts/migrate.sh', 'scripts/push-keys.mjs']
   workflow_dispatch:
 
 concurrency:
@@ -26,3 +26,11 @@ jobs:
             exit 0
           fi
           ./scripts/migrate.sh
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Phone notification keys
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          if [ -n "$SUPABASE_DB_URL" ]; then node scripts/push-keys.mjs; fi

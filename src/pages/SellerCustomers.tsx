@@ -1,8 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { myUserId } from '../lib/session'
-import { link } from '../lib/router'
-import { Icon } from '../lib/icons'
+import { RegularsUpdate } from '../lib/regulars'
 import { pounds } from '../lib/types'
 
 type Customer = { key: string; name: string; orders: number; spent: number; last: string; favourite: string }
@@ -12,13 +11,15 @@ const GONE = ['awaiting_payment', 'declined', 'cancelled', 'expired', 'refunded'
 // The cook's customers, regulars first, from their own orders.
 export default function SellerCustomers() {
   const [list, setList] = useState<Customer[] | null>(null)
+  const [shop, setShop] = useState<{ id: string; name: string } | null>(null)
 
   useEffect(() => {
     ;(async () => {
       const db = supabase!
       const { data: account } = await db.from('seller_accounts').select('id').eq('user_id', await myUserId()).maybeSingle()
-      const { data: shops } = await db.from('shops').select('id').eq('seller_account_id', account?.id ?? '00000000-0000-0000-0000-000000000000')
+      const { data: shops } = await db.from('shops').select('id, name').eq('seller_account_id', account?.id ?? '00000000-0000-0000-0000-000000000000')
       const ids = (shops ?? []).map((s) => s.id)
+      setShop(shops?.[0] ?? null)
       if (!ids.length) return setList([])
       const { data } = await db.from('orders').select('customer_id, customer_name, status, subtotal_pence, discount_pence, created_at, order_items(name, qty)')
         .in('shop_id', ids).order('created_at', { ascending: false }).limit(3000)
@@ -40,8 +41,8 @@ export default function SellerCustomers() {
   const regulars = (list ?? []).filter((c) => c.orders >= 3).length
   return (
     <div className="stack">
-      <a className="back" href="/sell" onClick={link('/sell')}><Icon name="back" size={18} /> Your shop</a>
       <h1>Your customers</h1>
+      {shop && <RegularsUpdate shopId={shop.id} shopName={shop.name} />}
       {!list && <p className="muted">Loading…</p>}
       {list && list.length === 0 && <div className="card empty"><span className="big">🙂</span><p>Your customers will appear here after their first order.</p></div>}
       {list && list.length > 0 && (

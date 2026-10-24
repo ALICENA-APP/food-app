@@ -9,6 +9,7 @@ import { Avatar, share } from '../lib/ui'
 import { loadRatings, type Rating } from '../lib/catalogue'
 import { useCommission, useWelcomeDetail, useWelcomeHeadline, useWelcomeOffer } from '../lib/platform'
 import { cookGets } from '../lib/fees'
+import { PushCard } from '../lib/PushCard'
 import { WelcomeRate } from './Fees'
 import { InviteBanner, InviteCard, UseInviteCode } from '../lib/invites'
 import { HygieneCard, SetupChecklist } from './SellerSetup'
@@ -146,7 +147,7 @@ function Dashboard({ shop, account, onChanged }: { shop: Shop; account: SellerAc
       since.setHours(0, 0, 0, 0)
       const [todo, today, ratings] = await Promise.all([
         db.from('orders').select('id', { count: 'exact', head: true }).eq('shop_id', shop.id).in('status', ['pending_acceptance', 'accepted', 'ready', 'out_for_delivery']),
-        db.from('orders').select('total_pence, platform_fee_pence, service_fee_pence').eq('shop_id', shop.id).gte('created_at', since.toISOString())
+        db.from('orders').select('total_pence, platform_fee_pence, service_fee_pence, refunded_pence').eq('shop_id', shop.id).gte('created_at', since.toISOString())
           .not('status', 'in', '(awaiting_payment,declined,cancelled,expired,refunded)'),
         loadRatings([shop.id]),
       ])
@@ -210,6 +211,7 @@ function Dashboard({ shop, account, onChanged }: { shop: Shop; account: SellerAc
         <a href="/sell/reviews" onClick={link('/sell/reviews')}><strong>{stats?.rating ? stats.rating.average.toFixed(1) : '–'}</strong><span className="muted tiny">{stats?.rating ? `${stats.rating.reviews} ${stats.rating.reviews === 1 ? 'review' : 'reviews'}` : 'No reviews yet'}</span></a>
       </div>
 
+      <PushCard kind="seller" />
       <ViewsCard shopId={shop.id} />
       <InviteCard />
       <SetupChecklist shop={shop} refresh={refresh} />
@@ -231,7 +233,7 @@ function Dashboard({ shop, account, onChanged }: { shop: Shop; account: SellerAc
         <SellerTile to="/sell/reviews" icon="star" title="Reviews" sub="Read and reply" tone="var(--line)" />
         <SellerTile to="/sell/discounts" icon="tag" title="Discount codes" sub="Offers for customers" tone="var(--yellow-soft)" />
         <SellerTile to="/sell/questions" icon="chat" title="Questions" sub="From customers" tone="var(--green-soft)" />
-        <SellerTile to="/sell/customers" icon="users" title="Customers" sub="Your regulars" tone="var(--line)" />
+        <SellerTile to="/sell/customers" icon="users" title="Customers" sub="Regulars and updates" tone="var(--line)" />
         <SellerTile to="/help" icon="help" title="Help" sub="How selling works" tone="var(--line)" />
       </div>
       <GetFeatured shopId={shop.id} shopLive={shop.status === 'live'} />

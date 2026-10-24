@@ -16,6 +16,7 @@ import { readRecent } from '../lib/views'
 import { pounds } from '../lib/types'
 import { useWelcomeDetail, useWelcomeHeadline } from '../lib/platform'
 import { OfferBadge } from '../lib/offer'
+import { TownLinks, useTowns } from './Town'
 
 // The first screen everyone sees, signed in or not.
 export default function Home() {
@@ -37,6 +38,7 @@ export default function Home() {
   const [delivers, setDelivers] = useState<Record<string, number>>({})
   const [featured, setFeatured] = useState<string[]>([])
   const [recent] = useState(readRecent)
+  const towns = useTowns()
 
   useEffect(() => {
     ;(async () => {
@@ -187,6 +189,8 @@ export default function Home() {
           </div>
         </section>
       )}
+
+      <TownLinks towns={towns} />
 
       <section className="promo">
         {welcome && <OfferBadge text={welcome} />}

@@ -5,6 +5,8 @@ import { HmrcReport } from '../lib/taxDetails'
 import { link, queryParam } from '../lib/router'
 import { AdminHelpInbox, AdminOrders, AdminOverview, AdminPromoted, AdminReviews, AdminSafety, AdminSettings, AdminShops, AdminAnnounce } from './AdminMore'
 import Statement from './Statements'
+import AdminBugs from './AdminBugs'
+import { AdminProblems } from '../lib/issues'
 import type { SellerAccount, SellerStatus, Shop, Verification } from '../lib/types'
 import { when } from './Orders'
 
@@ -38,8 +40,10 @@ const TABS = [
   { key: 'orders', label: 'Orders' },
   { key: 'reviews', label: 'Reviews' },
   { key: 'help', label: 'Help' },
+  { key: 'problems', label: 'Problems' },
   { key: 'promoted', label: 'Featured' },
   { key: 'safety', label: 'Safety' },
+  { key: 'bugs', label: 'Bugs' },
   { key: 'announce', label: 'Announce' },
   { key: 'report', label: 'Reports' },
   { key: 'settings', label: 'Settings' },
@@ -61,6 +65,8 @@ function AdminTabs() {
       {tab === 'orders' && <AdminOrders />}
       {tab === 'reviews' && <AdminReviews />}
       {tab === 'help' && <AdminHelpInbox />}
+      {tab === 'problems' && <AdminProblems />}
+      {tab === 'bugs' && <AdminBugs />}
       {tab === 'promoted' && <AdminPromoted />}
       {tab === 'safety' && <AdminSafety />}
       {tab === 'announce' && <AdminAnnounce />}

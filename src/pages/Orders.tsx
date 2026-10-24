@@ -10,6 +10,8 @@ import { HelpForm } from '../lib/help'
 import { pounds } from '../lib/types'
 import { ServiceFeeRow } from '../lib/ServiceFee'
 import { ReviewForm, ReviewItem, type Review } from '../lib/reviews'
+import { ProblemSection } from '../lib/issues'
+import { PushCard } from '../lib/PushCard'
 
 export type OrderStatus =
   | 'awaiting_payment' | 'pending_acceptance' | 'accepted' | 'declined' | 'ready'
@@ -36,6 +38,9 @@ export type Order = {
   service_fee_pence: number
   decline_reason: string | null
   created_at: string
+  completed_at?: string | null
+  reply_by?: string | null
+  refunded_pence?: number
   shops?: { name: string; slug: string; logo_path?: string | null; is_test?: boolean }
 }
 
@@ -52,6 +57,10 @@ export const ORDER_STATUS: Record<OrderStatus, string> = {
   cancelled: 'Cancelled',
   expired: 'Expired',
   refunded: 'Refunded',
+}
+
+export function clock(iso: string) {
+  return new Date(iso).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
 }
 
 export function when(iso: string | null) {
@@ -238,13 +247,16 @@ export function OrderDetail({ id }: { id: string }) {
 
   return (
     <div className="stack">
-      <a className="back" href="/orders" onClick={link('/orders')}><Icon name="back" size={18} /> Orders</a>
       <h1>Order {order.code}</h1>
       <div className="card">
         <span className={`pill ${order.status === 'completed' ? 'green' : 'yellow'}`}>{ORDER_STATUS[order.status]}</span>
         {order.decline_reason && <p className="small">{order.decline_reason}</p>}
+        {order.status === 'pending_acceptance' && order.reply_by && (
+          <p className="small muted">The cook has until {clock(order.reply_by)} to accept. If they don’t, it’s cancelled and you won’t be charged.</p>
+        )}
         <Tracker order={order} />
       </div>
+      {['pending_acceptance', 'accepted', 'ready', 'out_for_delivery'].includes(order.status) && <PushCard kind="customer" />}
 
       {order.status === 'awaiting_payment' && (
         <div className="card">
@@ -285,6 +297,7 @@ export function OrderDetail({ id }: { id: string }) {
         {order.delivery_fee_pence > 0 && <div className="item"><span>Delivery</span><span>{pounds(order.delivery_fee_pence)}</span></div>}
         {order.service_fee_pence > 0 && <ServiceFeeRow pence={order.service_fee_pence} />}
         <div className="item total"><strong>Total</strong><strong>{pounds(order.total_pence)}</strong></div>
+        {(order.refunded_pence ?? 0) > 0 && <div className="item"><span>Refunded to your card</span><span>−{pounds(order.refunded_pence!)}</span></div>}
         <p className="muted tiny">Ordered {when(order.created_at)}</p>
       </div>
 
@@ -315,11 +328,16 @@ export function OrderDetail({ id }: { id: string }) {
         </div>
       )}
 
+      {['accepted', 'ready', 'out_for_delivery', 'completed'].includes(order.status) && (
+        <ProblemSection orderId={order.id}
+          canReport={order.status !== 'completed' || Date.now() - new Date(order.completed_at ?? order.created_at).getTime() < 48 * 3600e3}
+          deadline={order.status === 'completed' && order.completed_at ? when(new Date(new Date(order.completed_at).getTime() + 48 * 3600e3).toISOString()) : null} />
+      )}
+
       {order.status !== 'awaiting_payment' && (<>
-        <p className="safety-tip small"><Icon name="shield" size={18} /> <span>Never pay a cook outside BiteBY, even if they ask. Report it below and we’ll help.</span></p>
-        <details className="card" id="problem">
-          <summary>Report a problem with this order</summary>
-          <p className="muted small">Message the cook first if it’s something they can sort out. If not, tell the BiteBY team and we’ll help.</p>
+        <p className="safety-tip small"><Icon name="shield" size={18} /> <span>Never pay a cook outside BiteBY, even if they ask. Tell us below and we’ll help.</span></p>
+        <details className="card">
+          <summary>Something else? Contact BiteBY</summary>
           <HelpForm orderId={order.id} plain />
         </details>
       </>

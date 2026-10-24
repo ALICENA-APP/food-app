@@ -12,6 +12,7 @@ import Home from './pages/Home'
 import Explore from './pages/Explore'
 import Dish from './pages/Dish'
 import PublicShop from './pages/PublicShop'
+import TownPage from './pages/Town'
 import Checkout from './pages/Checkout'
 import { MyOrders, OrderDetail } from './pages/Orders'
 import Profile, { Help } from './pages/Profile'
@@ -65,6 +66,7 @@ function backTo(path: string) {
   if (path.startsWith('/orders/')) return '/orders'
   if (path.startsWith('/messages/')) return '/messages'
   if (path === '/help/requests') return '/help'
+  if (path.startsWith('/near/')) return '/'
   return '/profile'
 }
 
@@ -79,6 +81,7 @@ function App() {
   const count = basketCount(basket)
 
   const shopMatch = path.match(/^\/s\/([a-z0-9-]+)\/?$/)
+  const townMatch = path.match(/^\/near\/([a-z0-9-]+)\/?$/)
   const dishMatch = path.match(/^\/s\/([a-z0-9-]+)\/i\/([0-9a-f-]{36})\/?$/)
   const orderMatch = path.match(/^\/orders\/([0-9a-f-]{36})\/?$/)
   const chatMatch = path.match(/^\/messages\/([0-9a-f-]{36})\/?$/)
@@ -103,6 +106,8 @@ function App() {
     page = <p className="muted">Loading…</p>
   } else if (dishMatch) {
     page = <Dish slug={dishMatch[1]} productId={dishMatch[2]} />
+  } else if (townMatch) {
+    page = <TownPage slug={townMatch[1]} />
   } else if (shopMatch) {
     page = <PublicShop slug={shopMatch[1]} />
   } else if (path === '/explore') {

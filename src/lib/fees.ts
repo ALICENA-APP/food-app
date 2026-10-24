@@ -10,7 +10,11 @@ export function serviceFee(base: number, s: Pick<PlatformSettings, 'service_fee_
 }
 
 // What reaches the cook from one order: everything except BiteBY's fee and
-// the customer's service fee.
-export function cookGets(o: { total_pence: number; platform_fee_pence: number; service_fee_pence?: number | null }) {
-  return o.total_pence - o.platform_fee_pence - (o.service_fee_pence ?? 0)
+// the customer's service fee, less any refund. On a refund BiteBY gives back
+// its fee on the refunded part, so the cook only loses their own share of it.
+export function cookGets(o: { total_pence: number; platform_fee_pence: number; service_fee_pence?: number | null; refunded_pence?: number | null }) {
+  const order = o.total_pence - (o.service_fee_pence ?? 0)
+  const share = order - o.platform_fee_pence
+  const refunded = Math.min(o.refunded_pence ?? 0, order)
+  return share - (order > 0 ? Math.round((refunded * share) / order) : 0)
 }

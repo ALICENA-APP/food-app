@@ -7,13 +7,16 @@ import { OrderChat } from '../lib/chat'
 import { HelpForm } from '../lib/help'
 import { pounds } from '../lib/types'
 import { cookGets } from '../lib/fees'
-import { ORDER_STATUS, when, type Order, type OrderItem, type OrderStatus } from './Orders'
+import { CookIssue, type OrderIssue } from '../lib/issues'
+import { PushCard } from '../lib/PushCard'
+import { clock, ORDER_STATUS, when, type Order, type OrderItem, type OrderStatus } from './Orders'
 
 const OPEN: OrderStatus[] = ['pending_acceptance', 'accepted', 'ready', 'out_for_delivery']
 
 // The seller's order inbox. Only paid orders appear here.
 export default function SellerOrders() {
   const [orders, setOrders] = useState<(Order & { order_items: OrderItem[] })[] | null>(null)
+  const [issues, setIssues] = useState<Record<string, OrderIssue>>({})
   const [tab, setTab] = useState<'open' | 'past'>('open')
   const openId = queryParam('open')
 
@@ -32,6 +35,8 @@ export default function SellerOrders() {
       .neq('status', 'awaiting_payment')
       .order('created_at', { ascending: false })
       .limit(100)
+    const { data: problems } = await db.from('order_issues').select('*').in('shop_id', ids).order('created_at', { ascending: false }).limit(100)
+    setIssues(Object.fromEntries((problems ?? []).map((i) => [i.order_id, i])))
     setOrders(data ?? [])
   }, [])
 
@@ -57,7 +62,9 @@ export default function SellerOrders() {
   }, [load])
 
   if (!orders) return <p className="muted">Loading…</p>
-  const shown = orders.filter((o) => (tab === 'open') === OPEN.includes(o.status))
+  // A problem still waiting for an answer keeps the order on the To do list.
+  const toDo = (o: Order) => OPEN.includes(o.status) || issues[o.id]?.status === 'open'
+  const shown = orders.filter((o) => (tab === 'open') === toDo(o))
 
   return (
     <div className="stack">
@@ -65,20 +72,21 @@ export default function SellerOrders() {
       <div className="segmented">
         <label className={tab === 'open' ? 'on not_present' : ''}>
           <input type="radio" checked={tab === 'open'} onChange={() => setTab('open')} />
-          To do ({orders.filter((o) => OPEN.includes(o.status)).length})
+          To do ({orders.filter(toDo).length})
         </label>
         <label className={tab === 'past' ? 'on not_present' : ''}>
           <input type="radio" checked={tab === 'past'} onChange={() => setTab('past')} />
           Past
         </label>
       </div>
+      <PushCard kind="seller" />
       {shown.length === 0 && <p className="muted">No orders here yet.</p>}
-      {shown.map((o) => <SellerOrderCard key={o.id} order={o} onChanged={load} />)}
+      {shown.map((o) => <SellerOrderCard key={o.id} order={o} issue={issues[o.id]} onChanged={load} />)}
     </div>
   )
 }
 
-function SellerOrderCard({ order, onChanged }: { order: Order & { order_items: OrderItem[] }; onChanged: () => void }) {
+function SellerOrderCard({ order, issue, onChanged }: { order: Order & { order_items: OrderItem[] }; issue?: OrderIssue; onChanged: () => void }) {
   const [reason, setReason] = useState('')
   const [declining, setDeclining] = useState(false)
   const [message, setMessage] = useState('')
@@ -111,6 +119,12 @@ function SellerOrderCard({ order, onChanged }: { order: Order & { order_items: O
       {(order.discount_pence ?? 0) > 0 && <p className="muted small">Your code {order.discount_code}: −{pounds(order.discount_pence!)}</p>}
       <p className="muted small">Order {pounds(order.total_pence - (order.service_fee_pence ?? 0))} · BiteBY fee {pounds(order.platform_fee_pence)} · you get {pounds(yourShare)}</p>
 
+      {(order.refunded_pence ?? 0) > 0 && <p className="small">Refunded {pounds(order.refunded_pence!)} to the customer</p>}
+      {issue && <CookIssue issue={issue} orderTotal={order.total_pence - (order.service_fee_pence ?? 0)} onChanged={onChanged} />}
+
+      {order.status === 'pending_acceptance' && order.reply_by && (
+        <p className="reply-by small"><strong>Reply by {clock(order.reply_by)}</strong> · {minutesLeft(order.reply_by)}, then it’s cancelled automatically</p>
+      )}
       {order.status === 'pending_acceptance' && !declining && (
         <div className="row">
           <button onClick={() => move('accepted')}>Accept</button>
@@ -147,4 +161,11 @@ function SellerOrderCard({ order, onChanged }: { order: Order & { order_items: O
       </details>
     </article>
   )
+}
+
+function minutesLeft(iso: string) {
+  const mins = Math.max(0, Math.round((new Date(iso).getTime() - Date.now()) / 60000))
+  if (mins >= 120) return `${Math.floor(mins / 60)} hours left`
+  if (mins >= 60) return `1 hour ${mins - 60} min left`
+  return `${mins} min left`
 }

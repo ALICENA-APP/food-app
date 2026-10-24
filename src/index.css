@@ -953,3 +953,39 @@ main:has(.back:not(.app-back)) .app-back { display: none; }
 .card.info-grey { background: #F3F3F3; border-color: transparent; gap: 8px; }
 :root[data-theme='dark'] .card.info-grey { background: #262626; }
 .set-icon { flex: 0 0 auto; display: inline-flex; }
+
+/* Phone notifications and cook updates */
+.push-card { background: #F3F3F3; border-color: transparent; display: flex; flex-direction: column; gap: 10px; }
+.push-card .set-icon { flex: 0 0 auto; display: inline-flex; color: #111; }
+.push-card .sum-text { flex: 1; }
+.push-prompt { background: #111; color: #fff; }
+.push-prompt .set-icon { color: #FFC72C; }
+.push-prompt .muted { color: rgba(255, 255, 255, 0.72); }
+:root[data-theme='dark'] .push-card:not(.push-prompt) { background: #262626; }
+:root[data-theme='dark'] .push-card:not(.push-prompt) .set-icon { color: #f3f3f3; }
+.notif-preview { display: flex; gap: 10px; align-items: center; padding: 10px 12px; border-radius: 14px; background: #fff; box-shadow: 0 1px 6px rgba(0, 0, 0, 0.12); }
+.notif-preview img { border-radius: 8px; flex: 0 0 auto; }
+:root[data-theme='dark'] .notif-preview { background: #333; }
+
+/* Problem with my order */
+.h-icon { display: inline-flex; align-items: center; gap: 8px; }
+.row-button { display: flex; align-items: center; gap: 12px; width: 100%; background: none; border: 0; padding: 0; min-height: 0; color: inherit; text-align: left; cursor: pointer; font: inherit; }
+.row-button .set-icon { flex: 0 0 auto; display: inline-flex; color: #111; }
+.row-button .sum-text { flex: 1; }
+.row-button .sum-text .small { font-weight: 400; }
+:root[data-theme='dark'] .row-button .set-icon { color: #f3f3f3; }
+.issue-thread { display: flex; flex-direction: column; gap: 6px; }
+.issue-thread p { margin: 0; }
+.issue-thread .reply { background: var(--bg); border-radius: 10px; padding: 8px 10px; }
+.issue-refund { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; color: var(--green-text, #1f7a3a); }
+.issue-box { display: flex; flex-direction: column; gap: 8px; padding: 12px; border-radius: 14px; background: var(--yellow-soft); }
+.issue-box.done { background: #F3F3F3; }
+:root[data-theme='dark'] .issue-box.done { background: #262626; }
+.reply-by { margin: 0; padding: 8px 12px; border-radius: 10px; background: #111; color: #fff; }
+
+/* Admin bugs, and the crash screen */
+details.bug summary .sum-text strong { overflow-wrap: anywhere; }
+.stack-trace { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 11px; background: var(--line); border-radius: 10px; padding: 10px; margin: 0; max-height: 220px; overflow: auto; }
+.stat-list .item { padding: 2px 0; }
+.crash { max-width: 520px; margin: 15vh auto 0; padding: 0 16px; display: flex; flex-direction: column; gap: 12px; }
+.issue-thread .review-photo { max-height: 200px; width: auto; max-width: 100%; object-fit: cover; border-radius: 12px; align-self: flex-start; }
