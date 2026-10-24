@@ -1043,3 +1043,44 @@ details.bug summary .sum-text strong { overflow-wrap: anywhere; }
 @media (min-width: 900px) {
   .stack > h1:first-child { scroll-margin-top: 20px; }
 }
+
+/* ---------- Growth: stamp card, how it works, tips ---------- */
+.stamp-card { display: flex; flex-direction: column; gap: 10px; background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; }
+.stamp-card.ready { background: var(--yellow-soft); border-color: var(--yellow); }
+.stamp-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+.stamp-head .h-icon svg { color: var(--yellow); }
+.stamps { display: flex; gap: 8px; flex-wrap: wrap; }
+.stamp { width: 32px; height: 32px; border-radius: 50%; border: 2px dashed #d8d8d8; display: inline-flex; align-items: center; justify-content: center; color: var(--black); }
+.stamp.on { background: var(--yellow); border: 2px solid var(--yellow); }
+.stamp.reward { border: 2px solid var(--black); background: var(--black); color: #fff; font-size: 0.68rem; font-weight: 700; }
+.stamp-note { color: var(--muted); }
+
+.how-it-works { display: flex; flex-direction: column; gap: 14px; background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; }
+.how-it-works .section-head button { padding: 4px; color: var(--muted); }
+.how-it-works > a { align-self: center; }
+.how-steps { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.how-steps li { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 4px; }
+.how-steps strong { font-size: 0.85rem; font-weight: 600; line-height: 1.25; }
+.how-steps .small { font-size: 0.75rem; line-height: 1.35; }
+.how-ic { position: relative; color: var(--yellow); display: inline-flex; padding: 4px 6px 6px; }
+.how-n { position: absolute; right: -4px; top: -2px; width: 18px; height: 18px; border-radius: 50%; background: var(--black); color: #fff; font-size: 0.68rem; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; }
+.trust-row { list-style: none; margin: 0; padding: 12px 0 0; border-top: 1px solid var(--line); display: grid; grid-template-columns: 1fr 1fr; gap: 8px 12px; }
+.trust-row li { display: flex; align-items: center; gap: 6px; font-size: 0.78rem; font-weight: 500; }
+.trust-row svg { color: var(--green); flex: none; }
+
+.waitlist-share { display: flex; flex-direction: column; gap: 8px; padding-top: 12px; margin-top: 4px; border-top: 1px solid var(--line); }
+.waitlist-share button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; width: 100%; }
+
+.photo-tips { background: var(--line); border-radius: 12px; padding: 10px 14px; }
+.photo-tips summary { cursor: pointer; font-weight: 600; font-size: 0.85rem; display: flex; align-items: center; gap: 6px; }
+.photo-tips ul { margin: 0; padding: 10px 0 0 18px; gap: 4px; display: block; }
+.photo-tips li { margin: 3px 0; }
+.price-hint { display: flex; gap: 6px; align-items: flex-start; margin: -4px 0 0; color: var(--muted); }
+.price-hint svg { flex: none; margin-top: 2px; color: var(--green); }
+
+:root[data-theme='dark'] .stamp.reward { background: #f2f2f2; color: #111; border-color: #f2f2f2; }
+
+@media (min-width: 900px) {
+  .trust-row { grid-template-columns: repeat(4, 1fr); }
+}
+.stamp-line svg { color: var(--yellow); }

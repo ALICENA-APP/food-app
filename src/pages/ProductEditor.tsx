@@ -5,6 +5,7 @@ import { navigate } from '../lib/router'
 import { DIETARY, pounds, type Allergen, type Category, type Presence, type Product, type ProductAddon, type ProductVariant } from '../lib/types'
 import { deletePhoto, photoUrl, uploadPhoto } from '../lib/images'
 import { ImageCropper } from '../lib/ImageCropper'
+import { Icon } from '../lib/icons'
 
 const PRESENCE_LABEL: Record<Presence, string> = {
   contains: 'Contains',
@@ -186,6 +187,7 @@ function Editor({ shopId, product, allergens, categories, answers: initialAnswer
             <input maxLength={60} value={portion} onChange={(e) => setPortion(e.target.value)} placeholder="e.g. Serves 2" />
           </label>
         </div>
+        <PriceHint categoryId={categoryId} name={name} />
         <label>
           Category
           <select value={categoryId} onChange={(e) => setCategoryId(e.target.value)}>
@@ -349,6 +351,16 @@ function Photos({ shopId, productId }: { shopId: string; productId: string }) {
     <div className="card">
       <h2>Photos</h2>
       <p className="muted small">Up to 4. The first one is shown on your menu. You can drag and zoom each photo to frame your dish.</p>
+      <details className="photo-tips">
+        <summary><Icon name="info" size={16} /> Tips for a photo that sells</summary>
+        <ul className="details-body small">
+          <li>Use daylight: stand near a window, with no flash.</li>
+          <li>Put the food on a plain plate or bowl, on a clean table.</li>
+          <li>Shoot from straight above, or from the side at a slight angle.</li>
+          <li>Get close so the food fills the photo.</li>
+          <li>Show the real portion. No people, no filters, no text.</li>
+        </ul>
+      </details>
       <div className="photos">
         {photos.map((p, i) => (
           <figure key={p.id}>
@@ -474,5 +486,28 @@ function Options({ productId }: { productId: string }) {
       <button type="button" className="secondary" onClick={addAddon} disabled={!aName.trim() || addons.length >= 10}>Add extra</button>
       {message && <p className="error small">{message}</p>}
     </div>
+  )
+}
+
+// "Similar dishes sell for £8 to £10": from other cooks' published dishes,
+// matched by the dish name first, then by category.
+type Hint = { basis: 'name' | 'category'; count: number; low: number; mid: number; high: number }
+
+function PriceHint({ categoryId, name }: { categoryId: string; name: string }) {
+  const [hint, setHint] = useState<Hint | null>(null)
+  useEffect(() => {
+    const t = setTimeout(() => {
+      supabase!.rpc('price_hint', { p_category: categoryId || null, p_name: name.trim() }).then(({ data }) => setHint((data as Hint | null) ?? null), () => {})
+    }, 600)
+    return () => clearTimeout(t)
+  }, [categoryId, name])
+  if (!hint) return null
+  return (
+    <p className="price-hint small">
+      <Icon name="pound" size={14} />
+      <span>
+        {hint.basis === 'name' ? 'Similar dishes' : 'Dishes in this category'} sell for {pounds(hint.low)} to {pounds(hint.high)} on BiteBY (most around {pounds(hint.mid)}). You choose your own price.
+      </span>
+    </p>
   )
 }

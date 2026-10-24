@@ -3,7 +3,7 @@ import { supabase } from '../lib/supabase'
 import { link, navigate } from '../lib/router'
 import { askToSignIn, useSession } from '../lib/session'
 import { Icon } from '../lib/icons'
-import { basketCount, basketSubtotal, lineKey, setQty, useBasket, writeBasket } from '../lib/basket'
+import { basketCount, basketSubtotal, lineKey, restoreBasket, setQty, useBasket, writeBasket } from '../lib/basket'
 import { FoodPhoto } from '../lib/ui'
 import { formatPostcode, loadNear, looksLikePostcode, readPostcode, type Point } from '../lib/postcode'
 import { locatePostcode } from '../lib/geo'
@@ -15,6 +15,7 @@ import { DiscountBox, type AppliedCode } from '../lib/discounts'
 import { usePlatform } from '../lib/platform'
 import { serviceFee } from '../lib/fees'
 import { ServiceFeeRow } from '../lib/ServiceFee'
+import { rewardOff, useStampCard } from '../lib/loyalty'
 
 const niceTime = (d: Date) => d.toLocaleString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
 
@@ -65,6 +66,7 @@ export default function Checkout() {
   const [spot, setSpot] = useState<{ postcode: string; point: Point | null; delivers: boolean } | null>(null)
   const shopId = basket?.shopId
   const userId = session?.user.id
+  const stampCard = useStampCard(userId ? shopId : undefined)
 
   const update = (patch: Partial<Draft>) => setDraft((d) => ({ ...d, ...patch }))
 
@@ -131,6 +133,11 @@ export default function Checkout() {
     })
   }, [userId])
 
+  // Empty here but saved on another device: bring it back.
+  useEffect(() => {
+    if (userId) restoreBasket().catch(() => {})
+  }, [userId])
+
   if (!basket || basket.lines.length === 0) {
     return (
       <div className="stack">
@@ -167,7 +174,9 @@ export default function Checkout() {
   const wantedWeekday = (new Date(wantedDay + 'T12:00:00Z').getUTCDay() + 6) % 7
   const wrongDay = dayLimits.find((d) => !d.days.includes(wantedWeekday))
   const isNewAddress = address.trim().length > 2 && !saved.some(sameAddress)
-  const off = applied ? Math.min(applied.discount_pence, subtotal) : 0
+  // A code wins over the stamp card reward; the reward is kept for next time.
+  const reward = stampCard?.reward_ready ? rewardOff(stampCard, subtotal) : 0
+  const off = applied ? Math.min(applied.discount_pence, subtotal) : reward
   const service = serviceFee(subtotal - off + fee, platform)
   const total = subtotal - off + fee + service
 
@@ -325,10 +334,12 @@ export default function Checkout() {
         <h2>Order summary</h2>
         <div className="item"><span>Food</span><span>{pounds(subtotal)}</span></div>
         {applied && <div className="item"><span>Discount ({applied.code})</span><span>−{pounds(off)}</span></div>}
+        {!applied && reward > 0 && <div className="item"><span className="h-icon stamp-line"><Icon name="star" size={14} filled /> Stamp card reward ({stampCard!.percent}%)</span><span>−{pounds(off)}</span></div>}
         {fulfilment === 'delivery' && <div className="item"><span>Delivery</span><span>{zone ? (fee ? pounds(fee) : 'Free') : '–'}</span></div>}
         {service > 0 && <ServiceFeeRow pence={service} />}
         <div className="item total"><strong>Total</strong><strong>{pounds(total)}</strong></div>
         <DiscountBox shopId={basket.shopId} subtotal={subtotal} applied={applied} onChange={setApplied} />
+        {applied && reward > 0 && <p className="tiny muted">Your stamp card reward is saved for your next order.</p>}
         {minOrder > subtotal && <p className="error small">This cook's minimum order is {pounds(minOrder)}.</p>}
         <p className="muted tiny">You pay before the cook starts. If they can't take your order, you get your money back.</p>
       </div>

@@ -2,6 +2,7 @@ import { Fragment, useEffect, useState } from 'react'
 import { goBack, link, navigate } from '../lib/router'
 import { recordView } from '../lib/views'
 import { ShopOffers } from '../lib/discounts'
+import { ShopStampCard } from '../lib/loyalty'
 import { ReportLink } from '../lib/report'
 import { AskCookButton, AskCookTile } from '../lib/askCook'
 import { CateringTile, fsaLink, hygieneWords, useHygiene } from '../lib/hygiene'
@@ -194,6 +195,7 @@ export default function PublicShop({ slug }: { slug: string }) {
         </div>
         {(settings?.min_order_pence ?? 0) > 0 && <p className="min-order small"><Icon name="pound" size={14} /> Minimum order {pounds(settings!.min_order_pence)}</p>}
 
+        {!isPreview && <ShopStampCard shopId={shop.id} />}
         {!isPreview && <ShopOffers shopId={shop.id} />}
       </div>
 

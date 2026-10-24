@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase'
 import { myUserId } from '../lib/session'
 import { link } from '../lib/router'
 import { Icon } from '../lib/icons'
+import { StampCardSettings } from '../lib/loyalty'
 import { offerLabel as discountLabel } from '../lib/discounts'
 
 export type Discount = {
@@ -77,12 +78,13 @@ export default function Discounts() {
 
   return (
     <div className="stack">
-      <a className="back" href="/sell" onClick={link('/sell')}><Icon name="back" size={18} /> Your shop</a>
-      <h1>Discount codes</h1>
+      <h1>Offers</h1>
       <p className="muted">
-        Make a code like WELCOME10 to bring in new customers or thank regulars. Share it with your shop link, or show it on your shop page.
+        A stamp card rewards regulars automatically. Or make a code like WELCOME10 to bring in new customers. Share it with your shop link, or show it on your shop page.
         The discount comes off your food price, and the BiteBY fee is worked out on what the customer pays after the discount.
       </p>
+
+      <StampCardSettings shopId={shopId!} />
 
       {adding ? <NewDiscount shopId={shopId} onDone={() => { setAdding(false); load(shopId) }} onCancel={() => setAdding(false)} />
         : <button type="button" onClick={() => setAdding(true)}><Icon name="plus" size={18} /> Make a code</button>}

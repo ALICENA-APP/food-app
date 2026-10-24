@@ -3,6 +3,7 @@ import { supabase } from './supabase'
 import { askToSignIn, myUserId, useSession } from './session'
 import { Icon } from './icons'
 import { postcodeDistrict } from './postcode'
+import { share } from './ui'
 
 // "No cooks near you yet": sign up to hear when the first one opens nearby.
 export function WaitlistCard({ postcode }: { postcode: string }) {
@@ -41,6 +42,12 @@ export function WaitlistCard({ postcode }: { postcode: string }) {
       </div>
       {!joined && <button type="button" disabled={busy} onClick={join}>{busy ? 'Saving…' : session ? 'Notify me' : 'Sign in to get notified'}</button>}
       {error && <p className="error small">{error}</p>}
+      <div className="waitlist-share">
+        <span className="small muted">Know someone round here who cooks? They could be the first. No sign-up or monthly fee.</span>
+        <button type="button" className="secondary" onClick={() => share(`Sell your homemade food on BiteBY. There are no cooks in ${district} yet, so you could be the first!`, `${location.origin}/sell`)}>
+          <Icon name="share" size={16} /> Tell a friend who cooks
+        </button>
+      </div>
     </div>
   )
 }

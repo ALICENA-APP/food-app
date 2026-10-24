@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react'
+import { supabase } from './supabase'
 
-// One shop per basket. Kept in this browser only; prices are always worked
-// out again by the database when the order is placed.
+// One shop per basket. Kept in this browser, plus a copy in the database for
+// signed-in customers so we can send one gentle reminder. Prices are always
+// worked out again by the database when the order is placed.
 export type BasketLine = {
   productId: string
   name: string
@@ -34,6 +36,32 @@ export function writeBasket(b: Basket | null) {
     // storage unavailable: basket lasts until the page reloads
     memory = b
   }
+  window.dispatchEvent(new Event(EVENT))
+  queueSave(b && b.lines.length ? b : null)
+}
+
+let saveTimer: ReturnType<typeof setTimeout> | undefined
+function queueSave(b: Basket | null) {
+  clearTimeout(saveTimer)
+  saveTimer = setTimeout(async () => {
+    const { data } = (await supabase?.auth.getSession()) ?? { data: null }
+    if (!data?.session) return
+    supabase!.rpc('save_basket', { p_shop: b?.shopId ?? null, p_lines: b ? b.lines : [] }).then(() => {}, () => {})
+  }, 1500)
+}
+
+// Brings back a basket saved on another device (or after a reminder).
+// A basket made before signing in is saved now.
+export async function restoreBasket() {
+  if (!supabase) return
+  const local = readBasket()
+  if (local) return queueSave(local)
+  const { data: auth } = await supabase.auth.getSession()
+  if (!auth.session) return
+  const { data } = await supabase.from('saved_baskets').select('shop_id, lines, shops(slug, name)').maybeSingle()
+  const shop = data?.shops as unknown as { slug: string; name: string } | null
+  if (!data || !shop || readBasket()) return
+  localStorage.setItem(KEY, JSON.stringify({ shopId: data.shop_id, shopSlug: shop.slug, shopName: shop.name, lines: data.lines }))
   window.dispatchEvent(new Event(EVENT))
 }
 

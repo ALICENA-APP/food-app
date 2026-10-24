@@ -17,6 +17,7 @@ import { pounds } from '../lib/types'
 import { useWelcomeDetail, useWelcomeHeadline } from '../lib/platform'
 import { OfferBadge } from '../lib/offer'
 import { TownLinks, useTowns } from './Town'
+import { HowItWorks } from '../lib/howItWorks'
 
 // The first screen everyone sees, signed in or not.
 export default function Home() {
@@ -122,6 +123,8 @@ export default function Home() {
         <a className="button dark" href="/explore?view=sellers" onClick={link('/explore?view=sellers')}>Browse local sellers</a>
         <BowlArt />
       </section>
+
+      <HowItWorks />
 
       {dishes === null && <p className="muted">Loading…</p>}
 

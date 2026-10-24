@@ -37,7 +37,7 @@ export default function Alerts() {
             <span className="set-icon"><Icon name="chef" size={22} filled /></span>
             <span className="sum-text">
               <strong>Updates from cooks</strong>
-              <span className="small muted">News from cooks you’ve ordered from or follow, like a dish being back. Usually no more than one a week from each.</span>
+              <span className="small muted">News from cooks you’ve ordered from or follow, plus one reminder if you leave food in your basket. Usually no more than one a week from each.</span>
             </span>
             <input type="checkbox" className="switch" checked={cookUpdates} onChange={(e) => saveCookUpdates(e.target.checked)} aria-label="Updates from cooks" />
           </div>
